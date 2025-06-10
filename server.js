@@ -171,6 +171,152 @@ app.get("/api/messages", async (c) => {
   }
 });
 
+// AI Settings API Routes
+app.get("/api/ai/has-valid-key", async (c) => {
+  if (!hasClerkConfig) {
+    // Demo mode - return false for now
+    return c.json({ hasValidKey: false });
+  }
+
+  const auth = getAuth(c);
+  if (!auth?.userId) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const hasKey = await client.query(api.aiKeys.hasValidApiKey);
+    return c.json({ hasValidKey: hasKey });
+  } catch (error) {
+    console.error("Error checking API key:", error);
+    return c.json({ error: "Failed to check API key" }, 500);
+  }
+});
+
+app.get("/api/ai/key-status", async (c) => {
+  if (!hasClerkConfig) {
+    return c.json({ error: "Authentication required" }, 401);
+  }
+
+  const auth = getAuth(c);
+  if (!auth?.userId) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const keyStatus = await client.query(api.aiKeys.getApiKeyStatus);
+    return c.json(keyStatus);
+  } catch (error) {
+    console.error("Error fetching key status:", error);
+    return c.json({ error: "Failed to fetch key status" }, 500);
+  }
+});
+
+app.get("/api/ai/preferences", async (c) => {
+  if (!hasClerkConfig) {
+    // Demo mode - return default preferences
+    return c.json({
+      defaultModel: "google/gemini-2.0-flash-exp",
+      temperature: 0.7,
+      maxTokens: 2000,
+      enableStreaming: true,
+      systemPrompt: "",
+    });
+  }
+
+  const auth = getAuth(c);
+  if (!auth?.userId) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const preferences = await client.query(api.aiKeys.getUserAIPreferences);
+    return c.json(
+      preferences || {
+        defaultModel: "google/gemini-2.0-flash-exp",
+        temperature: 0.7,
+        maxTokens: 2000,
+        enableStreaming: true,
+        systemPrompt: "",
+      }
+    );
+  } catch (error) {
+    console.error("Error fetching preferences:", error);
+    return c.json({ error: "Failed to fetch preferences" }, 500);
+  }
+});
+
+app.post("/api/ai/preferences", async (c) => {
+  if (!hasClerkConfig) {
+    return c.json({ error: "Authentication required" }, 401);
+  }
+
+  const auth = getAuth(c);
+  if (!auth?.userId) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const body = await c.req.json();
+    await client.mutation(api.aiKeys.setUserAIPreferences, body);
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Error saving preferences:", error);
+    return c.json({ error: "Failed to save preferences" }, 500);
+  }
+});
+
+app.post("/api/ai/test-key", async (c) => {
+  if (!hasClerkConfig) {
+    return c.json({ error: "Authentication required" }, 401);
+  }
+
+  const auth = getAuth(c);
+  if (!auth?.userId) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const { apiKey } = await c.req.json();
+    if (!apiKey) {
+      return c.json({ valid: false, error: "API key required" });
+    }
+
+    const result = await client.action(api.cryptoActions.testApiKey, {
+      apiKey,
+    });
+    return c.json(result);
+  } catch (error) {
+    console.error("Error testing API key:", error);
+    return c.json({ valid: false, error: "Failed to test API key" });
+  }
+});
+
+app.post("/api/ai/set-key", async (c) => {
+  if (!hasClerkConfig) {
+    return c.json({ error: "Authentication required" }, 401);
+  }
+
+  const auth = getAuth(c);
+  if (!auth?.userId) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const { apiKey } = await c.req.json();
+    if (!apiKey) {
+      return c.json({ error: "API key required" }, 400);
+    }
+
+    await client.action(api.cryptoActions.setUserApiKey, {
+      apiKey,
+    });
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Error setting API key:", error);
+    return c.json({ error: "Failed to set API key" }, 500);
+  }
+});
+
 // Serve the SPA for all other routes (production only)
 if (isProduction) {
   app.get("*", (c) => {
@@ -180,10 +326,7 @@ if (isProduction) {
       return c.html(html);
     } catch (error) {
       console.error("Error serving SPA:", error);
-      return c.text(
-        "Error loading application",
-        500
-      );
+      return c.text("Error loading application", 500);
     }
   });
 }

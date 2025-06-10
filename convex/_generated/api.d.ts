@@ -13,7 +13,11 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as aiKeys from "../aiKeys.js";
+import type * as cryptoActions from "../cryptoActions.js";
+import type * as lib_serverCrypto from "../lib/serverCrypto.js";
 import type * as tasks from "../tasks.js";
+import type * as usage from "../usage.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -24,7 +28,11 @@ import type * as tasks from "../tasks.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  aiKeys: typeof aiKeys;
+  cryptoActions: typeof cryptoActions;
+  "lib/serverCrypto": typeof lib_serverCrypto;
   tasks: typeof tasks;
+  usage: typeof usage;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

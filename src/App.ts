@@ -2,14 +2,34 @@ import { Component, html, authService } from "./lib/index";
 import type { AuthStatus } from "./lib/index";
 import "./components/ChatSidebar";
 import "./components/ChatMain";
+import "./components/AISettings";
 
 export class App extends Component {
   private _authStatus: AuthStatus = { isAuthenticated: false, userId: null };
   private _loading = true;
+  private _currentRoute = "";
 
   constructor() {
     super();
     this.checkAuthStatus();
+    this._setupRouting();
+  }
+
+  private _setupRouting() {
+    // Listen for hash changes
+    window.addEventListener("hashchange", () => {
+      this._handleRouteChange();
+    });
+
+    // Handle initial route
+    this._handleRouteChange();
+  }
+
+  private _handleRouteChange() {
+    this._currentRoute = window.location.hash.slice(1) || "/";
+    if (!this._loading) {
+      this.render();
+    }
   }
 
   private async checkAuthStatus() {
@@ -30,7 +50,21 @@ export class App extends Component {
     );
 
     if (isDemoMode) {
-      // Show demo mode - skip authentication and show the chat interface
+      // Show demo mode - skip authentication and show the appropriate page
+      if (this._currentRoute === "/ai-settings") {
+        const template = html`
+          <div class="demo-banner">
+            <p>🧪 Demo Mode - Authentication disabled</p>
+          </div>
+          <div class="single-page-container">
+            <ai-settings></ai-settings>
+          </div>
+        `;
+        this.innerHTML = String(template);
+        return;
+      }
+
+      // Default chat interface
       const template = html`
         <div class="demo-banner">
           <p>🧪 Demo Mode - Authentication disabled</p>
@@ -57,6 +91,18 @@ export class App extends Component {
       return;
     }
 
+    // Authenticated user - handle routing
+    if (this._currentRoute === "/ai-settings") {
+      const template = html`
+        <div class="single-page-container">
+          <ai-settings></ai-settings>
+        </div>
+      `;
+      this.innerHTML = String(template);
+      return;
+    }
+
+    // Default chat interface
     const template = html`
       <div class="chat-app-container">
         <chat-sidebar></chat-sidebar>

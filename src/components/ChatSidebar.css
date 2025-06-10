@@ -12,8 +12,9 @@ chat-sidebar {
 chat-sidebar > .header {
   padding: 1.25rem 1rem;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: stretch;
 }
 
 chat-sidebar > .header h2 {
@@ -23,7 +24,8 @@ chat-sidebar > .header h2 {
   color: var(--color-text-primary);
 }
 
-chat-sidebar .new-chat-btn {
+chat-sidebar .new-chat-btn,
+chat-sidebar .ai-settings-btn {
   background: var(--color-accent);
   color: var(--color-text-primary);
   border: none;
@@ -36,8 +38,19 @@ chat-sidebar .new-chat-btn {
   transition: all 0.2s ease;
 }
 
-chat-sidebar .new-chat-btn:hover {
+chat-sidebar .new-chat-btn:hover,
+chat-sidebar .ai-settings-btn:hover {
   opacity: 0.9;
+}
+
+chat-sidebar .ai-settings-btn {
+  background: var(--color-secondary);
+  color: var(--color-text-secondary);
+}
+
+chat-sidebar .ai-settings-btn:hover {
+  background: var(--color-primary);
+  color: var(--color-text-primary);
 }
 
 chat-sidebar .chat-list {

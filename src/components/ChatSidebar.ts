@@ -95,11 +95,29 @@ export class ChatSidebar extends Component {
     const template = html`
       <section class="header">
         <button class="new-chat-btn">New Chat</button>
+        <button class="ai-settings-btn">AI Settings</button>
       </section>
       <section class="chat-list"></section>
     `;
 
     this.innerHTML = String(template);
+
+    // Add event listeners
+    const newChatBtn = this.querySelector(".new-chat-btn");
+    const aiSettingsBtn = this.querySelector(".ai-settings-btn");
+
+    if (newChatBtn) {
+      newChatBtn.addEventListener("click", () => {
+        // Handle new chat creation
+        console.log("New chat clicked");
+      });
+    }
+
+    if (aiSettingsBtn) {
+      aiSettingsBtn.addEventListener("click", () => {
+        window.location.hash = "#/ai-settings";
+      });
+    }
 
     const chatList = this.querySelector(".chat-list");
     if (chatList) {
