@@ -3,6 +3,7 @@ import type { AuthStatus } from "./lib/index";
 import "./components/ChatSidebar";
 import "./components/ChatMain";
 import "./components/AISettings";
+import "./components/UsageDashboard";
 
 export class App extends Component {
   private _authStatus: AuthStatus = { isAuthenticated: false, userId: null };
@@ -64,6 +65,19 @@ export class App extends Component {
         return;
       }
 
+      if (this._currentRoute === "/usage") {
+        const template = html`
+          <div class="demo-banner">
+            <p>🧪 Demo Mode - Authentication disabled</p>
+          </div>
+          <div class="single-page-container">
+            <usage-dashboard></usage-dashboard>
+          </div>
+        `;
+        this.innerHTML = String(template);
+        return;
+      }
+
       // Default chat interface
       const template = html`
         <div class="demo-banner">
@@ -96,6 +110,16 @@ export class App extends Component {
       const template = html`
         <div class="single-page-container">
           <ai-settings></ai-settings>
+        </div>
+      `;
+      this.innerHTML = String(template);
+      return;
+    }
+
+    if (this._currentRoute === "/usage") {
+      const template = html`
+        <div class="single-page-container">
+          <usage-dashboard></usage-dashboard>
         </div>
       `;
       this.innerHTML = String(template);

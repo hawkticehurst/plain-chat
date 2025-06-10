@@ -96,6 +96,7 @@ export class ChatSidebar extends Component {
       <section class="header">
         <button class="new-chat-btn">New Chat</button>
         <button class="ai-settings-btn">AI Settings</button>
+        <button class="usage-dashboard-btn">Usage Dashboard</button>
       </section>
       <section class="chat-list"></section>
     `;
@@ -105,6 +106,7 @@ export class ChatSidebar extends Component {
     // Add event listeners
     const newChatBtn = this.querySelector(".new-chat-btn");
     const aiSettingsBtn = this.querySelector(".ai-settings-btn");
+    const usageDashboardBtn = this.querySelector(".usage-dashboard-btn");
 
     if (newChatBtn) {
       newChatBtn.addEventListener("click", () => {
@@ -116,6 +118,12 @@ export class ChatSidebar extends Component {
     if (aiSettingsBtn) {
       aiSettingsBtn.addEventListener("click", () => {
         window.location.hash = "#/ai-settings";
+      });
+    }
+
+    if (usageDashboardBtn) {
+      usageDashboardBtn.addEventListener("click", () => {
+        window.location.hash = "#/usage";
       });
     }
 

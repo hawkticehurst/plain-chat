@@ -5,17 +5,26 @@
 @import "./components/ChatMessages.css";
 @import "./components/ChatInput.css";
 @import "./components/AISettings.css";
+@import "./components/UsageDashboard.css";
 
 :root {
   /* Base colors */
   --color-primary: #646cff;
   --color-primary-hover: #535bf2;
+  --color-primary-light: rgba(100, 108, 255, 0.1);
   --color-accent: #007aff;
   --color-success: #34c759;
+  --color-success-light: rgba(52, 199, 89, 0.1);
+  --color-error: #ff3b30;
+  --color-error-light: rgba(255, 59, 48, 0.1);
+  --color-info: #5856d6;
+  --color-secondary: #8e8e93;
 
   /* Text colors */
+  --color-text: rgba(255, 255, 255, 0.87);
   --color-text-primary: rgba(255, 255, 255, 0.87);
   --color-text-secondary: #8e8e93;
+  --color-text-muted: rgba(255, 255, 255, 0.6);
   --color-text-inverse: #1a1a1a;
 
   /* Background colors */

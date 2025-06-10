@@ -317,6 +317,98 @@ app.post("/api/ai/set-key", async (c) => {
   }
 });
 
+// Usage API endpoints
+app.get("/api/usage/recent", async (c) => {
+  const auth = getAuth(c);
+  if (!auth?.userId) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const limit = parseInt(c.req.query("limit") || "20");
+    const usage = await client.query(api.usage.getRecentUsage, { limit });
+    return c.json({ usage });
+  } catch (error) {
+    console.error("Error fetching recent usage:", error);
+    return c.json({ error: "Failed to fetch recent usage" }, 500);
+  }
+});
+
+app.get("/api/usage/daily", async (c) => {
+  const auth = getAuth(c);
+  if (!auth?.userId) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const days = parseInt(c.req.query("days") || "7");
+    const summary = await client.query(api.usage.getUserUsageSummary, { days });
+    return c.json({ summary: summary?.dailySummaries || [] });
+  } catch (error) {
+    console.error("Error fetching daily usage:", error);
+    return c.json({ error: "Failed to fetch daily usage" }, 500);
+  }
+});
+
+app.get("/api/usage/monthly", async (c) => {
+  const auth = getAuth(c);
+  if (!auth?.userId) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const months = parseInt(c.req.query("months") || "3");
+    const days = months * 30; // Approximate conversion
+    const summary = await client.query(api.usage.getUserUsageSummary, { days });
+
+    // Group daily summaries by month
+    const monthlyData = {};
+    if (summary?.dailySummaries) {
+      summary.dailySummaries.forEach((day) => {
+        const monthKey = day.date.substring(0, 7); // YYYY-MM
+        if (!monthlyData[monthKey]) {
+          monthlyData[monthKey] = {
+            _id: monthKey,
+            date: monthKey,
+            totalTokens: 0,
+            totalCost: 0,
+            requestCount: 0,
+            modelUsage: {},
+          };
+        }
+
+        monthlyData[monthKey].totalTokens += day.totalTokens;
+        monthlyData[monthKey].totalCost += day.totalCost;
+        monthlyData[monthKey].requestCount += day.requestCount;
+
+        // Merge model usage
+        Object.entries(day.modelUsage).forEach(([model, tokens]) => {
+          if (!monthlyData[monthKey].modelUsage[model]) {
+            monthlyData[monthKey].modelUsage[model] = {
+              tokens: 0,
+              cost: 0,
+              requests: 0,
+            };
+          }
+          monthlyData[monthKey].modelUsage[model].tokens += tokens;
+          // Estimate cost and requests proportionally
+          monthlyData[monthKey].modelUsage[model].cost +=
+            (day.totalCost * tokens) / day.totalTokens;
+          monthlyData[monthKey].modelUsage[model].requests += Math.ceil(
+            (day.requestCount * tokens) / day.totalTokens
+          );
+        });
+      });
+    }
+
+    const monthlySummaries = Object.values(monthlyData);
+    return c.json({ summary: monthlySummaries });
+  } catch (error) {
+    console.error("Error fetching monthly usage:", error);
+    return c.json({ error: "Failed to fetch monthly usage" }, 500);
+  }
+});
+
 // Serve the SPA for all other routes (production only)
 if (isProduction) {
   app.get("*", (c) => {
