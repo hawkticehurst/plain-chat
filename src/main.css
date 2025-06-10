@@ -1,0 +1,146 @@
+/* Import chat components styles */
+@import "./components/ChatSidebar.css";
+@import "./components/ChatMain.css";
+@import "./components/ChatMessage.css";
+@import "./components/ChatMessages.css";
+@import "./components/ChatInput.css";
+
+:root {
+  /* Base colors */
+  --color-primary: #646cff;
+  --color-primary-hover: #535bf2;
+  --color-accent: #007aff;
+  --color-success: #34c759;
+
+  /* Text colors */
+  --color-text-primary: rgba(255, 255, 255, 0.87);
+  --color-text-secondary: #8e8e93;
+  --color-text-inverse: #1a1a1a;
+
+  /* Background colors */
+  --color-background: #242424;
+  --color-surface: #1a1a1a;
+  --color-surface-raised: #2a2a2a;
+
+  /* Border colors */
+  --color-border: rgba(255, 255, 255, 0.1);
+
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: var(--color-text-primary);
+  background-color: var(--color-background);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  min-width: 320px;
+  min-height: 100vh;
+  /* overflow: hidden; */
+}
+
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+chat-app {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+}
+
+.chat-app-container {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-size: 18px;
+  color: var(--color-text-secondary);
+}
+
+.auth-required {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  padding: 2rem;
+  text-align: center;
+}
+
+.auth-required h1 {
+  color: var(--color-text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.auth-required p {
+  color: var(--color-text-secondary);
+  margin-bottom: 2rem;
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  color: #ff6b6b;
+  font-size: 18px;
+}
+
+.demo-banner {
+  background: linear-gradient(90deg, #007aff, #00c2ff);
+  color: white;
+  padding: 0.75rem;
+  text-align: center;
+  font-weight: 500;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.demo-banner p {
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  chat-app {
+    flex-direction: column;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    /* Text colors */
+    --color-text-primary: #213547;
+    --color-text-secondary: #666666;
+    --color-text-inverse: #ffffff;
+
+    /* Background colors */
+    --color-background: #ffffff;
+    --color-surface: #f9f9f9;
+    --color-surface-raised: #ffffff;
+
+    /* Border colors */
+    --color-border: rgba(0, 0, 0, 0.1);
+  }
+}
