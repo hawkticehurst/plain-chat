@@ -504,4 +504,6 @@ export class UsageDashboard extends Component {
   }
 }
 
-customElements.define("usage-dashboard", UsageDashboard);
+if (!customElements.get('usage-dashboard')) {
+  customElements.define("usage-dashboard", UsageDashboard);
+}

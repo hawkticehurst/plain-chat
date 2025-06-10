@@ -99,8 +99,9 @@ function decryptApiKey(encryptedString: string): string {
  */
 function validateOpenRouterKeyFormat(apiKey: string): boolean {
   // OpenRouter keys start with "sk-or-" followed by base64-like characters
-  const pattern = /^sk-or-[A-Za-z0-9+/=_-]{32,}$/;
-  return pattern.test(apiKey) && apiKey.length >= 40;
+  // Updated pattern to be more flexible with characters
+  const pattern = /^sk-or-[A-Za-z0-9+/=_-]{20,}$/;
+  return pattern.test(apiKey) && apiKey.length >= 32;
 }
 
 // Store or update user's OpenRouter API key (server-side action for security)
@@ -215,6 +216,7 @@ export const testApiKey = action({
             Authorization: `Bearer ${apiKey}`,
             "Content-Type": "application/json",
             "HTTP-Referer": process.env.SITE_URL || "https://localhost:3000",
+            "X-Title": "Chat App",
           },
           body: JSON.stringify({
             model: "openai/gpt-3.5-turbo",
@@ -227,16 +229,165 @@ export const testApiKey = action({
       if (response.ok) {
         return { valid: true };
       } else {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ error: { message: `HTTP ${response.status}` } }));
+        console.error("OpenRouter API error:", response.status, errorData);
         return {
           valid: false,
-          error: errorData.error?.message || `HTTP ${response.status}`,
+          error: errorData.error?.message || `API returned status ${response.status}`,
         };
       }
     } catch (error: any) {
+      console.error("Network error testing API key:", error);
       return {
         valid: false,
-        error: error.message || "Network error",
+        error: error.message || "Network error - please check your connection",
+      };
+    }
+  },
+});
+
+/**
+ * Perform AI completion using user's stored API key
+ */
+export const performAICompletion = action({
+  args: {
+    message: v.string(),
+    conversation: v.array(
+      v.object({
+        role: v.string(),
+        content: v.string(),
+      })
+    ),
+    preferences: v.object({
+      defaultModel: v.string(),
+      temperature: v.number(),
+      maxTokens: v.number(),
+      systemPrompt: v.optional(v.string()),
+    }),
+  },
+  handler: async (ctx, { message, conversation, preferences }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("User must be authenticated");
+    }
+
+    try {
+      // Get user's encrypted API key
+      const apiKeyRecord = await ctx.runQuery(internal.aiKeys.getUserApiKeyRecord, {
+        userId: identity.subject,
+      });
+      if (!apiKeyRecord) {
+        return {
+          success: false,
+          error: "No API key found. Please configure your API key in Settings.",
+        };
+      }
+
+      // Decrypt the API key
+      const apiKey = decryptApiKey(apiKeyRecord.encryptedApiKey);
+
+      // Prepare messages for AI API
+      const messages: Array<{ role: string; content: string }> = [];
+      
+      // Add system prompt if provided
+      if (preferences.systemPrompt && preferences.systemPrompt.trim()) {
+        messages.push({
+          role: "system",
+          content: preferences.systemPrompt.trim(),
+        });
+      }
+
+      // Add conversation history
+      conversation.forEach((msg) => {
+        messages.push({
+          role: msg.role === "prompt" ? "user" : "assistant",
+          content: msg.content,
+        });
+      });
+
+      // Add current message
+      messages.push({
+        role: "user",
+        content: message,
+      });
+
+      const requestId = randomBytes(8).toString("hex");
+
+      // Make API request to OpenRouter
+      const response = await fetch(
+        "https://openrouter.ai/api/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": process.env.SITE_URL || "https://localhost:3000",
+            "X-Title": "Chat App",
+          },
+          body: JSON.stringify({
+            model: preferences.defaultModel,
+            messages,
+            temperature: preferences.temperature,
+            max_tokens: preferences.maxTokens,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return {
+          success: false,
+          error: errorData.error?.message || `API Error: ${response.status}`,
+          requestId,
+        };
+      }
+
+      const data = await response.json();
+      
+      if (!data.choices || data.choices.length === 0) {
+        return {
+          success: false,
+          error: "No response from AI model",
+          requestId,
+        };
+      }
+
+      const assistantMessage = data.choices[0].message?.content;
+      if (!assistantMessage) {
+        return {
+          success: false,
+          error: "Empty response from AI model",
+          requestId,
+        };
+      }
+
+      // Calculate cost (OpenRouter provides usage data)
+      const usage = data.usage || {};
+      const promptTokens = usage.prompt_tokens || 0;
+      const completionTokens = usage.completion_tokens || 0;
+      const totalTokens = usage.total_tokens || promptTokens + completionTokens;
+      
+      // Estimate cost (this is a rough estimate, real cost calculation would need model-specific pricing)
+      const estimatedCost = totalTokens * 0.000001; // Very rough estimate
+
+      return {
+        success: true,
+        response: assistantMessage,
+        model: preferences.defaultModel,
+        usage: {
+          promptTokens,
+          completionTokens,
+          totalTokens,
+          cost: estimatedCost,
+        },
+        requestId,
+      };
+    } catch (error: any) {
+      console.error("AI completion error:", error);
+      return {
+        success: false,
+        error: error.message || "Internal server error",
+        requestId: randomBytes(8).toString("hex"),
       };
     }
   },

@@ -162,7 +162,9 @@ export class ChatSidebar extends Component {
   }
 }
 
-customElements.define("chat-sidebar", ChatSidebar);
+if (!customElements.get('chat-sidebar')) {
+  customElements.define("chat-sidebar", ChatSidebar);
+}
 
 class ChatSidebarItem extends Component {
   private _id: Signal<string>;
@@ -192,4 +194,6 @@ class ChatSidebarItem extends Component {
   }
 }
 
-customElements.define("chat-sidebar-item", ChatSidebarItem);
+if (!customElements.get('chat-sidebar-item')) {
+  customElements.define("chat-sidebar-item", ChatSidebarItem);
+}

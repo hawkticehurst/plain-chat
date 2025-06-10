@@ -5,11 +5,15 @@ import { ChatMessages } from "./ChatMessages";
 export interface Message {
   role: "prompt" | "response";
   content: string;
+  timestamp?: number;
+  isLoading?: boolean;
 }
 
 export class ChatMain extends Component {
   private _messages: Array<Message> = [];
   private _loading = true;
+  private _chatInput: ChatInput | null = null;
+  private _chatMessages: ChatMessages | null = null;
 
   constructor() {
     super();
@@ -33,22 +37,23 @@ export class ChatMain extends Component {
           }));
         } else {
           console.warn(
-            "No messages array found in API response, using fallback"
+            "No messages array found in API response, using welcome message"
           );
           this._messages = [
             {
               role: "response",
-              content:
-                "No messages found. API response structure may have changed.",
+              content: "👋 Welcome to your AI chat assistant! Start a conversation by typing a message below. Configure your AI settings in the sidebar to customize your experience.",
+              timestamp: Date.now(),
             },
           ];
         }
       } else {
-        // Fallback to sample data if not authenticated or error
+        // Fallback to welcome message if not authenticated or error
         this._messages = [
           {
             role: "response",
-            content: "Please sign in to view your messages.",
+            content: "👋 Welcome to your AI chat assistant! In demo mode, you'll get simulated responses. Sign in and configure your API key in Settings for real AI conversations.",
+            timestamp: Date.now(),
           },
         ];
       }
@@ -58,7 +63,8 @@ export class ChatMain extends Component {
       this._messages = [
         {
           role: "response",
-          content: "Error loading messages. Please try again later.",
+          content: "❌ Unable to load messages. Please check your connection and try refreshing the page.",
+          timestamp: Date.now(),
         },
       ];
     } finally {
@@ -73,18 +79,130 @@ export class ChatMain extends Component {
       return;
     }
 
-    const messages = new ChatMessages(this._messages);
-    const input = new ChatInput();
+    this._chatMessages = new ChatMessages(this._messages);
+    this._chatInput = new ChatInput();
 
-    await messages.render();
-    input.render();
+    await this._chatMessages.render();
+    this._chatInput.render();
 
     // Clear previous content
     this.innerHTML = "";
 
-    this.insert(this, messages, null);
-    this.insert(this, input, null);
+    this.insert(this, this._chatMessages, null);
+    this.insert(this, this._chatInput, null);
+
+    // Listen for send-message events from ChatInput
+    this._chatInput.addEventListener("send-message", this._handleSendMessage.bind(this));
+  }
+
+  private async _handleSendMessage(event: Event) {
+    const customEvent = event as CustomEvent;
+    const { message } = customEvent.detail;
+    
+    // Add user message to conversation
+    const userMessage: Message = {
+      role: "prompt",
+      content: message,
+      timestamp: Date.now(),
+    };
+    
+    this._messages.push(userMessage);
+    
+    // Add loading message for AI response
+    const loadingMessage: Message = {
+      role: "response",
+      content: "Thinking...",
+      timestamp: Date.now(),
+      isLoading: true,
+    };
+    
+    this._messages.push(loadingMessage);
+    
+    // Re-render to show the messages
+    await this._updateMessages();
+    
+    try {
+      // Send request to AI API
+      const response = await authService.fetchWithAuth(
+        `${config.apiBaseUrl}/api/ai/chat`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message,
+            conversation: this._messages.slice(-10).filter(m => !m.isLoading), // Send last 10 non-loading messages
+          }),
+        }
+      );
+
+      // Remove loading message
+      this._messages.pop();
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.success) {
+          // Add AI response
+          const aiMessage: Message = {
+            role: "response",
+            content: data.response,
+            timestamp: Date.now(),
+          };
+          
+          this._messages.push(aiMessage);
+        } else {
+          // Add error message
+          const errorMessage: Message = {
+            role: "response",
+            content: `❌ Error: ${data.error}`,
+            timestamp: Date.now(),
+          };
+          
+          this._messages.push(errorMessage);
+        }
+      } else {
+        // Add error message for HTTP errors
+        const errorMessage: Message = {
+          role: "response",
+          content: `❌ Failed to send message. Please try again.`,
+          timestamp: Date.now(),
+        };
+        
+        this._messages.push(errorMessage);
+      }
+    } catch (error) {
+      // Remove loading message if still there
+      if (this._messages[this._messages.length - 1]?.isLoading) {
+        this._messages.pop();
+      }
+      
+      // Add error message
+      const errorMessage: Message = {
+        role: "response",
+        content: `❌ Network error. Please check your connection and try again.`,
+        timestamp: Date.now(),
+      };
+      
+      this._messages.push(errorMessage);
+    }
+    
+    // Re-render with final messages and enable input
+    await this._updateMessages();
+    if (this._chatInput) {
+      this._chatInput.messageProcessed();
+    }
+  }
+
+  private async _updateMessages() {
+    if (this._chatMessages) {
+      this._chatMessages.updateMessages(this._messages);
+      await this._chatMessages.render();
+    }
   }
 }
 
-customElements.define("chat-main", ChatMain);
+if (!customElements.get('chat-main')) {
+  customElements.define("chat-main", ChatMain);
+}

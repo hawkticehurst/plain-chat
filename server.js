@@ -266,19 +266,65 @@ app.post("/api/ai/preferences", async (c) => {
 });
 
 app.post("/api/ai/test-key", async (c) => {
-  if (!hasClerkConfig) {
-    return c.json({ error: "Authentication required" }, 401);
-  }
-
-  const auth = getAuth(c);
-  if (!auth?.userId) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
   try {
     const { apiKey } = await c.req.json();
     if (!apiKey) {
       return c.json({ valid: false, error: "API key required" });
+    }
+
+    // In demo mode, we can still test API keys directly without Convex
+    if (!hasClerkConfig) {
+      // Validate format first
+      const validateOpenRouterKeyFormat = (key) => {
+        const pattern = /^sk-or-[A-Za-z0-9+/=_-]{20,}$/;
+        return pattern.test(key) && key.length >= 32;
+      };
+
+      if (!validateOpenRouterKeyFormat(apiKey)) {
+        return c.json({ valid: false, error: "Invalid API key format" });
+      }
+
+      // Test the key directly with OpenRouter
+      try {
+        const response = await fetch(
+          "https://openrouter.ai/api/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+              "HTTP-Referer": process.env.SITE_URL || "https://localhost:3000",
+              "X-Title": "Chat App",
+            },
+            body: JSON.stringify({
+              model: "openai/gpt-3.5-turbo",
+              messages: [{ role: "user", content: "Hello" }],
+              max_tokens: 5,
+            }),
+          }
+        );
+
+        if (response.ok) {
+          return c.json({ valid: true });
+        } else {
+          const errorData = await response.json();
+          return c.json({
+            valid: false,
+            error: errorData.error?.message || `HTTP ${response.status}`,
+          });
+        }
+      } catch (fetchError) {
+        return c.json({
+          valid: false,
+          error: fetchError.message || "Network error",
+        });
+      }
+    }
+
+    // Authenticated mode - use Convex action
+    const auth = getAuth(c);
+    if (!auth?.userId) {
+      return c.json({ error: "Unauthorized" }, 401);
     }
 
     const result = await client.action(api.cryptoActions.testApiKey, {
@@ -292,19 +338,36 @@ app.post("/api/ai/test-key", async (c) => {
 });
 
 app.post("/api/ai/set-key", async (c) => {
-  if (!hasClerkConfig) {
-    return c.json({ error: "Authentication required" }, 401);
-  }
-
-  const auth = getAuth(c);
-  if (!auth?.userId) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
   try {
     const { apiKey } = await c.req.json();
     if (!apiKey) {
       return c.json({ error: "API key required" }, 400);
+    }
+
+    // In demo mode, we can't actually store the key, but we can validate it
+    if (!hasClerkConfig) {
+      // Just validate the format and return success for demo
+      const validateOpenRouterKeyFormat = (key) => {
+        const pattern = /^sk-or-[A-Za-z0-9+/=_-]{20,}$/;
+        return pattern.test(key) && key.length >= 32;
+      };
+
+      if (!validateOpenRouterKeyFormat(apiKey)) {
+        return c.json({ error: "Invalid API key format" }, 400);
+      }
+
+      // In demo mode, we simulate saving but warn the user
+      return c.json({ 
+        success: true, 
+        demo: true,
+        message: "Demo mode: API key validated but not permanently stored. Enable authentication to save keys securely."
+      });
+    }
+
+    // Authenticated mode - actually store the key
+    const auth = getAuth(c);
+    if (!auth?.userId) {
+      return c.json({ error: "Unauthorized" }, 401);
     }
 
     await client.action(api.cryptoActions.setUserApiKey, {
@@ -406,6 +469,119 @@ app.get("/api/usage/monthly", async (c) => {
   } catch (error) {
     console.error("Error fetching monthly usage:", error);
     return c.json({ error: "Failed to fetch monthly usage" }, 500);
+  }
+});
+
+// AI Chat API endpoint
+app.post("/api/ai/chat", async (c) => {
+  const auth = getAuth(c);
+  
+  // In demo mode, allow chat but use demo responses
+  if (!hasClerkConfig) {
+    try {
+      const { message, conversation = [] } = await c.req.json();
+      
+      // Simple demo AI response
+      const demoResponses = [
+        "This is a demo response! Configure your AI API key in Settings to use real AI.",
+        "I'm a demo AI assistant. Set up your API key to unlock my full potential!",
+        "Demo mode active. Your message was: '" + message + "' - Configure AI settings for real responses.",
+        "Hello! This is a simulated response. Enable authentication and configure your AI API key for real conversations.",
+      ];
+      
+      const response = demoResponses[Math.floor(Math.random() * demoResponses.length)];
+      
+      return c.json({
+        response,
+        usage: {
+          promptTokens: 10,
+          completionTokens: 20,
+          totalTokens: 30,
+          cost: 0.0001
+        }
+      });
+    } catch (error) {
+      console.error("Error in demo chat:", error);
+      return c.json({ error: "Failed to process demo chat" }, 500);
+    }
+  }
+
+  if (!auth?.userId) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const { message, conversation = [] } = await c.req.json();
+    
+    if (!message) {
+      return c.json({ error: "Message is required" }, 400);
+    }
+
+    // Get user's AI preferences and API key
+    const preferences = await client.query(api.aiKeys.getUserAIPreferences);
+    const hasValidKey = await client.query(api.aiKeys.hasValidApiKey);
+    
+    if (!hasValidKey) {
+      return c.json({ error: "No valid API key configured. Please set up your AI API key in Settings." }, 400);
+    }
+
+    // Use the server-side AI completion action
+    const result = await client.action(api.cryptoActions.performAICompletion, {
+      message,
+      conversation: conversation.slice(-10), // Keep last 10 messages for context
+      preferences: preferences || {
+        defaultModel: "google/gemini-2.0-flash-exp",
+        temperature: 0.7,
+        maxTokens: 2000,
+        systemPrompt: ""
+      }
+    });
+
+    // Record usage if successful
+    if (result.success && result.usage) {
+      await client.mutation(api.usage.recordUsage, {
+        model: result.model || preferences?.defaultModel || "google/gemini-2.0-flash-exp",
+        promptTokens: result.usage.promptTokens || 0,
+        completionTokens: result.usage.completionTokens || 0,
+        totalTokens: result.usage.totalTokens || 0,
+        cost: result.usage.cost || 0,
+        success: true,
+        requestId: result.requestId
+      });
+    } else if (!result.success) {
+      // Record failed usage
+      await client.mutation(api.usage.recordUsage, {
+        model: preferences?.defaultModel || "google/gemini-2.0-flash-exp",
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+        cost: 0,
+        success: false,
+        errorMessage: result.error,
+        requestId: result.requestId
+      });
+    }
+
+    return c.json(result);
+  } catch (error) {
+    console.error("Error in AI chat:", error);
+    
+    // Record failed usage for unexpected errors
+    try {
+      await client.mutation(api.usage.recordUsage, {
+        model: "unknown",
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+        cost: 0,
+        success: false,
+        errorMessage: error.message || "Internal server error"
+      });
+    } catch (usageError) {
+      console.error("Error recording failed usage:", usageError);
+    }
+    
+    return c.json({ error: "Failed to process AI request" }, 500);
   }
 });
 

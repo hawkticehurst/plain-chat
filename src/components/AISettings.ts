@@ -467,4 +467,6 @@ export class AISettings extends Component {
   }
 }
 
-customElements.define("ai-settings", AISettings);
+if (!customElements.get('ai-settings')) {
+  customElements.define("ai-settings", AISettings);
+}

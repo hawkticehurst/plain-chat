@@ -178,4 +178,6 @@ export class App extends Component {
   }
 }
 
-customElements.define("chat-app", App);
+if (!customElements.get('chat-app')) {
+  customElements.define("chat-app", App);
+}
