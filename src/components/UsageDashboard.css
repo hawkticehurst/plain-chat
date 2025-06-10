@@ -1,4 +1,8 @@
 /* Usage Dashboard Styles */
+usage-dashboard {
+  width: 100%;
+}
+
 .usage-dashboard {
   display: flex;
   flex-direction: column;

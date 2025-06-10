@@ -45,23 +45,9 @@ chat-sidebar .usage-dashboard-btn:hover {
   opacity: 0.9;
 }
 
-chat-sidebar .ai-settings-btn {
-  background: var(--color-secondary);
-  color: var(--color-text-secondary);
-}
-
-chat-sidebar .ai-settings-btn:hover {
-  background: var(--color-primary);
-  color: var(--color-text-primary);
-}
-
+chat-sidebar .ai-settings-btn,
 chat-sidebar .usage-dashboard-btn {
-  background: var(--color-info, var(--color-secondary));
-  color: var(--color-text-secondary);
-}
-
-chat-sidebar .usage-dashboard-btn:hover {
-  background: var(--color-primary);
+  background: var(--color-info);
   color: var(--color-text-primary);
 }
 
