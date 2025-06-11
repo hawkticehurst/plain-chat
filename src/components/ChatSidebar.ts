@@ -1,52 +1,66 @@
-import { Component, html, signal } from "../lib/index";
+import { Component, html, signal, config, authService } from "../lib/index";
 import type { Signal } from "../lib/index";
 
 interface ChatItem {
   id: string;
   title: string;
   timestamp: Date;
+  updatedAt: number;
 }
 
 export class ChatSidebar extends Component {
   private _chats: Array<ChatItem> = [];
+  private _loading = true;
+  private _currentChatId: string | null = null;
 
   constructor() {
     super();
-    this._chats = [
-      {
-        id: "1",
-        title: "AI Assistant",
-        timestamp: new Date(Date.now() - 2 * 60 * 1000), // 2 minutes ago
-      },
-      {
-        id: "2",
-        title: "Code Helper",
-        timestamp: new Date(Date.now() - 60 * 60 * 1000), // 1 hour ago
-      },
-      {
-        id: "3",
-        title: "Writing Assistant",
-        timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
-      },
-      {
-        id: "4",
-        title: "Data Analysis",
-        timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-      },
-      {
-        id: "5",
-        title: "Project Planning",
-        timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
-      },
-      {
-        id: "6",
-        title: "Research Helper",
-        timestamp: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10 days ago
-      },
-    ];
+    this.loadChats();
   }
 
   connectedCallback() {
+    this.render();
+  }
+
+  private async loadChats() {
+    try {
+      const response = await authService.fetchWithAuth(
+        `${config.apiBaseUrl}/api/chats`
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.chats && Array.isArray(data.chats)) {
+          this._chats = data.chats.map((chat: any) => ({
+            id: chat._id,
+            title: chat.title,
+            timestamp: new Date(chat.updatedAt),
+            updatedAt: chat.updatedAt,
+          }));
+        } else {
+          this._chats = [];
+        }
+      } else {
+        console.error("Failed to load chats:", response.status);
+        this._chats = [];
+      }
+    } catch (error) {
+      console.error("Error loading chats:", error);
+      this._chats = [];
+    } finally {
+      this._loading = false;
+      this.render();
+    }
+  }
+
+  public async refreshChats() {
+    this._loading = true;
+    this.render();
+    await this.loadChats();
+  }
+
+  public setCurrentChat(chatId: string | null) {
+    this._currentChatId = chatId;
     this.render();
   }
 
@@ -98,7 +112,9 @@ export class ChatSidebar extends Component {
         <button class="ai-settings-btn">AI Settings</button>
         <button class="usage-dashboard-btn">Usage Dashboard</button>
       </section>
-      <section class="chat-list"></section>
+      <section class="chat-list">
+        ${this._loading ? '<div class="loading">Loading chats...</div>' : ""}
+      </section>
     `;
 
     this.innerHTML = String(template);
@@ -110,8 +126,13 @@ export class ChatSidebar extends Component {
 
     if (newChatBtn) {
       newChatBtn.addEventListener("click", () => {
-        // Handle new chat creation
-        console.log("New chat clicked");
+        // Just dispatch an event to start a new chat (don't create in DB yet)
+        this.dispatchEvent(
+          new CustomEvent("new-chat-requested", {
+            bubbles: true,
+            composed: true,
+          })
+        );
       });
     }
 
@@ -127,42 +148,57 @@ export class ChatSidebar extends Component {
       });
     }
 
-    const chatList = this.querySelector(".chat-list");
-    if (chatList) {
-      const groupedChats = this.groupChatsByCategory();
-      const categoryOrder = ["Today", "Yesterday", "Last 7 Days", "Older"];
+    if (!this._loading) {
+      const chatList = this.querySelector(".chat-list");
+      if (chatList) {
+        // Clear loading message
+        chatList.innerHTML = "";
 
-      for (const category of categoryOrder) {
-        const chats = groupedChats[category];
-        if (chats.length === 0) continue;
+        const groupedChats = this.groupChatsByCategory();
+        const categoryOrder = ["Today", "Yesterday", "Last 7 Days", "Older"];
 
-        const categoryHeader = document.createElement("p");
-        categoryHeader.className = "category-header";
-        categoryHeader.textContent = category;
-        chatList.appendChild(categoryHeader);
+        for (const category of categoryOrder) {
+          const chats = groupedChats[category];
+          if (chats.length === 0) continue;
 
-        // const ul = document.createElement("ul");
+          const categoryHeader = document.createElement("p");
+          categoryHeader.className = "category-header";
+          categoryHeader.textContent = category;
+          chatList.appendChild(categoryHeader);
 
-        for (const chat of chats) {
-          const chatItem = new ChatSidebarItem(chat);
-          chatItem.addEventListener("click", () => {
-            this.dispatchEvent(
-              new CustomEvent("chat-selected", {
-                detail: { id: chatItem.id },
-                bubbles: true,
-                composed: true,
-              })
-            );
-          });
-          // ul.appendChild(chatItem);
-          chatList.appendChild(chatItem);
+          for (const chat of chats) {
+            const chatItem = new ChatSidebarItem(chat);
+
+            // Highlight current chat
+            if (chat.id === this._currentChatId) {
+              chatItem.classList.add("active");
+            }
+
+            chatItem.addEventListener("click", () => {
+              // Remove active class from all items
+              const allItems = chatList.querySelectorAll("chat-sidebar-item");
+              allItems.forEach((item) => item.classList.remove("active"));
+
+              // Add active class to clicked item
+              chatItem.classList.add("active");
+
+              this.dispatchEvent(
+                new CustomEvent("chat-selected", {
+                  detail: { id: chat.id },
+                  bubbles: true,
+                  composed: true,
+                })
+              );
+            });
+            chatList.appendChild(chatItem);
+          }
         }
       }
     }
   }
 }
 
-if (!customElements.get('chat-sidebar')) {
+if (!customElements.get("chat-sidebar")) {
   customElements.define("chat-sidebar", ChatSidebar);
 }
 
@@ -194,6 +230,6 @@ class ChatSidebarItem extends Component {
   }
 }
 
-if (!customElements.get('chat-sidebar-item')) {
+if (!customElements.get("chat-sidebar-item")) {
   customElements.define("chat-sidebar-item", ChatSidebarItem);
 }

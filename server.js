@@ -144,23 +144,6 @@ app.get("/api/auth/status", (c) => {
   });
 });
 
-app.get("/api/messages", async (c) => {
-  const auth = getAuth(c);
-
-  if (!auth?.userId) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  try {
-    const convexClient = await getConvexClient(auth);
-    const messages = await convexClient.query(api.tasks.get);
-    return c.json({ messages });
-  } catch (error) {
-    console.error("Error fetching messages:", error);
-    return c.json({ error: "Failed to fetch messages" }, 500);
-  }
-});
-
 // AI Settings API Routes
 app.get("/api/ai/has-valid-key", async (c) => {
   const auth = getAuth(c);
@@ -512,6 +495,165 @@ app.post("/api/ai/chat", async (c) => {
     }
 
     return c.json({ error: "Failed to process AI request" }, 500);
+  }
+});
+
+// Chat API endpoints
+app.get("/api/chats", async (c) => {
+  const auth = getAuth(c);
+  if (!auth?.userId) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const convexClient = await getConvexClient(auth);
+    const chats = await convexClient.query(api.chats.getUserChats);
+    return c.json({ chats });
+  } catch (error) {
+    console.error("Error fetching chats:", error);
+    return c.json({ error: "Failed to fetch chats" }, 500);
+  }
+});
+
+app.post("/api/chats", async (c) => {
+  const auth = getAuth(c);
+  if (!auth?.userId) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const { title } = await c.req.json();
+    const convexClient = await getConvexClient(auth);
+    const chatId = await convexClient.mutation(api.chats.createChat, {
+      title: title || "New Conversation",
+    });
+    return c.json({ chatId });
+  } catch (error) {
+    console.error("Error creating chat:", error);
+    return c.json({ error: "Failed to create chat" }, 500);
+  }
+});
+
+app.get("/api/chats/:chatId/messages", async (c) => {
+  const auth = getAuth(c);
+  if (!auth?.userId) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const chatId = c.req.param("chatId");
+    const convexClient = await getConvexClient(auth);
+    const messages = await convexClient.query(api.messages.getChatMessages, {
+      chatId: chatId,
+    });
+    return c.json({ messages });
+  } catch (error) {
+    console.error("Error fetching chat messages:", error);
+    return c.json({ error: "Failed to fetch messages" }, 500);
+  }
+});
+
+app.post("/api/chats/:chatId/messages", async (c) => {
+  const auth = getAuth(c);
+  if (!auth?.userId) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const chatId = c.req.param("chatId");
+    const { role, content, aiMetadata } = await c.req.json();
+    const convexClient = await getConvexClient(auth);
+    const messageId = await convexClient.mutation(api.messages.addMessage, {
+      chatId: chatId,
+      role,
+      content,
+      aiMetadata,
+    });
+    return c.json({ messageId });
+  } catch (error) {
+    console.error("Error adding message:", error);
+    return c.json({ error: "Failed to add message" }, 500);
+  }
+});
+
+app.patch("/api/chats/:chatId/title", async (c) => {
+  const auth = getAuth(c);
+  if (!auth?.userId) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const chatId = c.req.param("chatId");
+    const { title } = await c.req.json();
+    const convexClient = await getConvexClient(auth);
+    await convexClient.mutation(api.chats.updateChatTitle, {
+      chatId: chatId,
+      title,
+    });
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Error updating chat title:", error);
+    return c.json({ error: "Failed to update title" }, 500);
+  }
+});
+
+app.post("/api/chats/:chatId/generate-title", async (c) => {
+  const auth = getAuth(c);
+  if (!auth?.userId) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const chatId = c.req.param("chatId");
+    const { firstMessage } = await c.req.json();
+    const convexClient = await getConvexClient(auth);
+
+    // Generate title using AI
+    const result = await convexClient.action(
+      api.cryptoActions.generateChatTitle,
+      {
+        firstMessage,
+      }
+    );
+
+    if (result.success) {
+      // Update the chat title
+      await convexClient.mutation(api.chats.updateChatTitle, {
+        chatId: chatId,
+        title: result.title,
+      });
+    }
+
+    return c.json(result);
+  } catch (error) {
+    console.error("Error generating chat title:", error);
+    return c.json(
+      {
+        success: false,
+        error: "Failed to generate title",
+        title: "New Conversation",
+      },
+      500
+    );
+  }
+});
+
+app.delete("/api/chats/:chatId", async (c) => {
+  const auth = getAuth(c);
+  if (!auth?.userId) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const chatId = c.req.param("chatId");
+    const convexClient = await getConvexClient(auth);
+    await convexClient.mutation(api.chats.deleteChat, {
+      chatId: chatId,
+    });
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting chat:", error);
+    return c.json({ error: "Failed to delete chat" }, 500);
   }
 });
 

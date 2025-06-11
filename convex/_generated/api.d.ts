@@ -14,9 +14,10 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as aiKeys from "../aiKeys.js";
+import type * as chats from "../chats.js";
 import type * as cryptoActions from "../cryptoActions.js";
 import type * as lib_serverCrypto from "../lib/serverCrypto.js";
-import type * as tasks from "../tasks.js";
+import type * as messages from "../messages.js";
 import type * as usage from "../usage.js";
 
 /**
@@ -29,9 +30,10 @@ import type * as usage from "../usage.js";
  */
 declare const fullApi: ApiFromModules<{
   aiKeys: typeof aiKeys;
+  chats: typeof chats;
   cryptoActions: typeof cryptoActions;
   "lib/serverCrypto": typeof lib_serverCrypto;
-  tasks: typeof tasks;
+  messages: typeof messages;
   usage: typeof usage;
 }>;
 export declare const api: FilterApi<

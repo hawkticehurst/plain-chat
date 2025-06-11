@@ -2,11 +2,24 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-  tasks: defineTable({
+  // Chat conversations
+  chats: defineTable({
+    userId: v.string(),
+    title: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    isActive: v.optional(v.boolean()), // For soft delete
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_and_updated", ["userId", "updatedAt"]),
+
+  // Messages within chats
+  messages: defineTable({
+    chatId: v.id("chats"),
+    userId: v.string(),
     role: v.string(), // "prompt" or "response"
     content: v.string(),
-    userId: v.optional(v.string()),
-    createdAt: v.optional(v.number()), // Made optional for existing data
+    createdAt: v.number(),
     // AI-related fields for messages
     aiMetadata: v.optional(
       v.object({
@@ -21,6 +34,8 @@ export default defineSchema({
     ),
     isAIGenerated: v.optional(v.boolean()),
   })
+    .index("by_chat", ["chatId"])
+    .index("by_chat_and_created", ["chatId", "createdAt"])
     .index("by_user", ["userId"])
     .index("by_user_and_ai", ["userId", "isAIGenerated"]),
 

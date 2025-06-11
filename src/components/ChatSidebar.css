@@ -87,8 +87,8 @@ chat-sidebar-item:hover {
 }
 
 chat-sidebar-item.active {
-  background: var(--color-surface-raised);
-  border-color: var(--color-accent);
+  background: var(--color-primary-light) !important;
+  border-color: var(--color-primary) !important;
 }
 
 chat-sidebar-item .header {
@@ -103,6 +103,13 @@ chat-sidebar-item .title {
   font-size: 0.875rem;
   padding: 0;
   margin: 0;
+}
+
+chat-sidebar .loading {
+  padding: 1rem;
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
 }
 
 @media (max-width: 768px) {
