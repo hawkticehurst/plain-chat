@@ -88,6 +88,39 @@ export class App extends Component {
     `;
 
     this.innerHTML = String(template);
+
+    // Set up event listeners for chat interactions
+    const sidebar = this.querySelector("chat-sidebar");
+    const chatMain = this.querySelector("chat-main");
+
+    if (sidebar && chatMain) {
+      // Handle chat selection
+      sidebar.addEventListener("chat-selected", (event: Event) => {
+        const customEvent = event as CustomEvent;
+        const { id } = customEvent.detail;
+        (chatMain as any).loadChat(id);
+        (sidebar as any).setCurrentChat(id);
+      });
+
+      // Handle new chat request (don't create DB record yet)
+      sidebar.addEventListener("new-chat-requested", () => {
+        (chatMain as any).startNewChat();
+        (sidebar as any).setCurrentChat(null);
+      });
+
+      // Handle new chat creation from main (when sending first message)
+      chatMain.addEventListener("chat-created", (event: Event) => {
+        const customEvent = event as CustomEvent;
+        const { chatId } = customEvent.detail;
+        (sidebar as any).refreshChats();
+        (sidebar as any).setCurrentChat(chatId);
+      });
+
+      // Handle chat title updates
+      chatMain.addEventListener("chat-title-updated", () => {
+        (sidebar as any).refreshChats();
+      });
+    }
   }
 
   private async initializeClerk() {

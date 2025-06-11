@@ -400,3 +400,98 @@ export const performAICompletion = action({
     }
   },
 });
+
+/**
+ * Generate a chat title using AI based on the first message
+ */
+export const generateChatTitle = action({
+  args: {
+    firstMessage: v.string(),
+  },
+  handler: async (ctx, { firstMessage }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("User must be authenticated");
+    }
+
+    try {
+      // Get user's encrypted API key
+      const apiKeyRecord = await ctx.runQuery(
+        internal.aiKeys.getUserApiKeyRecord,
+        {
+          userId: identity.subject,
+        }
+      );
+      if (!apiKeyRecord) {
+        return {
+          success: false,
+          error: "No API key found",
+          title: "New Conversation",
+        };
+      }
+
+      // Decrypt the API key
+      const apiKey = decryptApiKey(apiKeyRecord.encryptedApiKey);
+
+      // Use a fast model for title generation
+      const titlePrompt = `Generate a concise, descriptive title (3-5 words max) for a conversation that starts with this message: "${firstMessage.slice(0, 200)}". Only return the title, nothing else.`;
+
+      // Make API request to OpenRouter with a fast model
+      const response = await fetch(
+        "https://openrouter.ai/api/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": process.env.SITE_URL || "https://localhost:3000",
+            "X-Title": "Chat App - Title Generation",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash-preview-05-20", // Fast, cheap model for titles
+            messages: [
+              {
+                role: "user",
+                content: titlePrompt,
+              },
+            ],
+            temperature: 0.3, // Lower temperature for more consistent titles
+            max_tokens: 20, // Short titles only
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        console.error("Title generation API error:", response.status);
+        return {
+          success: false,
+          error: `API error: ${response.status}`,
+          title: "New Conversation",
+        };
+      }
+
+      const data = await response.json();
+      const generatedTitle = data.choices?.[0]?.message?.content?.trim();
+
+      if (generatedTitle && generatedTitle.length > 0) {
+        return {
+          success: true,
+          title: generatedTitle.slice(0, 50), // Limit title length
+        };
+      } else {
+        return {
+          success: false,
+          error: "No title generated",
+          title: "New Conversation",
+        };
+      }
+    } catch (error: any) {
+      console.error("Error generating chat title:", error);
+      return {
+        success: false,
+        error: error.message || "Unknown error",
+        title: "New Conversation",
+      };
+    }
+  },
+});

@@ -132,7 +132,11 @@ src/
 
 convex/
 ├── schema.ts      # Database schema
-└── tasks.js       # Database functions
+├── chats.ts       # Chat management functions
+├── messages.ts    # Message management functions
+├── aiKeys.ts      # AI key management functions
+├── cryptoActions.ts # Secure server actions
+└── usage.ts       # Usage tracking functions
 
 server.js          # Hono server
 ```

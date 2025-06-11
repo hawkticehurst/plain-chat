@@ -14,71 +14,103 @@ export class ChatMain extends Component {
   private _loading = true;
   private _chatInput: ChatInput | null = null;
   private _chatMessages: ChatMessages | null = null;
+  private _currentChatId: string | null = null;
 
   constructor() {
     super();
-    this.loadMessages();
+    // Start with empty new chat state
+    this._loading = false;
+    this.startNewChat();
   }
 
-  private async loadMessages() {
+  public async loadChat(chatId: string | null) {
+    this._currentChatId = chatId;
+    this._loading = true;
+    this.render();
+
+    if (!chatId) {
+      // Show empty state for new chat
+      this._messages = [];
+      this._loading = false;
+      this.render();
+      return;
+    }
+
     try {
       const response = await authService.fetchWithAuth(
-        `${config.apiBaseUrl}/api/messages`
+        `${config.apiBaseUrl}/api/chats/${chatId}/messages`
       );
+
       if (response.ok) {
         const data = await response.json();
-
-        // Check if messages exist in the response
         if (data.messages && Array.isArray(data.messages)) {
-          // Convert Convex tasks to messages format
-          this._messages = data.messages.map((task: any) => ({
-            role: task.role || "response",
-            content: task.content || task.text || task.message || "No content",
+          this._messages = data.messages.map((msg: any) => ({
+            role: msg.role || "response",
+            content: msg.content || "No content",
+            timestamp: msg.createdAt,
           }));
         } else {
-          console.warn(
-            "No messages array found in API response, using welcome message"
-          );
-          this._messages = [
-            {
-              role: "response",
-              content:
-                "👋 Welcome to your AI chat assistant! Start a conversation by typing a message below. Configure your AI settings in the sidebar to customize your experience.",
-              timestamp: Date.now(),
-            },
-          ];
+          this._messages = [];
         }
       } else {
-        // Fallback to welcome message if not authenticated or error
+        console.error("Failed to load chat messages:", response.status);
         this._messages = [
           {
             role: "response",
             content:
-              "👋 Welcome to your AI chat assistant! Please sign in to start chatting.",
+              "❌ Failed to load chat messages. Please try refreshing the page.",
             timestamp: Date.now(),
           },
         ];
       }
     } catch (error) {
-      console.error("Error loading messages:", error);
-      // Fallback to sample data
+      console.error("Error loading chat messages:", error);
       this._messages = [
         {
           role: "response",
           content:
-            "❌ Unable to load messages. Please check your connection and try refreshing the page.",
+            "❌ Network error loading messages. Please check your connection.",
           timestamp: Date.now(),
         },
       ];
     } finally {
       this._loading = false;
-      await this.render();
+      this.render();
     }
+  }
+
+  public startNewChat() {
+    this._currentChatId = null;
+    this._messages = [];
+    this._loading = false;
+    this.render();
   }
 
   async render() {
     if (this._loading) {
       this.innerHTML = '<div class="loading">Loading messages...</div>';
+      return;
+    }
+
+    // Show empty state if no chat is selected
+    if (!this._currentChatId) {
+      this.innerHTML = `
+        <div class="empty-state">
+          <h2>Start a New Conversation</h2>
+          <p>Type your first message below to begin a new chat. Your conversation will be saved automatically.</p>
+        </div>
+      `;
+
+      // Still need to create the input for new chats
+      this._chatInput = new ChatInput();
+      this._chatInput.render();
+      this.appendChild(this._chatInput);
+
+      // Listen for send-message events from ChatInput
+      this._chatInput.addEventListener(
+        "send-message",
+        this._handleSendMessage.bind(this)
+      );
       return;
     }
 
@@ -105,7 +137,48 @@ export class ChatMain extends Component {
     const customEvent = event as CustomEvent;
     const { message } = customEvent.detail;
 
-    // Add user message to conversation
+    // If no chat is selected, create a new one first
+    if (!this._currentChatId) {
+      try {
+        const response = await authService.fetchWithAuth(
+          `${config.apiBaseUrl}/api/chats`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              title: "New Conversation",
+            }),
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          this._currentChatId = data.chatId;
+
+          // Re-render immediately to switch from empty state to chat interface
+          await this.render();
+
+          // Notify parent to update sidebar
+          this.dispatchEvent(
+            new CustomEvent("chat-created", {
+              detail: { chatId: this._currentChatId },
+              bubbles: true,
+              composed: true,
+            })
+          );
+        } else {
+          console.error("Failed to create new chat:", response.status);
+          return;
+        }
+      } catch (error) {
+        console.error("Error creating new chat:", error);
+        return;
+      }
+    }
+
+    // Add user message to conversation (local state)
     const userMessage: Message = {
       role: "prompt",
       content: message,
@@ -126,6 +199,29 @@ export class ChatMain extends Component {
 
     // Re-render to show the messages
     await this._updateMessages();
+
+    // Save user message to database
+    try {
+      await authService.fetchWithAuth(
+        `${config.apiBaseUrl}/api/chats/${this._currentChatId}/messages`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            role: "prompt",
+            content: message,
+          }),
+        }
+      );
+    } catch (error) {
+      console.error("Error saving user message:", error);
+    }
+
+    // Check if this is the first message and generate a title
+    const isFirstMessage =
+      this._messages.filter((m) => !m.isLoading).length === 1;
 
     try {
       // Send request to AI API
@@ -158,6 +254,31 @@ export class ChatMain extends Component {
           };
 
           this._messages.push(aiMessage);
+
+          // Save AI response to database
+          try {
+            await authService.fetchWithAuth(
+              `${config.apiBaseUrl}/api/chats/${this._currentChatId}/messages`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  role: "response",
+                  content: data.response,
+                  aiMetadata: data.metadata,
+                }),
+              }
+            );
+          } catch (error) {
+            console.error("Error saving AI message:", error);
+          }
+
+          // Generate title for first message (don't await to avoid blocking UI)
+          if (isFirstMessage) {
+            this._generateChatTitle(message);
+          }
         } else {
           // Add error message
           const errorMessage: Message = {
@@ -198,6 +319,41 @@ export class ChatMain extends Component {
     await this._updateMessages();
     if (this._chatInput) {
       this._chatInput.messageProcessed();
+    }
+  }
+
+  private async _generateChatTitle(firstMessage: string) {
+    if (!this._currentChatId) return;
+
+    try {
+      const response = await authService.fetchWithAuth(
+        `${config.apiBaseUrl}/api/chats/${this._currentChatId}/generate-title`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            firstMessage,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          // Notify parent to refresh sidebar with new title
+          this.dispatchEvent(
+            new CustomEvent("chat-title-updated", {
+              detail: { chatId: this._currentChatId, title: data.title },
+              bubbles: true,
+              composed: true,
+            })
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error generating chat title:", error);
     }
   }
 
