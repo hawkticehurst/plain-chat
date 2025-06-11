@@ -498,6 +498,298 @@ app.post("/api/ai/chat", async (c) => {
   }
 });
 
+// AI Chat Streaming API endpoint (SSE)
+app.post("/api/ai/chat/stream", async (c) => {
+  const auth = getAuth(c);
+  if (!auth?.userId) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const { message, conversation = [] } = await c.req.json();
+
+    if (!message) {
+      return c.json({ error: "Message is required" }, 400);
+    }
+
+    // Get authenticated Convex client
+    const convexClient = await getConvexClient(auth);
+
+    // Get user's AI preferences
+    const preferences = await convexClient.query(
+      api.aiKeys.getUserAIPreferences
+    );
+
+    // Handle model name migration from old to new
+    if (
+      preferences &&
+      preferences.defaultModel === "google/gemini-2.0-flash-exp"
+    ) {
+      preferences.defaultModel = "google/gemini-2.5-flash-preview-05-20";
+    }
+
+    const hasValidKey = await convexClient.query(api.aiKeys.hasValidApiKey);
+
+    if (!hasValidKey) {
+      return c.json(
+        {
+          error:
+            "No valid API key configured. Please set up your AI API key in Settings.",
+        },
+        400
+      );
+    }
+
+    // Get streaming preparation data
+    const streamData = await convexClient.action(
+      api.cryptoActions.performStreamingAICompletion,
+      {
+        message,
+        conversation: conversation.slice(-10), // Keep last 10 messages for context
+        preferences: preferences
+          ? {
+              defaultModel: preferences.defaultModel,
+              temperature: preferences.temperature,
+              maxTokens: preferences.maxTokens,
+              systemPrompt: preferences.systemPrompt,
+            }
+          : {
+              defaultModel: "google/gemini-2.5-flash-preview-05-20",
+              temperature: 0.7,
+              maxTokens: 2000,
+              systemPrompt: "",
+            },
+      }
+    );
+
+    if (!streamData.success) {
+      return c.json({ error: streamData.error }, 400);
+    }
+
+    // Set up SSE headers
+    c.header("Content-Type", "text/event-stream");
+    c.header("Cache-Control", "no-cache");
+    c.header("Connection", "keep-alive");
+    c.header("Access-Control-Allow-Origin", "*");
+    c.header("Access-Control-Allow-Headers", "Cache-Control");
+
+    // Create a readable stream for SSE
+    const stream = new ReadableStream({
+      async start(controller) {
+        let fullResponse = "";
+        let promptTokens = 0;
+        let completionTokens = 0;
+        let totalTokens = 0;
+        let streamFinished = false;
+
+        try {
+          // Make streaming request to OpenRouter
+          const response = await fetch(
+            "https://openrouter.ai/api/v1/chat/completions",
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${streamData.apiKey}`,
+                "Content-Type": "application/json",
+                "HTTP-Referer":
+                  process.env.SITE_URL || "https://localhost:3000",
+                "X-Title": "Chat App - Streaming",
+              },
+              body: JSON.stringify({
+                model: streamData.preferences.defaultModel,
+                messages: streamData.messages,
+                temperature: streamData.preferences.temperature,
+                max_tokens: streamData.preferences.maxTokens,
+                stream: true,
+              }),
+            }
+          );
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = `AI API error: ${
+              errorData.error?.message || `HTTP ${response.status}`
+            }`;
+
+            controller.enqueue(
+              `data: ${JSON.stringify({
+                type: "error",
+                error: errorMessage,
+                requestId: streamData.requestId,
+              })}\n\n`
+            );
+            controller.close();
+            return;
+          }
+
+          const reader = response.body?.getReader();
+          if (!reader) {
+            controller.enqueue(
+              `data: ${JSON.stringify({
+                type: "error",
+                error: "No response stream available",
+                requestId: streamData.requestId,
+              })}\n\n`
+            );
+            controller.close();
+            return;
+          }
+
+          const decoder = new TextDecoder();
+          let contentBuffer = "";
+          let lastSentTime = Date.now();
+          const BATCH_INTERVAL = 75; // Send batched content every 75ms
+
+          while (true) {
+            const { done, value } = await reader.read();
+
+            if (done) {
+              streamFinished = true;
+              break;
+            }
+
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split("\n");
+
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                const data = line.slice(6);
+
+                if (data === "[DONE]") {
+                  streamFinished = true;
+                  break;
+                }
+
+                try {
+                  const parsed = JSON.parse(data);
+                  const choice = parsed.choices?.[0];
+
+                  if (choice?.delta?.content) {
+                    const content = choice.delta.content;
+                    fullResponse += content;
+                    contentBuffer += content;
+
+                    // Send batched content to reduce jitter
+                    const now = Date.now();
+                    if (
+                      now - lastSentTime >= BATCH_INTERVAL ||
+                      contentBuffer.length >= 10
+                    ) {
+                      controller.enqueue(
+                        `data: ${JSON.stringify({
+                          type: "content",
+                          content: contentBuffer,
+                          requestId: streamData.requestId,
+                        })}\n\n`
+                      );
+                      contentBuffer = "";
+                      lastSentTime = now;
+                    }
+                  }
+
+                  // Track usage data
+                  if (parsed.usage) {
+                    promptTokens = parsed.usage.prompt_tokens || 0;
+                    completionTokens = parsed.usage.completion_tokens || 0;
+                    totalTokens = parsed.usage.total_tokens || 0;
+                  }
+                } catch (parseError) {
+                  // Ignore parse errors for individual chunks
+                  continue;
+                }
+              }
+            }
+
+            if (streamFinished) break;
+          }
+
+          // Send any remaining buffered content
+          if (contentBuffer.length > 0) {
+            controller.enqueue(
+              `data: ${JSON.stringify({
+                type: "content",
+                content: contentBuffer,
+                requestId: streamData.requestId,
+              })}\n\n`
+            );
+          }
+
+          // Send completion message
+          controller.enqueue(
+            `data: ${JSON.stringify({
+              type: "complete",
+              content: fullResponse,
+              usage: {
+                promptTokens,
+                completionTokens,
+                totalTokens,
+                cost: totalTokens * 0.000001, // Rough estimate
+              },
+              requestId: streamData.requestId,
+            })}\n\n`
+          );
+
+          // Record successful usage
+          try {
+            await convexClient.mutation(api.usage.recordUsage, {
+              model: streamData.preferences.defaultModel,
+              promptTokens,
+              completionTokens,
+              totalTokens,
+              cost: totalTokens * 0.000001,
+              success: true,
+              requestId: streamData.requestId,
+            });
+          } catch (usageError) {
+            console.error("Error recording usage:", usageError);
+          }
+        } catch (error) {
+          console.error("Streaming error:", error);
+
+          controller.enqueue(
+            `data: ${JSON.stringify({
+              type: "error",
+              error: error.message || "Streaming failed",
+              requestId: streamData.requestId,
+            })}\n\n`
+          );
+
+          // Record failed usage
+          try {
+            await convexClient.mutation(api.usage.recordUsage, {
+              model: streamData.preferences.defaultModel,
+              promptTokens: 0,
+              completionTokens: 0,
+              totalTokens: 0,
+              cost: 0,
+              success: false,
+              errorMessage: error.message || "Streaming failed",
+              requestId: streamData.requestId,
+            });
+          } catch (usageError) {
+            console.error("Error recording failed usage:", usageError);
+          }
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Cache-Control",
+      },
+    });
+  } catch (error) {
+    console.error("Error in streaming AI chat:", error);
+    return c.json({ error: "Failed to start streaming" }, 500);
+  }
+});
+
 // Chat API endpoints
 app.get("/api/chats", async (c) => {
   const auth = getAuth(c);
