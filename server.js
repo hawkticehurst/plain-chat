@@ -1,13 +1,13 @@
-import { ConvexHttpClient } from "convex/browser";
-import { api } from "./convex/_generated/api.js";
-import * as dotenv from "dotenv";
-import { clerkMiddleware, getAuth } from "@hono/clerk-auth";
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { cors } from "hono/cors";
 import { serveStatic } from "hono/serve-static";
+import { clerkMiddleware, getAuth } from "@hono/clerk-auth";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "./convex/_generated/api.js";
 import { readFileSync } from "fs";
 import { join } from "path";
+import * as dotenv from "dotenv";
 
 dotenv.config({ path: ".env.local" });
 
@@ -25,21 +25,20 @@ app.use(
   })
 );
 
-// Apply Clerk middleware only if environment variables are configured
-const hasClerkConfig =
-  process.env.CLERK_SECRET_KEY && process.env.CLERK_PUBLISHABLE_KEY;
-
-if (hasClerkConfig) {
-  app.use("*", clerkMiddleware());
-  console.log("✅ Clerk authentication enabled");
-} else {
-  console.log(
-    "⚠️  Clerk authentication disabled - missing environment variables"
+// Check for required Clerk environment variables
+if (!process.env.CLERK_SECRET_KEY || !process.env.CLERK_PUBLISHABLE_KEY) {
+  console.error("❌ Missing required Clerk environment variables:");
+  console.error(
+    "   CLERK_SECRET_KEY and CLERK_PUBLISHABLE_KEY must be set in .env.local"
   );
-  console.log(
-    "   Set CLERK_SECRET_KEY and CLERK_PUBLISHABLE_KEY in .env.local to enable auth"
+  console.error(
+    "   Please configure these variables before starting the server."
   );
+  process.exit(1);
 }
+
+// Apply Clerk middleware
+app.use("*", clerkMiddleware());
 
 // Serve static files from the appropriate directory
 const isProduction = process.env.NODE_ENV === "production";
@@ -77,7 +76,7 @@ if (isProduction) {
             <h3>✅ Server Status</h3>
             <p>✅ Backend API server is running</p>
             <p>✅ CORS configured for development</p>
-            <p>✅ Authentication: ${hasClerkConfig ? "Enabled" : "Demo Mode"}</p>
+            <p>✅ Authentication: Enabled</p>
             <p>✅ Database: ${process.env.CONVEX_URL ? "Connected to Convex" : "Demo Mode"}</p>
           </div>
 
@@ -113,15 +112,6 @@ if (isProduction) {
 
 // API Routes
 app.get("/api/auth/status", (c) => {
-  if (!hasClerkConfig) {
-    return c.json({
-      isAuthenticated: false,
-      userId: null,
-      message:
-        "Authentication is disabled - Configure Clerk environment variables to enable.",
-    });
-  }
-
   const auth = getAuth(c);
 
   return c.json({
@@ -131,31 +121,6 @@ app.get("/api/auth/status", (c) => {
 });
 
 app.get("/api/messages", async (c) => {
-  if (!hasClerkConfig) {
-    // Return demo data when auth is disabled
-    try {
-      const messages = await client.query(api.tasks.get);
-      return c.json({ messages });
-    } catch (error) {
-      console.error("Error fetching messages:", error);
-      // Return demo messages if Convex is also not configured
-      return c.json({
-        messages: [
-          {
-            role: "response",
-            content:
-              "Welcome to the chat app! Configure your environment variables to enable full functionality.",
-          },
-          {
-            role: "response",
-            content:
-              "Demo mode: Authentication and real-time sync are currently disabled.",
-          },
-        ],
-      });
-    }
-  }
-
   const auth = getAuth(c);
 
   if (!auth?.userId) {
@@ -173,11 +138,6 @@ app.get("/api/messages", async (c) => {
 
 // AI Settings API Routes
 app.get("/api/ai/has-valid-key", async (c) => {
-  if (!hasClerkConfig) {
-    // Demo mode - return false for now
-    return c.json({ hasValidKey: false });
-  }
-
   const auth = getAuth(c);
   if (!auth?.userId) {
     return c.json({ error: "Unauthorized" }, 401);
@@ -193,10 +153,6 @@ app.get("/api/ai/has-valid-key", async (c) => {
 });
 
 app.get("/api/ai/key-status", async (c) => {
-  if (!hasClerkConfig) {
-    return c.json({ error: "Authentication required" }, 401);
-  }
-
   const auth = getAuth(c);
   if (!auth?.userId) {
     return c.json({ error: "Unauthorized" }, 401);
@@ -212,17 +168,6 @@ app.get("/api/ai/key-status", async (c) => {
 });
 
 app.get("/api/ai/preferences", async (c) => {
-  if (!hasClerkConfig) {
-    // Demo mode - return default preferences
-    return c.json({
-      defaultModel: "google/gemini-2.0-flash-exp",
-      temperature: 0.7,
-      maxTokens: 2000,
-      enableStreaming: true,
-      systemPrompt: "",
-    });
-  }
-
   const auth = getAuth(c);
   if (!auth?.userId) {
     return c.json({ error: "Unauthorized" }, 401);
@@ -246,10 +191,6 @@ app.get("/api/ai/preferences", async (c) => {
 });
 
 app.post("/api/ai/preferences", async (c) => {
-  if (!hasClerkConfig) {
-    return c.json({ error: "Authentication required" }, 401);
-  }
-
   const auth = getAuth(c);
   if (!auth?.userId) {
     return c.json({ error: "Unauthorized" }, 401);
@@ -266,65 +207,15 @@ app.post("/api/ai/preferences", async (c) => {
 });
 
 app.post("/api/ai/test-key", async (c) => {
+  const auth = getAuth(c);
+  if (!auth?.userId) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
   try {
     const { apiKey } = await c.req.json();
     if (!apiKey) {
       return c.json({ valid: false, error: "API key required" });
-    }
-
-    // In demo mode, we can still test API keys directly without Convex
-    if (!hasClerkConfig) {
-      // Validate format first
-      const validateOpenRouterKeyFormat = (key) => {
-        const pattern = /^sk-or-[A-Za-z0-9+/=_-]{20,}$/;
-        return pattern.test(key) && key.length >= 32;
-      };
-
-      if (!validateOpenRouterKeyFormat(apiKey)) {
-        return c.json({ valid: false, error: "Invalid API key format" });
-      }
-
-      // Test the key directly with OpenRouter
-      try {
-        const response = await fetch(
-          "https://openrouter.ai/api/v1/chat/completions",
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-              "HTTP-Referer": process.env.SITE_URL || "https://localhost:3000",
-              "X-Title": "Chat App",
-            },
-            body: JSON.stringify({
-              model: "openai/gpt-3.5-turbo",
-              messages: [{ role: "user", content: "Hello" }],
-              max_tokens: 5,
-            }),
-          }
-        );
-
-        if (response.ok) {
-          return c.json({ valid: true });
-        } else {
-          const errorData = await response.json();
-          return c.json({
-            valid: false,
-            error: errorData.error?.message || `HTTP ${response.status}`,
-          });
-        }
-      } catch (fetchError) {
-        return c.json({
-          valid: false,
-          error: fetchError.message || "Network error",
-        });
-      }
-    }
-
-    // Authenticated mode - use Convex action
-    const auth = getAuth(c);
-    if (!auth?.userId) {
-      return c.json({ error: "Unauthorized" }, 401);
     }
 
     const result = await client.action(api.cryptoActions.testApiKey, {
@@ -338,36 +229,15 @@ app.post("/api/ai/test-key", async (c) => {
 });
 
 app.post("/api/ai/set-key", async (c) => {
+  const auth = getAuth(c);
+  if (!auth?.userId) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
   try {
     const { apiKey } = await c.req.json();
     if (!apiKey) {
       return c.json({ error: "API key required" }, 400);
-    }
-
-    // In demo mode, we can't actually store the key, but we can validate it
-    if (!hasClerkConfig) {
-      // Just validate the format and return success for demo
-      const validateOpenRouterKeyFormat = (key) => {
-        const pattern = /^sk-or-[A-Za-z0-9+/=_-]{20,}$/;
-        return pattern.test(key) && key.length >= 32;
-      };
-
-      if (!validateOpenRouterKeyFormat(apiKey)) {
-        return c.json({ error: "Invalid API key format" }, 400);
-      }
-
-      // In demo mode, we simulate saving but warn the user
-      return c.json({ 
-        success: true, 
-        demo: true,
-        message: "Demo mode: API key validated but not permanently stored. Enable authentication to save keys securely."
-      });
-    }
-
-    // Authenticated mode - actually store the key
-    const auth = getAuth(c);
-    if (!auth?.userId) {
-      return c.json({ error: "Unauthorized" }, 401);
     }
 
     await client.action(api.cryptoActions.setUserApiKey, {
@@ -475,44 +345,13 @@ app.get("/api/usage/monthly", async (c) => {
 // AI Chat API endpoint
 app.post("/api/ai/chat", async (c) => {
   const auth = getAuth(c);
-  
-  // In demo mode, allow chat but use demo responses
-  if (!hasClerkConfig) {
-    try {
-      const { message, conversation = [] } = await c.req.json();
-      
-      // Simple demo AI response
-      const demoResponses = [
-        "This is a demo response! Configure your AI API key in Settings to use real AI.",
-        "I'm a demo AI assistant. Set up your API key to unlock my full potential!",
-        "Demo mode active. Your message was: '" + message + "' - Configure AI settings for real responses.",
-        "Hello! This is a simulated response. Enable authentication and configure your AI API key for real conversations.",
-      ];
-      
-      const response = demoResponses[Math.floor(Math.random() * demoResponses.length)];
-      
-      return c.json({
-        response,
-        usage: {
-          promptTokens: 10,
-          completionTokens: 20,
-          totalTokens: 30,
-          cost: 0.0001
-        }
-      });
-    } catch (error) {
-      console.error("Error in demo chat:", error);
-      return c.json({ error: "Failed to process demo chat" }, 500);
-    }
-  }
-
   if (!auth?.userId) {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
   try {
     const { message, conversation = [] } = await c.req.json();
-    
+
     if (!message) {
       return c.json({ error: "Message is required" }, 400);
     }
@@ -520,9 +359,15 @@ app.post("/api/ai/chat", async (c) => {
     // Get user's AI preferences and API key
     const preferences = await client.query(api.aiKeys.getUserAIPreferences);
     const hasValidKey = await client.query(api.aiKeys.hasValidApiKey);
-    
+
     if (!hasValidKey) {
-      return c.json({ error: "No valid API key configured. Please set up your AI API key in Settings." }, 400);
+      return c.json(
+        {
+          error:
+            "No valid API key configured. Please set up your AI API key in Settings.",
+        },
+        400
+      );
     }
 
     // Use the server-side AI completion action
@@ -533,20 +378,23 @@ app.post("/api/ai/chat", async (c) => {
         defaultModel: "google/gemini-2.0-flash-exp",
         temperature: 0.7,
         maxTokens: 2000,
-        systemPrompt: ""
-      }
+        systemPrompt: "",
+      },
     });
 
     // Record usage if successful
     if (result.success && result.usage) {
       await client.mutation(api.usage.recordUsage, {
-        model: result.model || preferences?.defaultModel || "google/gemini-2.0-flash-exp",
+        model:
+          result.model ||
+          preferences?.defaultModel ||
+          "google/gemini-2.0-flash-exp",
         promptTokens: result.usage.promptTokens || 0,
         completionTokens: result.usage.completionTokens || 0,
         totalTokens: result.usage.totalTokens || 0,
         cost: result.usage.cost || 0,
         success: true,
-        requestId: result.requestId
+        requestId: result.requestId,
       });
     } else if (!result.success) {
       // Record failed usage
@@ -558,14 +406,14 @@ app.post("/api/ai/chat", async (c) => {
         cost: 0,
         success: false,
         errorMessage: result.error,
-        requestId: result.requestId
+        requestId: result.requestId,
       });
     }
 
     return c.json(result);
   } catch (error) {
     console.error("Error in AI chat:", error);
-    
+
     // Record failed usage for unexpected errors
     try {
       await client.mutation(api.usage.recordUsage, {
@@ -575,12 +423,12 @@ app.post("/api/ai/chat", async (c) => {
         totalTokens: 0,
         cost: 0,
         success: false,
-        errorMessage: error.message || "Internal server error"
+        errorMessage: error.message || "Internal server error",
       });
     } catch (usageError) {
       console.error("Error recording failed usage:", usageError);
     }
-    
+
     return c.json({ error: "Failed to process AI request" }, 500);
   }
 });

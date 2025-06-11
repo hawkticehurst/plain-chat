@@ -42,7 +42,8 @@ export class ChatMain extends Component {
           this._messages = [
             {
               role: "response",
-              content: "👋 Welcome to your AI chat assistant! Start a conversation by typing a message below. Configure your AI settings in the sidebar to customize your experience.",
+              content:
+                "👋 Welcome to your AI chat assistant! Start a conversation by typing a message below. Configure your AI settings in the sidebar to customize your experience.",
               timestamp: Date.now(),
             },
           ];
@@ -52,7 +53,8 @@ export class ChatMain extends Component {
         this._messages = [
           {
             role: "response",
-            content: "👋 Welcome to your AI chat assistant! In demo mode, you'll get simulated responses. Sign in and configure your API key in Settings for real AI conversations.",
+            content:
+              "👋 Welcome to your AI chat assistant! Please sign in to start chatting.",
             timestamp: Date.now(),
           },
         ];
@@ -63,7 +65,8 @@ export class ChatMain extends Component {
       this._messages = [
         {
           role: "response",
-          content: "❌ Unable to load messages. Please check your connection and try refreshing the page.",
+          content:
+            "❌ Unable to load messages. Please check your connection and try refreshing the page.",
           timestamp: Date.now(),
         },
       ];
@@ -92,22 +95,25 @@ export class ChatMain extends Component {
     this.insert(this, this._chatInput, null);
 
     // Listen for send-message events from ChatInput
-    this._chatInput.addEventListener("send-message", this._handleSendMessage.bind(this));
+    this._chatInput.addEventListener(
+      "send-message",
+      this._handleSendMessage.bind(this)
+    );
   }
 
   private async _handleSendMessage(event: Event) {
     const customEvent = event as CustomEvent;
     const { message } = customEvent.detail;
-    
+
     // Add user message to conversation
     const userMessage: Message = {
       role: "prompt",
       content: message,
       timestamp: Date.now(),
     };
-    
+
     this._messages.push(userMessage);
-    
+
     // Add loading message for AI response
     const loadingMessage: Message = {
       role: "response",
@@ -115,12 +121,12 @@ export class ChatMain extends Component {
       timestamp: Date.now(),
       isLoading: true,
     };
-    
+
     this._messages.push(loadingMessage);
-    
+
     // Re-render to show the messages
     await this._updateMessages();
-    
+
     try {
       // Send request to AI API
       const response = await authService.fetchWithAuth(
@@ -132,7 +138,7 @@ export class ChatMain extends Component {
           },
           body: JSON.stringify({
             message,
-            conversation: this._messages.slice(-10).filter(m => !m.isLoading), // Send last 10 non-loading messages
+            conversation: this._messages.slice(-10).filter((m) => !m.isLoading), // Send last 10 non-loading messages
           }),
         }
       );
@@ -142,7 +148,7 @@ export class ChatMain extends Component {
 
       if (response.ok) {
         const data = await response.json();
-        
+
         if (data.success) {
           // Add AI response
           const aiMessage: Message = {
@@ -150,7 +156,7 @@ export class ChatMain extends Component {
             content: data.response,
             timestamp: Date.now(),
           };
-          
+
           this._messages.push(aiMessage);
         } else {
           // Add error message
@@ -159,7 +165,7 @@ export class ChatMain extends Component {
             content: `❌ Error: ${data.error}`,
             timestamp: Date.now(),
           };
-          
+
           this._messages.push(errorMessage);
         }
       } else {
@@ -169,7 +175,7 @@ export class ChatMain extends Component {
           content: `❌ Failed to send message. Please try again.`,
           timestamp: Date.now(),
         };
-        
+
         this._messages.push(errorMessage);
       }
     } catch (error) {
@@ -177,17 +183,17 @@ export class ChatMain extends Component {
       if (this._messages[this._messages.length - 1]?.isLoading) {
         this._messages.pop();
       }
-      
+
       // Add error message
       const errorMessage: Message = {
         role: "response",
         content: `❌ Network error. Please check your connection and try again.`,
         timestamp: Date.now(),
       };
-      
+
       this._messages.push(errorMessage);
     }
-    
+
     // Re-render with final messages and enable input
     await this._updateMessages();
     if (this._chatInput) {
@@ -203,6 +209,6 @@ export class ChatMain extends Component {
   }
 }
 
-if (!customElements.get('chat-main')) {
+if (!customElements.get("chat-main")) {
   customElements.define("chat-main", ChatMain);
 }

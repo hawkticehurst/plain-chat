@@ -124,21 +124,6 @@ chat-app {
   font-size: 18px;
 }
 
-.demo-banner {
-  background: linear-gradient(90deg, #007aff, #00c2ff);
-  color: white;
-  padding: 0.75rem;
-  text-align: center;
-  font-weight: 500;
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-}
-
-.demo-banner p {
-  margin: 0;
-}
-
 @media (max-width: 768px) {
   chat-app {
     flex-direction: column;

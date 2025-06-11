@@ -45,53 +45,6 @@ export class App extends Component {
       return;
     }
 
-    // Check if this is demo mode (auth disabled)
-    const isDemoMode = (this._authStatus as any).message?.includes(
-      "Authentication is disabled"
-    );
-
-    if (isDemoMode) {
-      // Show demo mode - skip authentication and show the appropriate page
-      if (this._currentRoute === "/ai-settings") {
-        const template = html`
-          <div class="demo-banner">
-            <p>🧪 Demo Mode - Authentication disabled</p>
-          </div>
-          <div class="single-page-container">
-            <ai-settings></ai-settings>
-          </div>
-        `;
-        this.innerHTML = String(template);
-        return;
-      }
-
-      if (this._currentRoute === "/usage") {
-        const template = html`
-          <div class="demo-banner">
-            <p>🧪 Demo Mode - Authentication disabled</p>
-          </div>
-          <div class="single-page-container">
-            <usage-dashboard></usage-dashboard>
-          </div>
-        `;
-        this.innerHTML = String(template);
-        return;
-      }
-
-      // Default chat interface
-      const template = html`
-        <div class="demo-banner">
-          <p>🧪 Demo Mode - Authentication disabled</p>
-        </div>
-        <div class="chat-app-container">
-          <chat-sidebar></chat-sidebar>
-          <chat-main></chat-main>
-        </div>
-      `;
-      this.innerHTML = String(template);
-      return;
-    }
-
     if (!this._authStatus.isAuthenticated) {
       const template = html`
         <div class="auth-required">
@@ -178,6 +131,6 @@ export class App extends Component {
   }
 }
 
-if (!customElements.get('chat-app')) {
+if (!customElements.get("chat-app")) {
   customElements.define("chat-app", App);
 }
