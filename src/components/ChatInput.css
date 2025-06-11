@@ -45,6 +45,11 @@ chat-input .input::placeholder {
   color: var(--color-text-secondary);
 }
 
+chat-input .input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 chat-input .actions {
   display: flex;
   gap: 0.375rem;
@@ -74,6 +79,11 @@ chat-input .attach-btn {
 chat-input .attach-btn:hover {
   background: var(--color-surface-raised);
   color: var(--color-text-primary);
+}
+
+chat-input .attach-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 chat-input .send-btn {

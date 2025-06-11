@@ -4,17 +4,27 @@
 @import "./components/ChatMessage.css";
 @import "./components/ChatMessages.css";
 @import "./components/ChatInput.css";
+@import "./components/AISettings.css";
+@import "./components/UsageDashboard.css";
 
 :root {
   /* Base colors */
   --color-primary: #646cff;
   --color-primary-hover: #535bf2;
+  --color-primary-light: rgba(100, 108, 255, 0.1);
   --color-accent: #007aff;
   --color-success: #34c759;
+  --color-success-light: rgba(52, 199, 89, 0.1);
+  --color-error: #ff3b30;
+  --color-error-light: rgba(255, 59, 48, 0.1);
+  --color-info: #5856d6;
+  --color-secondary: #8e8e93;
 
   /* Text colors */
+  --color-text: rgba(255, 255, 255, 0.87);
   --color-text-primary: rgba(255, 255, 255, 0.87);
   --color-text-secondary: #8e8e93;
+  --color-text-muted: rgba(255, 255, 255, 0.6);
   --color-text-inverse: #1a1a1a;
 
   /* Background colors */
@@ -69,6 +79,13 @@ chat-app {
   width: 100%;
 }
 
+.single-page-container {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  background: var(--color-background);
+}
+
 .loading {
   display: flex;
   align-items: center;
@@ -105,21 +122,6 @@ chat-app {
   height: 100vh;
   color: #ff6b6b;
   font-size: 18px;
-}
-
-.demo-banner {
-  background: linear-gradient(90deg, #007aff, #00c2ff);
-  color: white;
-  padding: 0.75rem;
-  text-align: center;
-  font-weight: 500;
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-}
-
-.demo-banner p {
-  margin: 0;
 }
 
 @media (max-width: 768px) {

@@ -95,11 +95,37 @@ export class ChatSidebar extends Component {
     const template = html`
       <section class="header">
         <button class="new-chat-btn">New Chat</button>
+        <button class="ai-settings-btn">AI Settings</button>
+        <button class="usage-dashboard-btn">Usage Dashboard</button>
       </section>
       <section class="chat-list"></section>
     `;
 
     this.innerHTML = String(template);
+
+    // Add event listeners
+    const newChatBtn = this.querySelector(".new-chat-btn");
+    const aiSettingsBtn = this.querySelector(".ai-settings-btn");
+    const usageDashboardBtn = this.querySelector(".usage-dashboard-btn");
+
+    if (newChatBtn) {
+      newChatBtn.addEventListener("click", () => {
+        // Handle new chat creation
+        console.log("New chat clicked");
+      });
+    }
+
+    if (aiSettingsBtn) {
+      aiSettingsBtn.addEventListener("click", () => {
+        window.location.hash = "#/ai-settings";
+      });
+    }
+
+    if (usageDashboardBtn) {
+      usageDashboardBtn.addEventListener("click", () => {
+        window.location.hash = "#/usage";
+      });
+    }
 
     const chatList = this.querySelector(".chat-list");
     if (chatList) {
@@ -136,7 +162,9 @@ export class ChatSidebar extends Component {
   }
 }
 
-customElements.define("chat-sidebar", ChatSidebar);
+if (!customElements.get('chat-sidebar')) {
+  customElements.define("chat-sidebar", ChatSidebar);
+}
 
 class ChatSidebarItem extends Component {
   private _id: Signal<string>;
@@ -166,4 +194,6 @@ class ChatSidebarItem extends Component {
   }
 }
 
-customElements.define("chat-sidebar-item", ChatSidebarItem);
+if (!customElements.get('chat-sidebar-item')) {
+  customElements.define("chat-sidebar-item", ChatSidebarItem);
+}

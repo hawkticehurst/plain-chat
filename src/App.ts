@@ -2,14 +2,35 @@ import { Component, html, authService } from "./lib/index";
 import type { AuthStatus } from "./lib/index";
 import "./components/ChatSidebar";
 import "./components/ChatMain";
+import "./components/AISettings";
+import "./components/UsageDashboard";
 
 export class App extends Component {
   private _authStatus: AuthStatus = { isAuthenticated: false, userId: null };
   private _loading = true;
+  private _currentRoute = "";
 
   constructor() {
     super();
     this.checkAuthStatus();
+    this._setupRouting();
+  }
+
+  private _setupRouting() {
+    // Listen for hash changes
+    window.addEventListener("hashchange", () => {
+      this._handleRouteChange();
+    });
+
+    // Handle initial route
+    this._handleRouteChange();
+  }
+
+  private _handleRouteChange() {
+    this._currentRoute = window.location.hash.slice(1) || "/";
+    if (!this._loading) {
+      this.render();
+    }
   }
 
   private async checkAuthStatus() {
@@ -21,26 +42,6 @@ export class App extends Component {
   render() {
     if (this._loading) {
       this.innerHTML = '<div class="loading">Loading...</div>';
-      return;
-    }
-
-    // Check if this is demo mode (auth disabled)
-    const isDemoMode = (this._authStatus as any).message?.includes(
-      "Authentication is disabled"
-    );
-
-    if (isDemoMode) {
-      // Show demo mode - skip authentication and show the chat interface
-      const template = html`
-        <div class="demo-banner">
-          <p>🧪 Demo Mode - Authentication disabled</p>
-        </div>
-        <div class="chat-app-container">
-          <chat-sidebar></chat-sidebar>
-          <chat-main></chat-main>
-        </div>
-      `;
-      this.innerHTML = String(template);
       return;
     }
 
@@ -57,6 +58,28 @@ export class App extends Component {
       return;
     }
 
+    // Authenticated user - handle routing
+    if (this._currentRoute === "/ai-settings") {
+      const template = html`
+        <div class="single-page-container">
+          <ai-settings></ai-settings>
+        </div>
+      `;
+      this.innerHTML = String(template);
+      return;
+    }
+
+    if (this._currentRoute === "/usage") {
+      const template = html`
+        <div class="single-page-container">
+          <usage-dashboard></usage-dashboard>
+        </div>
+      `;
+      this.innerHTML = String(template);
+      return;
+    }
+
+    // Default chat interface
     const template = html`
       <div class="chat-app-container">
         <chat-sidebar></chat-sidebar>
@@ -108,4 +131,6 @@ export class App extends Component {
   }
 }
 
-customElements.define("chat-app", App);
+if (!customElements.get("chat-app")) {
+  customElements.define("chat-app", App);
+}

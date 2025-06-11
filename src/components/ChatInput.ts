@@ -1,6 +1,8 @@
 import { Component, html } from "../lib/index";
 
 export class ChatInput extends Component {
+  private _isLoading = false;
+
   constructor() {
     super();
   }
@@ -16,12 +18,15 @@ export class ChatInput extends Component {
           class="input"
           placeholder="Type your message here..."
           rows="1"
+          ${this._isLoading ? 'disabled' : ''}
         ></textarea>
         <div class="actions">
-          <button class="attach-btn" type="button" title="Attach file">
+          <button class="attach-btn" type="button" title="Attach file" ${this._isLoading ? 'disabled' : ''}>
             📎
           </button>
-          <button class="send-btn" type="button" title="Send message">➤</button>
+          <button class="send-btn" type="button" title="Send message" ${this._isLoading ? 'disabled' : ''}>
+            ${this._isLoading ? '⏳' : '➤'}
+          </button>
         </div>
       </div>
     `;
@@ -55,15 +60,43 @@ export class ChatInput extends Component {
     }
   }
 
-  private _handleSend() {
+  private async _handleSend() {
     const textarea = this.querySelector(".input") as HTMLTextAreaElement;
-    if (textarea && textarea.value.trim()) {
-      // TODO: Dispatch custom event with message content
-      console.log("Sending message:", textarea.value);
-      textarea.value = "";
-      textarea.style.height = "auto";
+    if (!textarea || !textarea.value.trim() || this._isLoading) {
+      return;
     }
+
+    const message = textarea.value.trim();
+    textarea.value = "";
+    textarea.style.height = "auto";
+
+    try {
+      this._isLoading = true;
+      this.render(); // Re-render to show loading state
+
+      // Dispatch event to ChatMain to handle the AI conversation
+      this.dispatchEvent(
+        new CustomEvent("send-message", {
+          detail: { message },
+          bubbles: true,
+          composed: true,
+        })
+      );
+    } catch (error) {
+      console.error("Error sending message:", error);
+      // Re-enable input on error
+      this._isLoading = false;
+      this.render();
+    }
+  }
+
+  // Method to be called by parent when message processing is complete
+  public messageProcessed() {
+    this._isLoading = false;
+    this.render();
   }
 }
 
-customElements.define("chat-input", ChatInput);
+if (!customElements.get('chat-input')) {
+  customElements.define("chat-input", ChatInput);
+}

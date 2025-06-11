@@ -79,5 +79,8 @@ export class RouteComponent extends HTMLElement {
   }
 }
 
-export const registerRouteComponent = () =>
-  customElements.define("x-route", RouteComponent);
+export const registerRouteComponent = () => {
+  if (!customElements.get('x-route')) {
+    customElements.define("x-route", RouteComponent);
+  }
+};
