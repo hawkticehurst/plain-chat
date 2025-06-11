@@ -14,6 +14,30 @@ dotenv.config({ path: ".env.local" });
 const app = new Hono();
 const client = new ConvexHttpClient(process.env["CONVEX_URL"]);
 
+// Helper function to create authenticated Convex client
+async function getAuthenticatedConvexClient(auth) {
+  if (!auth?.userId) {
+    throw new Error("User not authenticated");
+  }
+
+  const token = await auth.getToken({ template: "convex" });
+  if (!token) {
+    throw new Error("Failed to get authentication token");
+  }
+
+  const authenticatedClient = new ConvexHttpClient(process.env["CONVEX_URL"]);
+  authenticatedClient.setAuth(token);
+  return authenticatedClient;
+}
+
+// Helper function to get either authenticated or regular client based on need
+async function getConvexClient(auth, requireAuth = true) {
+  if (requireAuth || auth?.userId) {
+    return await getAuthenticatedConvexClient(auth);
+  }
+  return client;
+}
+
 // Enable CORS for development
 app.use(
   "*",
@@ -128,7 +152,8 @@ app.get("/api/messages", async (c) => {
   }
 
   try {
-    const messages = await client.query(api.tasks.get);
+    const convexClient = await getConvexClient(auth);
+    const messages = await convexClient.query(api.tasks.get);
     return c.json({ messages });
   } catch (error) {
     console.error("Error fetching messages:", error);
@@ -144,7 +169,8 @@ app.get("/api/ai/has-valid-key", async (c) => {
   }
 
   try {
-    const hasKey = await client.query(api.aiKeys.hasValidApiKey);
+    const convexClient = await getConvexClient(auth);
+    const hasKey = await convexClient.query(api.aiKeys.hasValidApiKey);
     return c.json({ hasValidKey: hasKey });
   } catch (error) {
     console.error("Error checking API key:", error);
@@ -159,7 +185,8 @@ app.get("/api/ai/key-status", async (c) => {
   }
 
   try {
-    const keyStatus = await client.query(api.aiKeys.getApiKeyStatus);
+    const convexClient = await getConvexClient(auth);
+    const keyStatus = await convexClient.query(api.aiKeys.getApiKeyStatus);
     return c.json(keyStatus);
   } catch (error) {
     console.error("Error fetching key status:", error);
@@ -174,10 +201,22 @@ app.get("/api/ai/preferences", async (c) => {
   }
 
   try {
-    const preferences = await client.query(api.aiKeys.getUserAIPreferences);
+    const convexClient = await getConvexClient(auth);
+    const preferences = await convexClient.query(
+      api.aiKeys.getUserAIPreferences
+    );
+
+    // Handle model name migration from old to new
+    if (
+      preferences &&
+      preferences.defaultModel === "google/gemini-2.0-flash-exp"
+    ) {
+      preferences.defaultModel = "google/gemini-2.5-flash-preview-05-20";
+    }
+
     return c.json(
       preferences || {
-        defaultModel: "google/gemini-2.0-flash-exp",
+        defaultModel: "google/gemini-2.5-flash-preview-05-20",
         temperature: 0.7,
         maxTokens: 2000,
         enableStreaming: true,
@@ -198,7 +237,8 @@ app.post("/api/ai/preferences", async (c) => {
 
   try {
     const body = await c.req.json();
-    await client.mutation(api.aiKeys.setUserAIPreferences, body);
+    const convexClient = await getConvexClient(auth);
+    await convexClient.mutation(api.aiKeys.setUserAIPreferences, body);
     return c.json({ success: true });
   } catch (error) {
     console.error("Error saving preferences:", error);
@@ -218,9 +258,15 @@ app.post("/api/ai/test-key", async (c) => {
       return c.json({ valid: false, error: "API key required" });
     }
 
-    const result = await client.action(api.cryptoActions.testApiKey, {
-      apiKey,
-    });
+    // Get authenticated Convex client
+    const authenticatedClient = await getAuthenticatedConvexClient(auth);
+
+    const result = await authenticatedClient.action(
+      api.cryptoActions.testApiKey,
+      {
+        apiKey,
+      }
+    );
     return c.json(result);
   } catch (error) {
     console.error("Error testing API key:", error);
@@ -240,7 +286,10 @@ app.post("/api/ai/set-key", async (c) => {
       return c.json({ error: "API key required" }, 400);
     }
 
-    await client.action(api.cryptoActions.setUserApiKey, {
+    // Get authenticated Convex client
+    const authenticatedClient = await getAuthenticatedConvexClient(auth);
+
+    await authenticatedClient.action(api.cryptoActions.setUserApiKey, {
       apiKey,
     });
     return c.json({ success: true });
@@ -259,7 +308,8 @@ app.get("/api/usage/recent", async (c) => {
 
   try {
     const limit = parseInt(c.req.query("limit") || "20");
-    const usage = await client.query(api.usage.getRecentUsage, { limit });
+    const convexClient = await getConvexClient(auth);
+    const usage = await convexClient.query(api.usage.getRecentUsage, { limit });
     return c.json({ usage });
   } catch (error) {
     console.error("Error fetching recent usage:", error);
@@ -275,7 +325,10 @@ app.get("/api/usage/daily", async (c) => {
 
   try {
     const days = parseInt(c.req.query("days") || "7");
-    const summary = await client.query(api.usage.getUserUsageSummary, { days });
+    const convexClient = await getConvexClient(auth);
+    const summary = await convexClient.query(api.usage.getUserUsageSummary, {
+      days,
+    });
     return c.json({ summary: summary?.dailySummaries || [] });
   } catch (error) {
     console.error("Error fetching daily usage:", error);
@@ -292,7 +345,10 @@ app.get("/api/usage/monthly", async (c) => {
   try {
     const months = parseInt(c.req.query("months") || "3");
     const days = months * 30; // Approximate conversion
-    const summary = await client.query(api.usage.getUserUsageSummary, { days });
+    const convexClient = await getConvexClient(auth);
+    const summary = await convexClient.query(api.usage.getUserUsageSummary, {
+      days,
+    });
 
     // Group daily summaries by month
     const monthlyData = {};
@@ -356,9 +412,23 @@ app.post("/api/ai/chat", async (c) => {
       return c.json({ error: "Message is required" }, 400);
     }
 
+    // Get authenticated Convex client
+    const convexClient = await getConvexClient(auth);
+
     // Get user's AI preferences and API key
-    const preferences = await client.query(api.aiKeys.getUserAIPreferences);
-    const hasValidKey = await client.query(api.aiKeys.hasValidApiKey);
+    const preferences = await convexClient.query(
+      api.aiKeys.getUserAIPreferences
+    );
+
+    // Handle model name migration from old to new
+    if (
+      preferences &&
+      preferences.defaultModel === "google/gemini-2.0-flash-exp"
+    ) {
+      preferences.defaultModel = "google/gemini-2.5-flash-preview-05-20";
+    }
+
+    const hasValidKey = await convexClient.query(api.aiKeys.hasValidApiKey);
 
     if (!hasValidKey) {
       return c.json(
@@ -371,24 +441,34 @@ app.post("/api/ai/chat", async (c) => {
     }
 
     // Use the server-side AI completion action
-    const result = await client.action(api.cryptoActions.performAICompletion, {
-      message,
-      conversation: conversation.slice(-10), // Keep last 10 messages for context
-      preferences: preferences || {
-        defaultModel: "google/gemini-2.0-flash-exp",
-        temperature: 0.7,
-        maxTokens: 2000,
-        systemPrompt: "",
-      },
-    });
+    const result = await convexClient.action(
+      api.cryptoActions.performAICompletion,
+      {
+        message,
+        conversation: conversation.slice(-10), // Keep last 10 messages for context
+        preferences: preferences
+          ? {
+              defaultModel: preferences.defaultModel,
+              temperature: preferences.temperature,
+              maxTokens: preferences.maxTokens,
+              systemPrompt: preferences.systemPrompt,
+            }
+          : {
+              defaultModel: "google/gemini-2.5-flash-preview-05-20",
+              temperature: 0.7,
+              maxTokens: 2000,
+              systemPrompt: "",
+            },
+      }
+    );
 
     // Record usage if successful
     if (result.success && result.usage) {
-      await client.mutation(api.usage.recordUsage, {
+      await convexClient.mutation(api.usage.recordUsage, {
         model:
           result.model ||
           preferences?.defaultModel ||
-          "google/gemini-2.0-flash-exp",
+          "google/gemini-2.5-flash-preview-05-20",
         promptTokens: result.usage.promptTokens || 0,
         completionTokens: result.usage.completionTokens || 0,
         totalTokens: result.usage.totalTokens || 0,
@@ -398,8 +478,9 @@ app.post("/api/ai/chat", async (c) => {
       });
     } else if (!result.success) {
       // Record failed usage
-      await client.mutation(api.usage.recordUsage, {
-        model: preferences?.defaultModel || "google/gemini-2.0-flash-exp",
+      await convexClient.mutation(api.usage.recordUsage, {
+        model:
+          preferences?.defaultModel || "google/gemini-2.5-flash-preview-05-20",
         promptTokens: 0,
         completionTokens: 0,
         totalTokens: 0,
@@ -416,7 +497,8 @@ app.post("/api/ai/chat", async (c) => {
 
     // Record failed usage for unexpected errors
     try {
-      await client.mutation(api.usage.recordUsage, {
+      const convexClient = await getConvexClient(auth);
+      await convexClient.mutation(api.usage.recordUsage, {
         model: "unknown",
         promptTokens: 0,
         completionTokens: 0,

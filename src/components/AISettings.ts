@@ -7,7 +7,7 @@ export class AISettings extends Component {
   private _apiKey: Signal<string> = signal("", []);
   private _hasValidKey: Signal<boolean> = signal(false, []);
   private _selectedModel: Signal<string> = signal(
-    "google/gemini-2.0-flash-exp",
+    "google/gemini-2.5-flash-preview-05-20",
     []
   );
   private _temperature: Signal<number> = signal(0.7, []);
@@ -75,8 +75,8 @@ export class AISettings extends Component {
             <div class="form-group">
               <label for="model-select">AI Model</label>
               <select id="model-select" class="form-select">
-                <option value="google/gemini-2.0-flash-exp">
-                  Gemini 2.0 Flash (Recommended)
+                <option value="google/gemini-2.5-flash-preview-05-20">
+                  Gemini 2.5 Flash (Recommended)
                 </option>
                 <option value="openai/gpt-4">GPT-4</option>
                 <option value="openai/gpt-3.5-turbo">GPT-3.5 Turbo</option>
@@ -289,8 +289,14 @@ export class AISettings extends Component {
       if (preferencesResponse.ok) {
         const preferences = await preferencesResponse.json();
         if (preferences) {
-          this._selectedModel.value =
-            preferences.defaultModel || "google/gemini-2.0-flash-exp";
+          // Handle model name migration from old to new
+          let defaultModel =
+            preferences.defaultModel || "google/gemini-2.5-flash-preview-05-20";
+          if (defaultModel === "google/gemini-2.0-flash-exp") {
+            defaultModel = "google/gemini-2.5-flash-preview-05-20";
+          }
+
+          this._selectedModel.value = defaultModel;
           this._temperature.value = preferences.temperature || 0.7;
           this._maxTokens.value = preferences.maxTokens || 2000;
           this._systemPrompt.value = preferences.systemPrompt || "";
@@ -305,7 +311,26 @@ export class AISettings extends Component {
           this._maxTokensValue.textContent = this._maxTokens.value.toString();
           this._systemPromptTextarea.value = this._systemPrompt.value;
           this._streamingToggle.checked = this._enableStreaming.value;
+        } else {
+          // No preferences found, set defaults
+          this._modelSelect.value = this._selectedModel.value;
+          this._temperatureInput.value = this._temperature.value.toString();
+          this._temperatureValue.textContent =
+            this._temperature.value.toString();
+          this._maxTokensInput.value = this._maxTokens.value.toString();
+          this._maxTokensValue.textContent = this._maxTokens.value.toString();
+          this._systemPromptTextarea.value = this._systemPrompt.value;
+          this._streamingToggle.checked = this._enableStreaming.value;
         }
+      } else {
+        // Failed to load preferences, set defaults
+        this._modelSelect.value = this._selectedModel.value;
+        this._temperatureInput.value = this._temperature.value.toString();
+        this._temperatureValue.textContent = this._temperature.value.toString();
+        this._maxTokensInput.value = this._maxTokens.value.toString();
+        this._maxTokensValue.textContent = this._maxTokens.value.toString();
+        this._systemPromptTextarea.value = this._systemPrompt.value;
+        this._streamingToggle.checked = this._enableStreaming.value;
       }
 
       this._clearMessages();
@@ -467,6 +492,6 @@ export class AISettings extends Component {
   }
 }
 
-if (!customElements.get('ai-settings')) {
+if (!customElements.get("ai-settings")) {
   customElements.define("ai-settings", AISettings);
 }

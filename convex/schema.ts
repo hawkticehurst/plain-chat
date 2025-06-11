@@ -81,7 +81,7 @@ export default defineSchema({
     totalTokens: v.number(),
     totalCost: v.number(),
     requestCount: v.number(),
-    modelUsage: v.object({}), // Dynamic object to track usage per model
+    modelUsage: v.record(v.string(), v.number()), // Dynamic object to track usage per model
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -95,7 +95,7 @@ export default defineSchema({
     totalTokens: v.number(),
     totalCost: v.number(),
     requestCount: v.number(),
-    modelUsage: v.object({}), // Dynamic object to track usage per model
+    modelUsage: v.record(v.string(), v.number()), // Dynamic object to track usage per model
     createdAt: v.number(),
     updatedAt: v.number(),
   })

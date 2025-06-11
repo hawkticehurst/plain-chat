@@ -229,11 +229,15 @@ export const testApiKey = action({
       if (response.ok) {
         return { valid: true };
       } else {
-        const errorData = await response.json().catch(() => ({ error: { message: `HTTP ${response.status}` } }));
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: { message: `HTTP ${response.status}` } }));
         console.error("OpenRouter API error:", response.status, errorData);
         return {
           valid: false,
-          error: errorData.error?.message || `API returned status ${response.status}`,
+          error:
+            errorData.error?.message ||
+            `API returned status ${response.status}`,
         };
       }
     } catch (error: any) {
@@ -256,6 +260,7 @@ export const performAICompletion = action({
       v.object({
         role: v.string(),
         content: v.string(),
+        timestamp: v.optional(v.number()),
       })
     ),
     preferences: v.object({
@@ -273,9 +278,12 @@ export const performAICompletion = action({
 
     try {
       // Get user's encrypted API key
-      const apiKeyRecord = await ctx.runQuery(internal.aiKeys.getUserApiKeyRecord, {
-        userId: identity.subject,
-      });
+      const apiKeyRecord = await ctx.runQuery(
+        internal.aiKeys.getUserApiKeyRecord,
+        {
+          userId: identity.subject,
+        }
+      );
       if (!apiKeyRecord) {
         return {
           success: false,
@@ -288,7 +296,7 @@ export const performAICompletion = action({
 
       // Prepare messages for AI API
       const messages: Array<{ role: string; content: string }> = [];
-      
+
       // Add system prompt if provided
       if (preferences.systemPrompt && preferences.systemPrompt.trim()) {
         messages.push({
@@ -343,7 +351,7 @@ export const performAICompletion = action({
       }
 
       const data = await response.json();
-      
+
       if (!data.choices || data.choices.length === 0) {
         return {
           success: false,
@@ -366,7 +374,7 @@ export const performAICompletion = action({
       const promptTokens = usage.prompt_tokens || 0;
       const completionTokens = usage.completion_tokens || 0;
       const totalTokens = usage.total_tokens || promptTokens + completionTokens;
-      
+
       // Estimate cost (this is a rough estimate, real cost calculation would need model-specific pricing)
       const estimatedCost = totalTokens * 0.000001; // Very rough estimate
 
