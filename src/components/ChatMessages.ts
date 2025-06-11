@@ -13,17 +13,22 @@ export class ChatMessages extends Component {
   public updateMessages(messages: Array<Message>) {
     this._messages = messages;
   }
-  
+
   async render() {
     this.innerHTML = "";
     for (const message of this._messages) {
       const messageComponent = new ChatMessage();
-      await messageComponent.render(message.role, message.content, message.isLoading || false);
+      await messageComponent.render(
+        message.role,
+        message.content,
+        message.isLoading || false,
+        message.isStreaming || false
+      );
       this.insert(this, messageComponent, null);
     }
   }
 }
 
-if (!customElements.get('chat-messages')) {
+if (!customElements.get("chat-messages")) {
   customElements.define("chat-messages", ChatMessages);
 }

@@ -495,3 +495,95 @@ export const generateChatTitle = action({
     }
   },
 });
+
+/**
+ * Perform streaming AI completion using user's stored API key
+ * This is used by the SSE endpoint to stream responses
+ */
+export const performStreamingAICompletion = action({
+  args: {
+    message: v.string(),
+    conversation: v.array(
+      v.object({
+        role: v.string(),
+        content: v.string(),
+        timestamp: v.optional(v.number()),
+      })
+    ),
+    preferences: v.object({
+      defaultModel: v.string(),
+      temperature: v.number(),
+      maxTokens: v.number(),
+      systemPrompt: v.optional(v.string()),
+    }),
+  },
+  handler: async (ctx, { message, conversation, preferences }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("User must be authenticated");
+    }
+
+    try {
+      // Get user's encrypted API key
+      const apiKeyRecord = await ctx.runQuery(
+        internal.aiKeys.getUserApiKeyRecord,
+        {
+          userId: identity.subject,
+        }
+      );
+      if (!apiKeyRecord) {
+        return {
+          success: false,
+          error: "No API key found. Please configure your API key in Settings.",
+        };
+      }
+
+      // Decrypt the API key
+      const apiKey = decryptApiKey(apiKeyRecord.encryptedApiKey);
+
+      // Prepare messages for AI API
+      const messages: Array<{ role: string; content: string }> = [];
+
+      // Add system prompt if provided
+      if (preferences.systemPrompt && preferences.systemPrompt.trim()) {
+        messages.push({
+          role: "system",
+          content: preferences.systemPrompt.trim(),
+        });
+      }
+
+      // Add conversation history
+      conversation.forEach((msg) => {
+        messages.push({
+          role: msg.role === "prompt" ? "user" : "assistant",
+          content: msg.content,
+        });
+      });
+
+      // Add current message
+      messages.push({
+        role: "user",
+        content: message,
+      });
+
+      const requestId = randomBytes(8).toString("hex");
+
+      // Return the necessary data for streaming instead of making the API call here
+      // The server will handle the actual streaming API call
+      return {
+        success: true,
+        apiKey,
+        messages,
+        preferences,
+        requestId,
+      };
+    } catch (error: any) {
+      console.error("Streaming AI completion error:", error);
+      return {
+        success: false,
+        error: error.message || "Internal server error",
+        requestId: randomBytes(8).toString("hex"),
+      };
+    }
+  },
+});

@@ -2,6 +2,7 @@ import { Component, html } from "../lib/index";
 
 export class ChatInput extends Component {
   private _isLoading = false;
+  private _isStreaming = false;
 
   constructor() {
     super();
@@ -18,15 +19,33 @@ export class ChatInput extends Component {
           class="input"
           placeholder="Type your message here..."
           rows="1"
-          ${this._isLoading ? 'disabled' : ''}
+          ${this._isLoading || this._isStreaming ? "disabled" : ""}
         ></textarea>
         <div class="actions">
-          <button class="attach-btn" type="button" title="Attach file" ${this._isLoading ? 'disabled' : ''}>
+          <button
+            class="attach-btn"
+            type="button"
+            title="Attach file"
+            ${this._isLoading || this._isStreaming ? "disabled" : ""}
+          >
             📎
           </button>
-          <button class="send-btn" type="button" title="Send message" ${this._isLoading ? 'disabled' : ''}>
-            ${this._isLoading ? '⏳' : '➤'}
-          </button>
+          ${this._isStreaming
+            ? html`<button
+                class="cancel-btn"
+                type="button"
+                title="Cancel streaming response"
+              >
+                ⏹️
+              </button>`
+            : html`<button
+                class="send-btn"
+                type="button"
+                title="Send message"
+                ${this._isLoading ? "disabled" : ""}
+              >
+                ${this._isLoading ? "⏳" : "➤"}
+              </button>`}
         </div>
       </div>
     `;
@@ -36,6 +55,7 @@ export class ChatInput extends Component {
     // Add event listeners for auto-resize and send functionality
     const textarea = this.querySelector(".input") as HTMLTextAreaElement;
     const sendBtn = this.querySelector(".send-btn") as HTMLButtonElement;
+    const cancelBtn = this.querySelector(".cancel-btn") as HTMLButtonElement;
 
     if (textarea) {
       textarea.addEventListener("input", this._handleTextareaResize.bind(this));
@@ -44,6 +64,10 @@ export class ChatInput extends Component {
 
     if (sendBtn) {
       sendBtn.addEventListener("click", this._handleSend.bind(this));
+    }
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener("click", this._handleCancel.bind(this));
     }
   }
 
@@ -90,13 +114,40 @@ export class ChatInput extends Component {
     }
   }
 
+  private _handleCancel() {
+    if (this._isStreaming) {
+      // Dispatch cancel event to ChatMain
+      this.dispatchEvent(
+        new CustomEvent("cancel-streaming", {
+          bubbles: true,
+          composed: true,
+        })
+      );
+    }
+  }
+
   // Method to be called by parent when message processing is complete
   public messageProcessed() {
+    this._isLoading = false;
+    this._isStreaming = false;
+    this.render();
+  }
+
+  // Method to be called by parent when streaming starts
+  public streamingStarted() {
+    this._isStreaming = true;
+    this._isLoading = false;
+    this.render();
+  }
+
+  // Method to be called by parent when streaming ends
+  public streamingEnded() {
+    this._isStreaming = false;
     this._isLoading = false;
     this.render();
   }
 }
 
-if (!customElements.get('chat-input')) {
+if (!customElements.get("chat-input")) {
   customElements.define("chat-input", ChatInput);
 }
