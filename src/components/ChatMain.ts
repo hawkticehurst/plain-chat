@@ -1,6 +1,5 @@
-import { Component, config, authService } from "../lib/index";
-import { ChatInput } from "./ChatInput";
-import { ChatMessages } from "./ChatMessages";
+import { Component, config, authService, html } from "@lib";
+import { ChatInput, ChatMessages } from "@components";
 
 export interface Message {
   role: "prompt" | "response";
@@ -12,7 +11,6 @@ export interface Message {
 
 export class ChatMain extends Component {
   private _messages: Array<Message> = [];
-  private _loading = true;
   private _chatInput: ChatInput | null = null;
   private _chatMessages: ChatMessages | null = null;
   private _currentChatId: string | null = null;
@@ -22,19 +20,16 @@ export class ChatMain extends Component {
   constructor() {
     super();
     // Start with empty new chat state
-    this._loading = false;
     this.startNewChat();
   }
 
   public async loadChat(chatId: string | null) {
     this._currentChatId = chatId;
-    this._loading = true;
     this.render();
 
     if (!chatId) {
       // Show empty state for new chat
       this._messages = [];
-      this._loading = false;
       this.render();
       return;
     }
@@ -77,7 +72,6 @@ export class ChatMain extends Component {
         },
       ];
     } finally {
-      this._loading = false;
       this.render();
     }
   }
@@ -85,24 +79,21 @@ export class ChatMain extends Component {
   public startNewChat() {
     this._currentChatId = null;
     this._messages = [];
-    this._loading = false;
     this.render();
   }
 
   async render() {
-    if (this._loading) {
-      this.innerHTML = '<div class="loading">Loading messages...</div>';
-      return;
-    }
-
     // Show empty state if no chat is selected
     if (!this._currentChatId) {
-      this.innerHTML = `
+      this.innerHTML = String(html`
         <div class="empty-state">
           <h2>Start a New Conversation</h2>
-          <p>Type your first message below to begin a new chat. Your conversation will be saved automatically.</p>
+          <p>
+            Type your first message below to begin a new chat. Your conversation
+            will be saved automatically.
+          </p>
         </div>
-      `;
+      `);
 
       // Still need to create the input for new chats
       this._chatInput = new ChatInput();
@@ -140,6 +131,10 @@ export class ChatMain extends Component {
       "cancel-streaming",
       this._handleCancelStreaming.bind(this)
     );
+  }
+
+  public hello() {
+    console.log("Hello from App component!");
   }
 
   private async _handleSendMessage(event: Event) {
@@ -282,26 +277,6 @@ export class ChatMain extends Component {
     message: string,
     isFirstMessage: boolean
   ) {
-    // Check if user has streaming enabled
-    let shouldStream = true;
-    try {
-      const prefsResponse = await authService.fetchWithAuth(
-        `${config.apiBaseUrl}/api/ai/preferences`
-      );
-      if (prefsResponse.ok) {
-        const prefs = await prefsResponse.json();
-        shouldStream = prefs.enableStreaming !== false;
-      }
-    } catch (error) {
-      console.error("Error checking streaming preference:", error);
-      // Default to streaming if we can't check
-    }
-
-    if (!shouldStream) {
-      // Use regular non-streaming approach
-      return this._handleNonStreamingResponse(message, isFirstMessage);
-    }
-
     this._isStreaming = true;
 
     // Notify input that streaming started
@@ -478,118 +453,6 @@ export class ChatMain extends Component {
 
     // This should not be needed as we handle input state in individual cases above
     // But keeping as fallback
-    // Re-enable input
-    if (this._chatInput) {
-      this._chatInput.messageProcessed();
-    }
-  }
-
-  private async _handleNonStreamingResponse(
-    message: string,
-    isFirstMessage: boolean
-  ) {
-    try {
-      // Send request to AI API (existing non-streaming logic)
-      const response = await authService.fetchWithAuth(
-        `${config.apiBaseUrl}/api/ai/chat`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            message,
-            conversation: this._messages
-              .slice(-10)
-              .filter((m) => !m.isLoading) // Send last 10 non-loading messages
-              .map((m) => ({
-                role: m.role,
-                content: m.content,
-                timestamp: m.timestamp,
-              })),
-          }),
-        }
-      );
-
-      // Remove loading message
-      this._messages.pop();
-
-      if (response.ok) {
-        const data = await response.json();
-
-        if (data.success) {
-          // Add AI response
-          const aiMessage: Message = {
-            role: "response",
-            content: data.response,
-            timestamp: Date.now(),
-          };
-
-          this._messages.push(aiMessage);
-
-          // Save AI response to database
-          try {
-            await authService.fetchWithAuth(
-              `${config.apiBaseUrl}/api/chats/${this._currentChatId}/messages`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  role: "response",
-                  content: data.response,
-                  aiMetadata: data.metadata,
-                }),
-              }
-            );
-          } catch (error) {
-            console.error("Error saving AI message:", error);
-          }
-
-          // Generate title for first message (don't await to avoid blocking UI)
-          if (isFirstMessage) {
-            this._generateChatTitle(message);
-          }
-        } else {
-          // Add error message
-          const errorMessage: Message = {
-            role: "response",
-            content: `❌ Error: ${data.error}`,
-            timestamp: Date.now(),
-          };
-
-          this._messages.push(errorMessage);
-        }
-      } else {
-        // Add error message for HTTP errors
-        const errorMessage: Message = {
-          role: "response",
-          content: `❌ Failed to send message. Please try again.`,
-          timestamp: Date.now(),
-        };
-
-        this._messages.push(errorMessage);
-      }
-    } catch (error) {
-      // Remove loading message if still there
-      if (this._messages[this._messages.length - 1]?.isLoading) {
-        this._messages.pop();
-      }
-
-      // Add error message
-      const errorMessage: Message = {
-        role: "response",
-        content: `❌ Network error. Please check your connection and try again.`,
-        timestamp: Date.now(),
-      };
-
-      this._messages.push(errorMessage);
-    }
-
-    // Re-render with final messages
-    await this._updateMessages();
-
     // Re-enable input
     if (this._chatInput) {
       this._chatInput.messageProcessed();
