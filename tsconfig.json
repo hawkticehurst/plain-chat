@@ -13,6 +13,13 @@
     "moduleDetection": "force",
     "noEmit": true,
 
+    /* Path mapping */
+    "baseUrl": ".",
+    "paths": {
+      "@lib": ["./lib/index.ts"],
+      "@components": ["./src/components/index.ts"]
+    },
+
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,
@@ -21,5 +28,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src", "lib"]
 }
