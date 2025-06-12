@@ -3,7 +3,7 @@ import { createOpenRouterClient } from "./openrouter";
 import type {
   ChatCompletionMessage,
   AIMessageMetadata,
-} from "./types/openrouter";
+} from "../types/openrouter";
 
 export interface ChatCompletionOptions {
   model?: string;
