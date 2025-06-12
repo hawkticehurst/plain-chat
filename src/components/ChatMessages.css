@@ -1,16 +1,14 @@
 chat-messages {
   display: block;
   flex: 1;
-  padding: 1rem 1.5rem;
+  padding: 1rem calc(50% - 400px);
   background: var(--color-background);
   scroll-behavior: smooth;
   overflow-y: scroll;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  margin: 0 auto;
-  width: 90%;
-  max-width: 800px;
+  width: 100%;
 }
 
 @media (max-width: 768px) {
