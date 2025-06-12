@@ -1,5 +1,5 @@
-import { Component, html, authService } from "./lib/index";
-import type { AuthStatus } from "./lib/index";
+import { Component, html, authService, router } from "@lib";
+import type { AuthStatus } from "@lib";
 import "./components/ChatSidebar";
 import "./components/ChatMain";
 import "./components/AISettings";
@@ -7,89 +7,50 @@ import "./components/UsageDashboard";
 
 export class App extends Component {
   private _authStatus: AuthStatus = { isAuthenticated: false, userId: null };
-  private _loading = true;
-  private _currentRoute = "";
 
   constructor() {
     super();
-    this.checkAuthStatus();
-    this._setupRouting();
+    this.getAuthStatus();
   }
 
-  private _setupRouting() {
-    // Listen for hash changes
-    window.addEventListener("hashchange", () => {
-      this._handleRouteChange();
-    });
-
-    // Handle initial route
-    this._handleRouteChange();
-  }
-
-  private _handleRouteChange() {
-    this._currentRoute = window.location.hash.slice(1) || "/";
-    if (!this._loading) {
-      this.render();
-    }
-  }
-
-  private async checkAuthStatus() {
+  private async getAuthStatus() {
     this._authStatus = await authService.getAuthStatus();
-    this._loading = false;
-    this.render();
   }
 
-  render() {
-    if (this._loading) {
-      this.innerHTML = '<div class="loading">Loading...</div>';
-      return;
-    }
-
-    if (!this._authStatus.isAuthenticated) {
-      const template = html`
-        <div class="auth-required">
-          <h1>Welcome to Chat App</h1>
-          <div id="clerk-signin"></div>
-        </div>
-      `;
-      this.innerHTML = String(template);
-
-      this.initializeClerk();
-      return;
-    }
-
-    // Authenticated user - handle routing
-    if (this._currentRoute === "/ai-settings") {
-      const template = html`
-        <div class="single-page-container">
-          <ai-settings></ai-settings>
-        </div>
-      `;
-      this.innerHTML = String(template);
-      return;
-    }
-
-    if (this._currentRoute === "/usage") {
-      const template = html`
-        <div class="single-page-container">
-          <usage-dashboard></usage-dashboard>
-        </div>
-      `;
-      this.innerHTML = String(template);
-      return;
-    }
-
-    // Default chat interface
-    const template = html`
-      <div class="chat-app-container">
+  // Initial component setup - This will be called only once
+  async init() {
+    router.createRoute("/", () => {
+      this.innerHTML = String(html`
         <chat-sidebar></chat-sidebar>
         <chat-main></chat-main>
-      </div>
-    `;
+      `);
+      this._setupChatEventListeners();
+    });
 
-    this.innerHTML = String(template);
+    router.createRoute("/sign-in", () => {
+      this.innerHTML = String(html`
+        <div class="auth-required">
+          <div id="clerk-signin"></div>
+        </div>
+      `);
+    });
 
-    // Set up event listeners for chat interactions
+    router.createRoute("/ai-settings", () => {
+      this.innerHTML = String(html`<ai-settings></ai-settings>`);
+    });
+
+    router.createRoute("/usage", () => {
+      this.innerHTML = String(html`<usage-dashboard></usage-dashboard>`);
+    });
+
+    if (!this._authStatus.isAuthenticated) {
+      router.navigate("/sign-in");
+      await this.initializeClerk();
+      return;
+    }
+  }
+
+  private _setupChatEventListeners() {
     const sidebar = this.querySelector("chat-sidebar");
     const chatMain = this.querySelector("chat-main");
 
@@ -125,37 +86,11 @@ export class App extends Component {
 
   private async initializeClerk() {
     try {
-      const { Clerk } = await import("@clerk/clerk-js");
-
-      const publicKey =
-        "pk_test_Z3Jvd24tcGVyY2gtNDcuY2xlcmsuYWNjb3VudHMuZGV2JA";
-      const clerk = new Clerk(publicKey);
-      await clerk.load();
-
-      authService.setClerk(clerk);
-
-      if (clerk.user) {
-        // User is already signed in, refresh the app
-        this._authStatus = { isAuthenticated: true, userId: clerk.user.id };
-        this.render();
-        return;
-      }
-
-      // Mount the sign-in component
       const signInDiv = this.querySelector("#clerk-signin") as HTMLDivElement;
-      if (signInDiv) {
-        clerk.mountSignIn(signInDiv);
-      }
-
-      // Listen for sign-in events
-      clerk.addListener(({ user }) => {
-        if (user) {
-          // Update auth service with the clerk instance
-          authService.setClerk(clerk);
-          this._authStatus = { isAuthenticated: true, userId: user.id };
-          this.render();
-        }
+      await authService.init(signInDiv, (user) => {
+        this._authStatus = { isAuthenticated: true, userId: user.id };
       });
+      router.navigate("/");
     } catch (error) {
       console.error("Error initializing Clerk:", error);
       this.innerHTML =
