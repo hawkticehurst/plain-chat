@@ -397,3 +397,5 @@ bench-button button {
 ## General Guidelines
 
 - Remember to always check for missing or unused imports when adding, removing, or refactoring code.
+- Padding, margin, and border should always be defined in pixels (px) for consistency.
+- Font sizes should always be defined in rem units for consistency.

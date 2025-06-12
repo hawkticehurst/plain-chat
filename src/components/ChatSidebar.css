@@ -10,15 +10,15 @@ chat-sidebar {
 }
 
 chat-sidebar > .header {
-  padding: 1.25rem 1rem;
+  padding: 20px 16px;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 12px;
   align-items: stretch;
 }
 
 chat-sidebar > .footer {
-  padding: 1rem;
+  padding: 16px;
   margin-top: auto;
   border-top: 1px solid var(--color-border);
 }
@@ -37,8 +37,8 @@ chat-sidebar .auth-btn {
   background: var(--color-accent);
   color: var(--color-text-primary);
   border: none;
-  padding: 0.5rem 0.875rem;
-  border-radius: 0.5rem;
+  padding: 8px 14px;
+  border-radius: 8px;
   width: 100%;
   font-size: 0.8rem;
   font-weight: 600;
@@ -64,7 +64,7 @@ chat-sidebar .chat-list {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  padding: 0.5rem;
+  padding: 8px;
 }
 
 chat-sidebar .category-header {
@@ -73,7 +73,7 @@ chat-sidebar .category-header {
   color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: 0.5rem;
+  padding: 8px;
   margin: 10px 0 0 0;
 }
 
@@ -82,9 +82,9 @@ chat-sidebar .category-header:first-child {
 }
 
 chat-sidebar-item {
-  padding: 0.5rem;
-  margin-bottom: 0.25rem;
-  border-radius: 0.75rem;
+  padding: 8px;
+  margin-bottom: 4px;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
   border: 1px solid transparent;
@@ -121,7 +121,7 @@ chat-sidebar-item .title {
 }
 
 chat-sidebar .loading {
-  padding: 1rem;
+  padding: 16px;
   text-align: center;
   color: var(--color-text-secondary);
   font-size: 0.9rem;
