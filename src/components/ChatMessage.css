@@ -44,8 +44,8 @@ chat-message .text {
   padding: 0.875rem 1.125rem;
   border-radius: 1.25rem;
   margin-bottom: 0.375rem;
-  line-height: 1.5;
-  font-size: 0.9rem;
+  line-height: 1.75;
+  font-size: 1rem;
   position: relative;
   box-shadow: 0 1px 2px var(--color-border);
 }

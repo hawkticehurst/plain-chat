@@ -79,11 +79,17 @@ chat-sidebar-item {
   cursor: pointer;
   transition: all 0.2s ease;
   border: 1px solid transparent;
+  /* height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; */
 }
 
 chat-sidebar-item:hover {
   background: var(--color-surface-raised);
-  box-shadow: 0 1px 3px var(--color-border);
 }
 
 chat-sidebar-item.active {
