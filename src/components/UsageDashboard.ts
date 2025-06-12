@@ -1,5 +1,5 @@
-import { Component, html, signal, config, authService } from "../lib/index";
-import type { Signal } from "../lib/index";
+import { Component, html, signal, config, authService } from "@lib";
+import type { Signal } from "@lib";
 
 interface UsageRecord {
   _id: string;
@@ -504,6 +504,6 @@ export class UsageDashboard extends Component {
   }
 }
 
-if (!customElements.get('usage-dashboard')) {
+if (!customElements.get("usage-dashboard")) {
   customElements.define("usage-dashboard", UsageDashboard);
 }

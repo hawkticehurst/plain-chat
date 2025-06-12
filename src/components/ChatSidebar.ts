@@ -1,5 +1,5 @@
-import { Component, html, signal, config, authService } from "../lib/index";
-import type { Signal } from "../lib/index";
+import { Component, html, signal, config, authService } from "@lib";
+import type { Signal } from "@lib";
 
 interface ChatItem {
   id: string;
@@ -113,7 +113,9 @@ export class ChatSidebar extends Component {
         <button class="usage-dashboard-btn">Usage Dashboard</button>
       </section>
       <section class="chat-list">
-        ${this._loading ? '<div class="loading">Loading chats...</div>' : ""}
+        ${this._loading
+          ? html`<div class="loading">Loading chats...</div>`
+          : ""}
       </section>
     `;
 

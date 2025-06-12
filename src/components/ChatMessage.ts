@@ -1,4 +1,4 @@
-import { Component, html, htmlRaw } from "../lib/index";
+import { Component, html, htmlRaw } from "@lib";
 import { marked } from "marked";
 
 export class ChatMessage extends Component {
