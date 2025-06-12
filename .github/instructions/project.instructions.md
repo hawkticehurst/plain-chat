@@ -46,7 +46,7 @@ Below is an example of the web component format that must be used in this projec
 - Internal state is always stored in private properties (e.g. `_id`, `_selected`)
 
 ```ts
-import { Component, html } from "./lib/index";
+import { Component, html } from "@lib";
 
 const adjectives = [
   "pretty",
