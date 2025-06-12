@@ -1,5 +1,35 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, httpAction } from "./_generated/server";
+import { api } from "./_generated/api";
 import { v } from "convex/values";
+
+export const addMessage = httpAction(async (ctx, request) => {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  // Get URL parameter from the request URL
+  const url = new URL(request.url);
+  // Note: The path will be something like /messages, not the full path.
+  // We'll handle path params in the router definition.
+  // For now, let's assume we get it from the body for simplicity,
+  // or see the final http.ts for the real solution.
+
+  // Get the body
+  const { chatId, role, content, aiMetadata } = await request.json();
+
+  const messageId = await ctx.runMutation(api.messages.addUserMessage, {
+    chatId,
+    role,
+    content,
+    aiMetadata,
+  });
+
+  return new Response(JSON.stringify({ messageId }), {
+    headers: { "Content-Type": "application/json" },
+    status: 200,
+  });
+});
 
 // Get messages for a specific chat
 export const getChatMessages = query({
@@ -29,7 +59,7 @@ export const getChatMessages = query({
 });
 
 // Add a message to a chat
-export const addMessage = mutation({
+export const addUserMessage = mutation({
   args: {
     chatId: v.id("chats"),
     role: v.string(),

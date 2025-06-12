@@ -60,7 +60,10 @@ export class AuthService {
 
   async getAuthStatus(): Promise<AuthStatus> {
     try {
-      const response = await fetch(`${config.apiBaseUrl}/api/auth/status`);
+      // Use fetchWithAuth to include the Bearer token
+      const response = await this.fetchWithAuth(
+        `${config.apiBaseUrl}/auth/status`
+      );
       if (response.ok) {
         return await response.json();
       }
@@ -75,11 +78,29 @@ export class AuthService {
     try {
       // Try to get Clerk session token if available
       if (this.clerk && this.clerk.session) {
-        const token = await this.clerk.session.getToken();
+        // Get token with Convex URL as audience
+        const convexUrl = config.apiBaseUrl;
+        const token = await this.clerk.session.getToken({
+          template: "convex",
+          // Add the Convex site URL as audience
+          audience: convexUrl,
+        });
+        console.log("🔧 Auth token debug:", {
+          hasClerk: !!this.clerk,
+          hasSession: !!this.clerk.session,
+          hasToken: !!token,
+          tokenPreview: token ? token.substring(0, 20) + "..." : null,
+          audience: convexUrl,
+        });
         return {
           Authorization: `Bearer ${token}`,
         };
       }
+
+      console.log("🔧 No Clerk session available:", {
+        hasClerk: !!this.clerk,
+        hasSession: this.clerk ? !!this.clerk.session : false,
+      });
 
       // If no Clerk session, return empty headers
       return {};

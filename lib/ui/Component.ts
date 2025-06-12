@@ -1,8 +1,8 @@
 // Adapted from https://github.com/hawkticehurst/stellar/blob/main/examples/counter/index.html
 
-function isCustomElement(tagName: string) {
-  return tagName.includes('-');
-}
+// function isCustomElement(tagName: string) {
+//   return tagName.includes('-');
+// }
 
 function removeAttribute(elem: HTMLElement, attr: Attr) {
   elem?.removeAttributeNode(attr);

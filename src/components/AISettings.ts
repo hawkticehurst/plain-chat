@@ -238,7 +238,7 @@ export class AISettings extends Component {
 
       // Check if user has API key
       const hasKeyResponse = await authService.fetchWithAuth(
-        `${config.apiBaseUrl}/api/ai/has-valid-key`
+        `${config.apiBaseUrl}/ai-settings/has-valid-key`
       );
 
       if (hasKeyResponse.ok) {
@@ -248,7 +248,7 @@ export class AISettings extends Component {
         if (hasKeyData.hasValidKey) {
           // Load API key status (masked)
           const keyStatusResponse = await authService.fetchWithAuth(
-            `${config.apiBaseUrl}/api/ai/key-status`
+            `${config.apiBaseUrl}/ai-settings/key-status`
           );
 
           if (keyStatusResponse.ok) {
@@ -262,7 +262,7 @@ export class AISettings extends Component {
 
       // Load user preferences
       const preferencesResponse = await authService.fetchWithAuth(
-        `${config.apiBaseUrl}/api/ai/preferences`
+        `${config.apiBaseUrl}/ai-settings/preferences`
       );
 
       if (preferencesResponse.ok) {
@@ -327,7 +327,7 @@ export class AISettings extends Component {
 
       // Test the API key using the server endpoint
       const response = await authService.fetchWithAuth(
-        `${config.apiBaseUrl}/api/ai/test-key`,
+        `${config.apiBaseUrl}/ai-settings/test-key`,
         {
           method: "POST",
           headers: {
@@ -374,7 +374,7 @@ export class AISettings extends Component {
       // Save API key if provided
       if (this._apiKey.value.trim()) {
         const keyResponse = await authService.fetchWithAuth(
-          `${config.apiBaseUrl}/api/ai/set-key`,
+          `${config.apiBaseUrl}/ai-settings/set-key`,
           {
             method: "POST",
             headers: {
@@ -394,7 +394,7 @@ export class AISettings extends Component {
 
       // Save preferences
       const preferencesResponse = await authService.fetchWithAuth(
-        `${config.apiBaseUrl}/api/ai/preferences`,
+        `${config.apiBaseUrl}/ai-settings/preferences`,
         {
           method: "POST",
           headers: {

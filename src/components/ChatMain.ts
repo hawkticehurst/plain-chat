@@ -36,7 +36,7 @@ export class ChatMain extends Component {
 
     try {
       const response = await authService.fetchWithAuth(
-        `${config.apiBaseUrl}/api/chats/${chatId}/messages`
+        `${config.apiBaseUrl}/chats/${chatId}/messages`
       );
 
       if (response.ok) {
@@ -145,7 +145,7 @@ export class ChatMain extends Component {
     if (!this._currentChatId) {
       try {
         const response = await authService.fetchWithAuth(
-          `${config.apiBaseUrl}/api/chats`,
+          `${config.apiBaseUrl}/chats`,
           {
             method: "POST",
             headers: {
@@ -207,7 +207,7 @@ export class ChatMain extends Component {
     // Save user message to database
     try {
       await authService.fetchWithAuth(
-        `${config.apiBaseUrl}/api/chats/${this._currentChatId}/messages`,
+        `${config.apiBaseUrl}/chats/${this._currentChatId}/messages`,
         {
           method: "POST",
           headers: {
@@ -236,7 +236,7 @@ export class ChatMain extends Component {
 
     try {
       const response = await authService.fetchWithAuth(
-        `${config.apiBaseUrl}/api/chats/${this._currentChatId}/generate-title`,
+        `${config.apiBaseUrl}/chats/${this._currentChatId}/generate-title`,
         {
           method: "POST",
           headers: {
@@ -302,9 +302,12 @@ export class ChatMain extends Component {
     const streamingMessageElement = this._getLastMessageElement();
 
     try {
-      // Prepare the streaming request
+      // Create an AbortController for the streaming request
+      const abortController = new AbortController();
+      
+      // Prepare the streaming request with AbortController
       const response = await authService.fetchWithAuth(
-        `${config.apiBaseUrl}/api/ai/chat/stream`,
+        `${config.apiBaseUrl}/chats/${this._currentChatId}/stream`,
         {
           method: "POST",
           headers: {
@@ -321,6 +324,7 @@ export class ChatMain extends Component {
                 timestamp: m.timestamp,
               })),
           }),
+          signal: abortController.signal,
         }
       );
 
@@ -328,107 +332,27 @@ export class ChatMain extends Component {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // Set up EventSource for streaming
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error("No response stream available");
-      }
-
-      const decoder = new TextDecoder();
-      let fullContent = "";
-      let usage: any = null;
-
-      while (true) {
-        const { done, value } = await reader.read();
-
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const data = line.slice(6);
-
-            if (data === "[DONE]") break;
-
-            try {
-              const parsed = JSON.parse(data);
-
-              if (parsed.type === "content") {
-                fullContent += parsed.content;
-
-                // Update the message content
-                streamingMessage.content = fullContent;
-
-                // Update the streaming message element
-                if (streamingMessageElement) {
-                  await streamingMessageElement.updateStreamingContent(
-                    fullContent
-                  );
-                }
-              } else if (parsed.type === "complete") {
-                fullContent = parsed.content;
-                usage = parsed.usage;
-                break;
-              } else if (parsed.type === "error") {
-                throw new Error(parsed.error);
-              }
-            } catch (parseError) {
-              // Ignore individual parsing errors
-              continue;
-            }
-          }
+      // Check if it's a text/event-stream response
+      const contentType = response.headers.get('content-type');
+      console.log('Response content type:', contentType);
+      
+      if (contentType && contentType.includes('text/event-stream')) {
+        // Handle true streaming response
+        await this._handleEventStreamResponse(response, streamingMessage, streamingMessageElement, message, isFirstMessage);
+      } else {
+        // Handle the complete response (not streaming) - fallback
+        console.log('Falling back to non-streaming response');
+        const data = await response.json();
+        if (data.error) {
+          throw new Error(data.error);
         }
-      }
 
-      // Finalize the streaming message
-      streamingMessage.content = fullContent;
-      streamingMessage.isStreaming = false;
-      this._isStreaming = false;
-
-      if (streamingMessageElement) {
-        await streamingMessageElement.finalizeStream();
-      }
-
-      // Notify input that streaming ended
-      if (this._chatInput) {
-        this._chatInput.streamingEnded();
-      }
-
-      // Save AI response to database
-      if (fullContent) {
-        try {
-          await authService.fetchWithAuth(
-            `${config.apiBaseUrl}/api/chats/${this._currentChatId}/messages`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                role: "response",
-                content: fullContent,
-                aiMetadata: usage
-                  ? {
-                      model: "streaming",
-                      promptTokens: usage.promptTokens,
-                      completionTokens: usage.completionTokens,
-                      totalTokens: usage.totalTokens,
-                      cost: usage.cost,
-                    }
-                  : undefined,
-              }),
-            }
-          );
-        } catch (error) {
-          console.error("Error saving AI message:", error);
-        }
-      }
-
-      // Generate title for first message (don't await to avoid blocking UI)
-      if (isFirstMessage) {
-        this._generateChatTitle(message);
+        // Simulate streaming by displaying content character by character
+        const fullContent = data.content || "";
+        await this._simulateStreaming(fullContent, streamingMessage, streamingMessageElement);
+        
+        // Save message and handle completion
+        await this._completeResponse(fullContent, streamingMessage, streamingMessageElement, message, isFirstMessage, data.usage);
       }
     } catch (error) {
       this._isStreaming = false;
@@ -456,6 +380,154 @@ export class ChatMain extends Component {
     // Re-enable input
     if (this._chatInput) {
       this._chatInput.messageProcessed();
+    }
+  }
+
+  private async _handleEventStreamResponse(
+    response: Response,
+    streamingMessage: Message,
+    streamingMessageElement: any,
+    originalMessage: string,
+    isFirstMessage: boolean
+  ) {
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error("No response stream available");
+    }
+
+    const decoder = new TextDecoder();
+    let fullContent = "";
+    let usage: any = null;
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') {
+              // Streaming complete
+              continue;
+            }
+
+            try {
+              const parsed = JSON.parse(data);
+              
+              if (parsed.type === 'content' && parsed.content) {
+                fullContent += parsed.content;
+                streamingMessage.content = fullContent;
+                
+                if (streamingMessageElement) {
+                  await streamingMessageElement.updateStreamingContent(fullContent);
+                }
+              } else if (parsed.type === 'complete') {
+                fullContent = parsed.content || fullContent;
+                usage = parsed.usage;
+                break;
+              } else if (parsed.type === 'error') {
+                throw new Error(parsed.error || 'Streaming error');
+              }
+            } catch (parseError) {
+              // Ignore individual parse errors
+              console.log('Parse error on chunk:', data);
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    // Complete the streaming
+    await this._completeResponse(fullContent, streamingMessage, streamingMessageElement, originalMessage, isFirstMessage, usage);
+  }
+
+  private async _simulateStreaming(
+    fullContent: string,
+    streamingMessage: Message,
+    streamingMessageElement: any
+  ) {
+    let displayedContent = "";
+    
+    // Display content with simulated streaming effect
+    for (let i = 0; i <= fullContent.length; i += 3) {
+      displayedContent = fullContent.slice(0, i);
+      
+      // Update the message content
+      streamingMessage.content = displayedContent;
+
+      // Update the streaming message element
+      if (streamingMessageElement) {
+        await streamingMessageElement.updateStreamingContent(displayedContent);
+      }
+
+      // Small delay to simulate streaming
+      if (i < fullContent.length) {
+        await new Promise(resolve => setTimeout(resolve, 20));
+      }
+    }
+  }
+
+  private async _completeResponse(
+    fullContent: string,
+    streamingMessage: Message,
+    streamingMessageElement: any,
+    originalMessage: string,
+    isFirstMessage: boolean,
+    usage?: any
+  ) {
+    // Ensure we have the complete content
+    streamingMessage.content = fullContent;
+    streamingMessage.isStreaming = false;
+    this._isStreaming = false;
+
+    if (streamingMessageElement) {
+      await streamingMessageElement.finalizeStream();
+    }
+
+    // Notify input that streaming ended
+    if (this._chatInput) {
+      this._chatInput.streamingEnded();
+    }
+
+    // Save AI response to database
+    if (fullContent) {
+      try {
+        await authService.fetchWithAuth(
+          `${config.apiBaseUrl}/chats/${this._currentChatId}/messages`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              role: "response",
+              content: fullContent,
+              aiMetadata: usage
+                ? {
+                    model: "streaming",
+                    promptTokens: usage.promptTokens,
+                    completionTokens: usage.completionTokens,
+                    totalTokens: usage.totalTokens,
+                    cost: usage.cost,
+                  }
+                : undefined,
+            }),
+          }
+        );
+      } catch (error) {
+        console.error("Error saving AI message:", error);
+      }
+    }
+
+    // Generate title for first message (don't await to avoid blocking UI)
+    if (isFirstMessage) {
+      this._generateChatTitle(originalMessage);
     }
   }
 
