@@ -304,7 +304,7 @@ export class ChatMain extends Component {
     try {
       // Create an AbortController for the streaming request
       const abortController = new AbortController();
-      
+
       // Prepare the streaming request with AbortController
       const response = await authService.fetchWithAuth(
         `${config.apiBaseUrl}/chats/${this._currentChatId}/stream`,
@@ -333,15 +333,21 @@ export class ChatMain extends Component {
       }
 
       // Check if it's a text/event-stream response
-      const contentType = response.headers.get('content-type');
-      console.log('Response content type:', contentType);
-      
-      if (contentType && contentType.includes('text/event-stream')) {
+      const contentType = response.headers.get("content-type");
+      console.log("Response content type:", contentType);
+
+      if (contentType && contentType.includes("text/event-stream")) {
         // Handle true streaming response
-        await this._handleEventStreamResponse(response, streamingMessage, streamingMessageElement, message, isFirstMessage);
+        await this._handleEventStreamResponse(
+          response,
+          streamingMessage,
+          streamingMessageElement,
+          message,
+          isFirstMessage
+        );
       } else {
         // Handle the complete response (not streaming) - fallback
-        console.log('Falling back to non-streaming response');
+        console.log("Falling back to non-streaming response");
         const data = await response.json();
         if (data.error) {
           throw new Error(data.error);
@@ -349,10 +355,21 @@ export class ChatMain extends Component {
 
         // Simulate streaming by displaying content character by character
         const fullContent = data.content || "";
-        await this._simulateStreaming(fullContent, streamingMessage, streamingMessageElement);
-        
+        await this._simulateStreaming(
+          fullContent,
+          streamingMessage,
+          streamingMessageElement
+        );
+
         // Save message and handle completion
-        await this._completeResponse(fullContent, streamingMessage, streamingMessageElement, message, isFirstMessage, data.usage);
+        await this._completeResponse(
+          fullContent,
+          streamingMessage,
+          streamingMessageElement,
+          message,
+          isFirstMessage,
+          data.usage
+        );
       }
     } catch (error) {
       this._isStreaming = false;
@@ -405,36 +422,38 @@ export class ChatMain extends Component {
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
+        const lines = chunk.split("\n");
 
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
+          if (line.startsWith("data: ")) {
             const data = line.slice(6);
-            if (data === '[DONE]') {
+            if (data === "[DONE]") {
               // Streaming complete
               continue;
             }
 
             try {
               const parsed = JSON.parse(data);
-              
-              if (parsed.type === 'content' && parsed.content) {
+
+              if (parsed.type === "content" && parsed.content) {
                 fullContent += parsed.content;
                 streamingMessage.content = fullContent;
-                
+
                 if (streamingMessageElement) {
-                  await streamingMessageElement.updateStreamingContent(fullContent);
+                  await streamingMessageElement.updateStreamingContent(
+                    fullContent
+                  );
                 }
-              } else if (parsed.type === 'complete') {
+              } else if (parsed.type === "complete") {
                 fullContent = parsed.content || fullContent;
                 usage = parsed.usage;
                 break;
-              } else if (parsed.type === 'error') {
-                throw new Error(parsed.error || 'Streaming error');
+              } else if (parsed.type === "error") {
+                throw new Error(parsed.error || "Streaming error");
               }
             } catch (parseError) {
               // Ignore individual parse errors
-              console.log('Parse error on chunk:', data);
+              console.log("Parse error on chunk:", data);
             }
           }
         }
@@ -444,7 +463,14 @@ export class ChatMain extends Component {
     }
 
     // Complete the streaming
-    await this._completeResponse(fullContent, streamingMessage, streamingMessageElement, originalMessage, isFirstMessage, usage);
+    await this._completeResponse(
+      fullContent,
+      streamingMessage,
+      streamingMessageElement,
+      originalMessage,
+      isFirstMessage,
+      usage
+    );
   }
 
   private async _simulateStreaming(
@@ -453,11 +479,11 @@ export class ChatMain extends Component {
     streamingMessageElement: any
   ) {
     let displayedContent = "";
-    
+
     // Display content with simulated streaming effect
     for (let i = 0; i <= fullContent.length; i += 3) {
       displayedContent = fullContent.slice(0, i);
-      
+
       // Update the message content
       streamingMessage.content = displayedContent;
 
@@ -468,7 +494,7 @@ export class ChatMain extends Component {
 
       // Small delay to simulate streaming
       if (i < fullContent.length) {
-        await new Promise(resolve => setTimeout(resolve, 20));
+        await new Promise((resolve) => setTimeout(resolve, 20));
       }
     }
   }

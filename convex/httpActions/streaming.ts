@@ -29,7 +29,8 @@ function setCorsHeaders(): HeadersInit {
   return {
     "Access-Control-Allow-Origin": "http://localhost:5173",
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, x-route-params",
+    "Access-Control-Allow-Headers":
+      "Content-Type, Authorization, x-route-params",
     "Access-Control-Allow-Credentials": "true",
     "Access-Control-Max-Age": "86400",
   };
@@ -50,16 +51,13 @@ export const streamChat = httpAction(async (ctx, request) => {
   const identity = await checkAuth(ctx, request);
   if (!identity) {
     console.log("[Streaming] Authentication failed");
-    return new Response(
-      JSON.stringify({ error: "Unauthorized" }),
-      {
-        status: 401,
-        headers: {
-          "Content-Type": "application/json",
-          ...setCorsHeaders(),
-        },
-      }
-    );
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: {
+        "Content-Type": "application/json",
+        ...setCorsHeaders(),
+      },
+    });
   }
 
   const userId = identity.subject;
@@ -70,16 +68,13 @@ export const streamChat = httpAction(async (ctx, request) => {
   const chatId = params.chatId;
 
   if (!chatId) {
-    return new Response(
-      JSON.stringify({ error: "Chat ID is required" }),
-      {
-        status: 400,
-        headers: {
-          "Content-Type": "application/json",
-          ...setCorsHeaders(),
-        },
-      }
-    );
+    return new Response(JSON.stringify({ error: "Chat ID is required" }), {
+      status: 400,
+      headers: {
+        "Content-Type": "application/json",
+        ...setCorsHeaders(),
+      },
+    });
   }
 
   try {
@@ -87,16 +82,13 @@ export const streamChat = httpAction(async (ctx, request) => {
     const { message, conversation = [] } = body;
 
     if (!message) {
-      return new Response(
-        JSON.stringify({ error: "Message is required" }),
-        {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json",
-            ...setCorsHeaders(),
-          },
-        }
-      );
+      return new Response(JSON.stringify({ error: "Message is required" }), {
+        status: 400,
+        headers: {
+          "Content-Type": "application/json",
+          ...setCorsHeaders(),
+        },
+      });
     }
 
     console.log(`[Streaming] Processing message for chat ${chatId}`);
@@ -105,7 +97,10 @@ export const streamChat = httpAction(async (ctx, request) => {
     const preferences = await ctx.runQuery(api.aiKeys.getUserAIPreferences);
 
     // Handle model name migration from old to new
-    if (preferences && preferences.defaultModel === "google/gemini-2.0-flash-exp") {
+    if (
+      preferences &&
+      preferences.defaultModel === "google/gemini-2.0-flash-exp"
+    ) {
       preferences.defaultModel = "google/gemini-2.5-flash-preview-05-20";
     }
 
@@ -114,7 +109,8 @@ export const streamChat = httpAction(async (ctx, request) => {
     if (!hasValidKey) {
       return new Response(
         JSON.stringify({
-          error: "No valid API key configured. Please set up your AI API key in Settings.",
+          error:
+            "No valid API key configured. Please set up your AI API key in Settings.",
         }),
         {
           status: 400,
@@ -149,16 +145,13 @@ export const streamChat = httpAction(async (ctx, request) => {
     );
 
     if (!streamData.success) {
-      return new Response(
-        JSON.stringify({ error: streamData.error }),
-        {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json",
-            ...setCorsHeaders(),
-          },
-        }
-      );
+      return new Response(JSON.stringify({ error: streamData.error }), {
+        status: 400,
+        headers: {
+          "Content-Type": "application/json",
+          ...setCorsHeaders(),
+        },
+      });
     }
 
     console.log(`[Streaming] Stream data prepared for ${chatId}`);
@@ -181,11 +174,14 @@ export const streamChat = httpAction(async (ctx, request) => {
               headers: {
                 Authorization: `Bearer ${streamData.apiKey}`,
                 "Content-Type": "application/json",
-                "HTTP-Referer": process.env.SITE_URL || "https://localhost:5173",
+                "HTTP-Referer":
+                  process.env.SITE_URL || "https://localhost:5173",
                 "X-Title": "Chat App - Streaming",
               },
               body: JSON.stringify({
-                model: streamData.preferences?.defaultModel || "google/gemini-2.5-flash-preview-05-20",
+                model:
+                  streamData.preferences?.defaultModel ||
+                  "google/gemini-2.5-flash-preview-05-20",
                 messages: streamData.messages,
                 temperature: streamData.preferences?.temperature || 0.7,
                 max_tokens: streamData.preferences?.maxTokens || 2000,
@@ -321,7 +317,9 @@ export const streamChat = httpAction(async (ctx, request) => {
           // Record successful usage
           try {
             await ctx.runMutation(api.usage.recordUsage, {
-              model: streamData.preferences?.defaultModel || "google/gemini-2.5-flash-preview-05-20",
+              model:
+                streamData.preferences?.defaultModel ||
+                "google/gemini-2.5-flash-preview-05-20",
               promptTokens,
               completionTokens,
               totalTokens,
@@ -346,7 +344,9 @@ export const streamChat = httpAction(async (ctx, request) => {
           // Record failed usage
           try {
             await ctx.runMutation(api.usage.recordUsage, {
-              model: streamData.preferences?.defaultModel || "google/gemini-2.5-flash-preview-05-20",
+              model:
+                streamData.preferences?.defaultModel ||
+                "google/gemini-2.5-flash-preview-05-20",
               promptTokens: 0,
               completionTokens: 0,
               totalTokens: 0,
@@ -368,7 +368,7 @@ export const streamChat = httpAction(async (ctx, request) => {
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
+        Connection: "keep-alive",
         ...setCorsHeaders(),
       },
     });
