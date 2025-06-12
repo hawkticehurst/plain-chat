@@ -54,14 +54,10 @@ chat-sidebar .auth-btn:hover {
 }
 
 chat-sidebar .ai-settings-btn,
-chat-sidebar .usage-dashboard-btn {
+chat-sidebar .usage-dashboard-btn,
+chat-sidebar .auth-btn {
   background: var(--color-info);
   color: var(--color-text-primary);
-}
-
-chat-sidebar .auth-btn {
-  background: var(--color-error);
-  color: white;
 }
 
 chat-sidebar .chat-list {
