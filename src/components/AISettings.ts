@@ -1,5 +1,5 @@
-import { Component, html, signal, config, authService } from "../lib/index";
-import type { Signal } from "../lib/index";
+import { Component, html, signal, config, authService } from "@lib";
+import type { Signal } from "@lib";
 
 export class AISettings extends Component {
   private _isLoading: Signal<boolean> = signal(false, []);
@@ -13,7 +13,6 @@ export class AISettings extends Component {
   private _temperature: Signal<number> = signal(0.7, []);
   private _maxTokens: Signal<number> = signal(2000, []);
   private _systemPrompt: Signal<string> = signal("", []);
-  private _enableStreaming: Signal<boolean> = signal(true, []);
 
   private _apiKeyInput!: HTMLInputElement;
   private _modelSelect!: HTMLSelectElement;
@@ -22,7 +21,6 @@ export class AISettings extends Component {
   private _maxTokensInput!: HTMLInputElement;
   private _maxTokensValue!: HTMLSpanElement;
   private _systemPromptTextarea!: HTMLTextAreaElement;
-  private _streamingToggle!: HTMLInputElement;
 
   constructor() {
     super();
@@ -143,17 +141,6 @@ export class AISettings extends Component {
                 conversation
               </p>
             </div>
-
-            <div class="form-group">
-              <label class="form-checkbox">
-                <input type="checkbox" id="streaming" checked />
-                <span class="checkmark"></span>
-                Enable streaming responses
-              </label>
-              <p class="form-help">
-                Show AI responses as they're generated (recommended)
-              </p>
-            </div>
           </div>
 
           <!-- Action Buttons -->
@@ -201,9 +188,6 @@ export class AISettings extends Component {
     this._systemPromptTextarea = this.querySelector(
       "#system-prompt"
     ) as HTMLTextAreaElement;
-    this._streamingToggle = this.querySelector(
-      "#streaming"
-    ) as HTMLInputElement;
   }
 
   private _setupEventListeners() {
@@ -237,11 +221,6 @@ export class AISettings extends Component {
     // System prompt
     this._systemPromptTextarea.addEventListener("input", () => {
       this._systemPrompt.value = this._systemPromptTextarea.value;
-    });
-
-    // Streaming toggle
-    this._streamingToggle.addEventListener("change", () => {
-      this._enableStreaming.value = this._streamingToggle.checked;
     });
 
     // Action buttons
@@ -300,7 +279,6 @@ export class AISettings extends Component {
           this._temperature.value = preferences.temperature || 0.7;
           this._maxTokens.value = preferences.maxTokens || 2000;
           this._systemPrompt.value = preferences.systemPrompt || "";
-          this._enableStreaming.value = preferences.enableStreaming !== false;
 
           // Update UI
           this._modelSelect.value = this._selectedModel.value;
@@ -310,7 +288,6 @@ export class AISettings extends Component {
           this._maxTokensInput.value = this._maxTokens.value.toString();
           this._maxTokensValue.textContent = this._maxTokens.value.toString();
           this._systemPromptTextarea.value = this._systemPrompt.value;
-          this._streamingToggle.checked = this._enableStreaming.value;
         } else {
           // No preferences found, set defaults
           this._modelSelect.value = this._selectedModel.value;
@@ -320,7 +297,6 @@ export class AISettings extends Component {
           this._maxTokensInput.value = this._maxTokens.value.toString();
           this._maxTokensValue.textContent = this._maxTokens.value.toString();
           this._systemPromptTextarea.value = this._systemPrompt.value;
-          this._streamingToggle.checked = this._enableStreaming.value;
         }
       } else {
         // Failed to load preferences, set defaults
@@ -330,7 +306,6 @@ export class AISettings extends Component {
         this._maxTokensInput.value = this._maxTokens.value.toString();
         this._maxTokensValue.textContent = this._maxTokens.value.toString();
         this._systemPromptTextarea.value = this._systemPrompt.value;
-        this._streamingToggle.checked = this._enableStreaming.value;
       }
 
       this._clearMessages();
@@ -430,7 +405,6 @@ export class AISettings extends Component {
             temperature: this._temperature.value,
             maxTokens: this._maxTokens.value,
             systemPrompt: this._systemPrompt.value || undefined,
-            enableStreaming: this._enableStreaming.value,
             enableUsageNotifications: true, // Default value
           }),
         }

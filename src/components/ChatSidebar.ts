@@ -1,5 +1,5 @@
-import { Component, html, signal, config, authService } from "../lib/index";
-import type { Signal } from "../lib/index";
+import { Component, html, signal, config, authService } from "@lib";
+import type { Signal } from "@lib";
 
 interface ChatItem {
   id: string;
@@ -12,14 +12,20 @@ export class ChatSidebar extends Component {
   private _chats: Array<ChatItem> = [];
   private _loading = true;
   private _currentChatId: string | null = null;
+  private _isSignedIn = false;
 
   constructor() {
     super();
     this.loadChats();
+    this.checkAuthStatus();
   }
 
   connectedCallback() {
     this.render();
+  }
+
+  private checkAuthStatus() {
+    this._isSignedIn = authService.isSignedIn();
   }
 
   private async loadChats() {
@@ -106,6 +112,8 @@ export class ChatSidebar extends Component {
   }
 
   render() {
+    this.checkAuthStatus(); // Update auth status before render
+
     const template = html`
       <section class="header">
         <button class="new-chat-btn">New Chat</button>
@@ -113,7 +121,14 @@ export class ChatSidebar extends Component {
         <button class="usage-dashboard-btn">Usage Dashboard</button>
       </section>
       <section class="chat-list">
-        ${this._loading ? '<div class="loading">Loading chats...</div>' : ""}
+        ${this._loading
+          ? html`<div class="loading">Loading chats...</div>`
+          : ""}
+      </section>
+      <section class="footer">
+        <button class="auth-btn">
+          ${this._isSignedIn ? "Sign Out" : "Sign In"}
+        </button>
       </section>
     `;
 
@@ -123,6 +138,7 @@ export class ChatSidebar extends Component {
     const newChatBtn = this.querySelector(".new-chat-btn");
     const aiSettingsBtn = this.querySelector(".ai-settings-btn");
     const usageDashboardBtn = this.querySelector(".usage-dashboard-btn");
+    const authBtn = this.querySelector(".auth-btn");
 
     if (newChatBtn) {
       newChatBtn.addEventListener("click", () => {
@@ -145,6 +161,21 @@ export class ChatSidebar extends Component {
     if (usageDashboardBtn) {
       usageDashboardBtn.addEventListener("click", () => {
         window.location.hash = "#/usage";
+      });
+    }
+
+    if (authBtn) {
+      authBtn.addEventListener("click", async () => {
+        if (this._isSignedIn) {
+          try {
+            await authService.signOut();
+          } catch (error) {
+            console.error("Error signing out:", error);
+          }
+        } else {
+          // Navigate to sign-in page
+          window.location.hash = "#/sign-in";
+        }
       });
     }
 

@@ -5,10 +5,10 @@ chat-message {
 
 chat-message .message {
   display: flex;
-  gap: 0.75rem;
+  gap: 12px;
   width: fit-content;
   max-width: 70%;
-  margin-bottom: 0.5rem;
+  margin-bottom: 8px;
 }
 
 chat-message .message.prompt {
@@ -41,11 +41,11 @@ chat-message .content {
 }
 
 chat-message .text {
-  padding: 0.875rem 1.125rem;
-  border-radius: 1.25rem;
-  margin-bottom: 0.375rem;
-  line-height: 1.5;
-  font-size: 0.9rem;
+  padding: 10px 20px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+  line-height: 1.75;
+  font-size: 1rem;
   position: relative;
   box-shadow: 0 1px 2px var(--color-border);
 }
@@ -57,7 +57,6 @@ chat-message .message.prompt .text {
     var(--color-primary)
   );
   color: var(--color-text-primary);
-  border-top-right-radius: 0.375rem;
 }
 
 chat-message .message.response .text {
@@ -104,9 +103,9 @@ chat-message .message.streaming .text {
 chat-message .error-box {
   background: var(--color-error);
   color: var(--color-text-primary);
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.375rem;
-  margin-top: 0.5rem;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-top: 8px;
   font-size: 0.875rem;
   border: 1px solid rgba(255, 0, 0, 0.3);
   box-shadow: 0 1px 3px rgba(255, 0, 0, 0.1);
@@ -114,7 +113,7 @@ chat-message .error-box {
 
 chat-message .error-box::before {
   content: "⚠️ ";
-  margin-right: 0.25rem;
+  margin-right: 4px;
 }
 
 @media (max-width: 768px) {
@@ -129,7 +128,7 @@ chat-message .error-box::before {
   }
 
   chat-message .text {
-    padding: 0.75rem 1rem;
+    padding: 12px 16px;
     font-size: 0.875rem;
   }
 }
@@ -152,7 +151,7 @@ chat-message .message.streaming .text p {
 chat-message .message.streaming .text ul,
 chat-message .message.streaming .text ol {
   margin: 0.5em 0;
-  padding-left: 1.5em;
+  padding-left: 24px;
 }
 
 chat-message .message.streaming .text li {
@@ -168,15 +167,15 @@ chat-message .message.streaming .text code {
 
 chat-message .message.streaming .text pre {
   background: var(--color-code-bg, #f5f5f5);
-  padding: 1em;
-  border-radius: 0.5em;
+  padding: 16px;
+  border-radius: 8px;
   overflow-x: auto;
   margin: 0.5em 0;
 }
 
 chat-message .message.streaming .text blockquote {
   border-left: 3px solid var(--color-border, #ddd);
-  padding-left: 1em;
+  padding-left: 16px;
   margin: 0.5em 0;
   color: var(--color-text-secondary, #666);
 }
@@ -190,7 +189,7 @@ chat-message .message.streaming .text table {
 chat-message .message.streaming .text th,
 chat-message .message.streaming .text td {
   border: 1px solid var(--color-border, #ddd);
-  padding: 0.5em;
+  padding: 8px;
   text-align: left;
 }
 

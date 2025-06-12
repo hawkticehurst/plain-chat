@@ -1,5 +1,5 @@
-import { Component } from "../lib/index";
-import { ChatMessage } from "./ChatMessage";
+import { Component } from "@lib";
+import { ChatMessage } from "@components";
 import type { Message } from "./ChatMain";
 
 export class ChatMessages extends Component {

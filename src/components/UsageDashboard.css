@@ -6,8 +6,8 @@ usage-dashboard {
 .usage-dashboard {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-  padding: 2rem;
+  gap: 32px;
+  padding: 32px;
   max-width: 1200px;
   margin: 0 auto;
   min-height: 100vh;
@@ -16,14 +16,14 @@ usage-dashboard {
 
 .usage-header {
   text-align: center;
-  margin-bottom: 1rem;
+  margin-bottom: 16px;
 }
 
 .usage-header h2 {
   font-size: 2rem;
   font-weight: 600;
   color: var(--color-text);
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 8px 0;
 }
 
 .usage-description {
@@ -35,25 +35,25 @@ usage-dashboard {
 .usage-content {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 32px;
 }
 
 /* Summary Cards */
 .summary-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 1rem;
+  gap: 24px;
+  margin-bottom: 16px;
 }
 
 .summary-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 12px;
-  padding: 1.5rem;
+  padding: 24px;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 16px;
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
@@ -66,8 +66,8 @@ usage-dashboard {
 
 .card-icon {
   font-size: 2rem;
-  width: 3rem;
-  height: 3rem;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -85,7 +85,7 @@ usage-dashboard {
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--color-text-muted);
-  margin: 0 0 0.25rem 0;
+  margin: 0 0 4px 0;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -101,7 +101,7 @@ usage-dashboard {
 .card-subtitle {
   font-size: 0.875rem;
   color: var(--color-text-muted);
-  margin: 0.25rem 0 0 0;
+  margin: 4px 0 0 0;
 }
 
 /* Period Selector */
@@ -112,18 +112,18 @@ usage-dashboard {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 12px;
-  padding: 1.5rem;
-  gap: 1rem;
+  padding: 24px;
+  gap: 16px;
   flex-wrap: wrap;
 }
 
 .period-buttons {
   display: flex;
-  gap: 0.5rem;
+  gap: 8px;
 }
 
 .period-btn {
-  padding: 0.5rem 1rem;
+  padding: 8px 16px;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: var(--color-background);
@@ -148,7 +148,7 @@ usage-dashboard {
 .days-selector {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 12px;
 }
 
 .days-selector label {
@@ -159,7 +159,7 @@ usage-dashboard {
 }
 
 .form-select {
-  padding: 0.5rem;
+  padding: 8px;
   border: 1px solid var(--color-border);
   border-radius: 6px;
   background: var(--color-background);
@@ -173,14 +173,14 @@ usage-dashboard {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 12px;
-  padding: 1.5rem;
+  padding: 24px;
 }
 
 .chart-section h3 {
   font-size: 1.25rem;
   font-weight: 600;
   color: var(--color-text);
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 24px 0;
 }
 
 .chart-container {
@@ -202,9 +202,9 @@ usage-dashboard {
 .simple-chart {
   display: flex;
   align-items: end;
-  gap: 0.5rem;
+  gap: 8px;
   height: 300px;
-  padding: 1rem 0;
+  padding: 16px 0;
 }
 
 .chart-bar {
@@ -237,7 +237,7 @@ usage-dashboard {
 }
 
 .chart-bar-label {
-  margin-top: 0.5rem;
+  margin-top: 8px;
   font-size: 0.75rem;
   color: var(--color-text-muted);
   text-align: center;
@@ -250,24 +250,24 @@ usage-dashboard {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 12px;
-  padding: 1.5rem;
+  padding: 24px;
 }
 
 .model-breakdown h3 {
   font-size: 1.25rem;
   font-weight: 600;
   color: var(--color-text);
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 24px 0;
 }
 
 .model-stats {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 16px;
 }
 
 .model-stat-item {
-  padding: 1rem;
+  padding: 16px;
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: 8px;
@@ -281,13 +281,13 @@ usage-dashboard {
 .model-name {
   font-weight: 600;
   color: var(--color-text);
-  margin-bottom: 0.5rem;
+  margin-bottom: 8px;
 }
 
 .model-details {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 0.75rem;
+  gap: 16px;
+  margin-bottom: 12px;
   flex-wrap: wrap;
 }
 
@@ -325,14 +325,14 @@ usage-dashboard {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 12px;
-  padding: 1.5rem;
+  padding: 24px;
 }
 
 .recent-usage h3 {
   font-size: 1.25rem;
   font-weight: 600;
   color: var(--color-text);
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 24px 0;
 }
 
 .table-container {
@@ -349,7 +349,7 @@ usage-dashboard {
 
 .usage-table th,
 .usage-table td {
-  padding: 0.75rem 1rem;
+  padding: 12px 16px;
   text-align: left;
   border-bottom: 1px solid var(--color-border);
 }
@@ -386,26 +386,26 @@ usage-dashboard {
   text-align: center;
   color: var(--color-text-muted);
   font-style: italic;
-  padding: 2rem 1rem;
+  padding: 32px 16px;
 }
 
 .loading-text {
   text-align: center;
   color: var(--color-text-muted);
   font-style: italic;
-  margin: 2rem 0;
+  margin: 32px 0;
 }
 
 /* Action Buttons */
 .dashboard-actions {
   display: flex;
-  gap: 1rem;
+  gap: 16px;
   justify-content: center;
-  padding: 1rem 0;
+  padding: 16px 0;
 }
 
 .btn {
-  padding: 0.75rem 1.5rem;
+  padding: 12px 24px;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: var(--color-background);
@@ -440,17 +440,17 @@ usage-dashboard {
 /* Status Messages */
 .status-messages {
   position: fixed;
-  top: 2rem;
-  right: 2rem;
+  top: 32px;
+  right: 32px;
   z-index: 1000;
 }
 
 .error-message,
 .success-message {
-  padding: 1rem 1.5rem;
+  padding: 16px 24px;
   border-radius: 8px;
   font-weight: 500;
-  margin-bottom: 0.5rem;
+  margin-bottom: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   max-width: 400px;
   word-wrap: break-word;
@@ -471,13 +471,13 @@ usage-dashboard {
 /* Responsive Design */
 @media (max-width: 768px) {
   .usage-dashboard {
-    padding: 1rem;
+    padding: 16px;
   }
 
   .period-selector {
     flex-direction: column;
     align-items: stretch;
-    gap: 1rem;
+    gap: 16px;
   }
 
   .period-buttons {
@@ -490,7 +490,7 @@ usage-dashboard {
 
   .model-details {
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 8px;
   }
 
   .dashboard-actions {
@@ -505,7 +505,7 @@ usage-dashboard {
 
   .status-messages {
     position: static;
-    margin-top: 1rem;
+    margin-top: 16px;
   }
 }
 
@@ -515,7 +515,7 @@ usage-dashboard {
   }
 
   .summary-card {
-    padding: 1rem;
+    padding: 16px;
   }
 
   .card-value {
@@ -524,7 +524,7 @@ usage-dashboard {
 
   .usage-table th,
   .usage-table td {
-    padding: 0.5rem;
+    padding: 8px;
     font-size: 0.875rem;
   }
 }

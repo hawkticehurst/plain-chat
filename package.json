@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:server": "node server.js",
+    "dev:server": "node --watch server.js",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "start": "node server.js"
