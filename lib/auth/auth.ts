@@ -37,6 +37,27 @@ export class AuthService {
     });
   }
 
+  async signOut(): Promise<void> {
+    try {
+      if (this.clerk) {
+        await this.clerk.signOut();
+        // Force page reload to clear any cached state
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("Error signing out:", error);
+      throw error;
+    }
+  }
+
+  getCurrentUser(): UserResource | null {
+    return this.clerk?.user || null;
+  }
+
+  isSignedIn(): boolean {
+    return !!this.clerk?.user;
+  }
+
   async getAuthStatus(): Promise<AuthStatus> {
     try {
       const response = await fetch(`${config.apiBaseUrl}/api/auth/status`);

@@ -17,6 +17,12 @@ chat-sidebar > .header {
   align-items: stretch;
 }
 
+chat-sidebar > .footer {
+  padding: 1rem;
+  margin-top: auto;
+  border-top: 1px solid var(--color-border);
+}
+
 chat-sidebar > .header h2 {
   margin: 0;
   font-size: 1.125rem;
@@ -26,7 +32,8 @@ chat-sidebar > .header h2 {
 
 chat-sidebar .new-chat-btn,
 chat-sidebar .ai-settings-btn,
-chat-sidebar .usage-dashboard-btn {
+chat-sidebar .usage-dashboard-btn,
+chat-sidebar .auth-btn {
   background: var(--color-accent);
   color: var(--color-text-primary);
   border: none;
@@ -41,7 +48,8 @@ chat-sidebar .usage-dashboard-btn {
 
 chat-sidebar .new-chat-btn:hover,
 chat-sidebar .ai-settings-btn:hover,
-chat-sidebar .usage-dashboard-btn:hover {
+chat-sidebar .usage-dashboard-btn:hover,
+chat-sidebar .auth-btn:hover {
   opacity: 0.9;
 }
 
@@ -49,6 +57,11 @@ chat-sidebar .ai-settings-btn,
 chat-sidebar .usage-dashboard-btn {
   background: var(--color-info);
   color: var(--color-text-primary);
+}
+
+chat-sidebar .auth-btn {
+  background: var(--color-error);
+  color: white;
 }
 
 chat-sidebar .chat-list {

@@ -89,6 +89,11 @@ export class App extends Component {
       const signInDiv = this.querySelector("#clerk-signin") as HTMLDivElement;
       await authService.init(signInDiv, (user) => {
         this._authStatus = { isAuthenticated: true, userId: user.id };
+        // Refresh the sidebar to update auth button state
+        const sidebar = document.querySelector("chat-sidebar") as any;
+        if (sidebar) {
+          sidebar.render();
+        }
       });
       router.navigate("/");
     } catch (error) {
