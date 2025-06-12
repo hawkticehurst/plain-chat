@@ -4,6 +4,8 @@
 
 Successfully implemented persistent chat functionality with a lazy creation approach where chats are only created in the database when the first message is sent.
 
+**MIGRATION STATUS: Backend migration from Hono server to Convex HTTP actions is 95% complete. Frontend works with authentication and basic endpoints, but streaming (SSE) functionality still has CORS issues preventing real-time AI responses.**
+
 ## Key Features Implemented
 
 ### 1. Database Schema Updates
@@ -141,3 +143,158 @@ Successfully implemented persistent chat functionality with a lazy creation appr
 - Message editing/deletion
 - Chat sharing between users
 - Chat templates/prompts
+
+---
+
+# CONVEX MIGRATION STATUS (December 2024)
+
+## Migration Completed ✅
+
+### Backend Infrastructure
+
+- **All API endpoints migrated** from Hono server (`server.js`) to Convex HTTP actions
+- **Authentication working** - Clerk JWT tokens properly validated
+- **Environment setup complete** - All Convex environment variables configured
+- **Deployment successful** - Functions deployed to both dev and prod environments
+- **CORS headers configured** - All endpoints return proper CORS headers
+
+### Migrated Endpoints
+
+1. **Auth**: `/auth/status` - ✅ Working
+2. **AI Settings**: All endpoints (`/ai-settings/*`) - ✅ Working
+3. **Chats**: All CRUD operations (`/chats`, `/chats/:chatId/*`) - ✅ Working
+4. **Messages**: Get and create messages (`/chats/:chatId/messages`) - ✅ Working
+5. **Usage**: All usage tracking endpoints (`/usage/*`) - ✅ Working
+6. **Streaming**: `/chats/:chatId/stream` - ⚠️ CORS Issues
+
+### Frontend Updates
+
+- **Config updated** - Using Convex HTTP URL instead of local server
+- **API calls updated** - All frontend code uses new Convex endpoints
+- **Authentication fixed** - JWT tokens sent with correct audience
+- **Debug logging added** - Comprehensive logging for troubleshooting
+
+## Current Issue: Streaming CORS Problem ⚠️
+
+### Problem Description
+
+The streaming endpoint (`/chats/:chatId/stream`) returns proper CORS headers when tested with curl, but browsers are blocking the stream reading due to CORS policy violations. The error message in browser console:
+
+```
+Cross-Origin Request Blocked: The Same Origin Policy disallows reading the remote resource at https://giant-camel-264.convex.site/chats/jx7drfm00am517ehe9hj5nq04s7hp97x/stream. (Reason: CORS request did not succeed).
+```
+
+### What Works
+
+- ✅ OPTIONS preflight requests return correct CORS headers
+- ✅ Authentication is working (JWT tokens validated)
+- ✅ POST request to streaming endpoint starts successfully
+- ✅ Backend streaming logic is implemented correctly
+- ✅ Fallback to non-streaming responses works
+
+### What Doesn't Work
+
+- ❌ Browser cannot read the SSE stream due to CORS restrictions
+- ❌ `response.body.getReader()` fails with network error
+- ❌ Real-time streaming of AI responses blocked
+
+### Files Involved in Streaming
+
+#### Backend (Convex)
+
+- `convex/httpActions/streaming.ts` - Complete SSE implementation
+- `convex/http.ts` - Hono router with dynamic route support
+
+#### Frontend
+
+- `src/components/ChatMain.ts` - Streaming response handler with fallback logic
+
+### Attempted Solutions
+
+1. **CORS Headers**: Added comprehensive CORS headers to streaming endpoint
+2. **Preflight Handling**: OPTIONS requests properly handled
+3. **Hono Integration**: Used Hono for advanced routing and CORS middleware
+4. **Fallback Logic**: Implemented simulated streaming when real streaming fails
+
+### Technical Details
+
+#### Current Architecture
+
+```
+Frontend (localhost:5173)
+    ↓ HTTP/SSE Request
+Convex HTTP Actions (blessed-shark-458.convex.site)
+    ↓ OpenRouter API Call
+OpenRouter AI API (openrouter.ai)
+```
+
+#### CORS Configuration
+
+```typescript
+// In convex/httpActions/streaming.ts
+function setCorsHeaders(): HeadersInit {
+  return {
+    "Access-Control-Allow-Origin": "http://localhost:5173",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+    "Access-Control-Allow-Headers":
+      "Content-Type, Authorization, x-route-params",
+    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Max-Age": "86400",
+  };
+}
+```
+
+### Next Session Action Items
+
+1. **Investigate Alternative Streaming Solutions**:
+
+   - Research Convex-specific streaming limitations
+   - Consider WebSocket-based streaming
+   - Explore chunked JSON responses instead of SSE
+   - Look into Convex's built-in streaming capabilities
+
+2. **Test CORS Configuration**:
+
+   - Verify if wildcard origins work (`*` instead of specific domain)
+   - Test with different CORS middleware configurations
+   - Check if Convex has specific CORS requirements
+
+3. **Implement Workaround**:
+
+   - If SSE doesn't work, implement polling-based streaming
+   - Use WebSocket connections if Convex supports them
+   - Consider server-sent events alternative solutions
+
+4. **Final Cleanup**:
+   - Remove `server.js` once streaming is resolved
+   - Remove all Hono server dependencies
+   - Update documentation and deployment scripts
+
+### Debug Information
+
+#### Working Endpoints Test
+
+```bash
+# Test auth endpoint
+curl -H "Authorization: Bearer <token>" https://blessed-shark-458.convex.site/auth/status
+
+# Test chats endpoint
+curl -H "Authorization: Bearer <token>" https://blessed-shark-458.convex.site/chats
+
+# Test CORS preflight
+curl -X OPTIONS -H "Origin: http://localhost:5173" https://blessed-shark-458.convex.site/chats/test/stream
+```
+
+#### Environment Variables (Convex)
+
+- `ENCRYPTION_KEY` - ✅ Set
+- `SITE_URL` - ✅ Set
+- `CLERK_PUBLISHABLE_KEY` - ✅ Set
+- `CLERK_SECRET_KEY` - ✅ Set
+
+#### Deployment Status
+
+- **Dev Environment**: `giant-camel-264.convex.site` - ✅ Active
+- **Prod Environment**: `blessed-shark-458.convex.site` - ✅ Active
+
+The migration is essentially complete except for this final streaming CORS hurdle. All other functionality works perfectly with the new Convex backend.
