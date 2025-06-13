@@ -1,5 +1,6 @@
 import { httpAction } from "../_generated/server";
 import { api } from "../_generated/api";
+import { getStreamingCorsHeaders, isDevelopment } from "../lib/corsConfig";
 
 // Extract route parameters from custom header set by Hono
 function getRouteParams(request: Request): Record<string, string> {
@@ -24,24 +25,14 @@ async function checkAuth(ctx: any, request: Request) {
   }
 }
 
-// Helper function to set CORS headers
-function setCorsHeaders(): HeadersInit {
-  return {
-    "Access-Control-Allow-Origin": "*", // Try wildcard for testing
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-    "Access-Control-Allow-Headers": "*", // Allow all headers
-    "Access-Control-Expose-Headers": "*", // Expose all response headers
-    "Access-Control-Allow-Credentials": "false", // Must be false when using wildcard origin
-    "Access-Control-Max-Age": "86400",
-  };
-}
-
 export const streamChat = httpAction(async (ctx, request) => {
+  const isDev = isDevelopment();
+
   // Handle preflight OPTIONS request
   if (request.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
-      headers: setCorsHeaders(),
+      headers: getStreamingCorsHeaders(isDev),
     });
   }
 
@@ -52,7 +43,7 @@ export const streamChat = httpAction(async (ctx, request) => {
       status: 401,
       headers: {
         "Content-Type": "application/json",
-        ...setCorsHeaders(),
+        ...getStreamingCorsHeaders(isDev),
       },
     });
   }
@@ -68,7 +59,7 @@ export const streamChat = httpAction(async (ctx, request) => {
       status: 400,
       headers: {
         "Content-Type": "application/json",
-        ...setCorsHeaders(),
+        ...getStreamingCorsHeaders(isDev),
       },
     });
   }
@@ -82,7 +73,7 @@ export const streamChat = httpAction(async (ctx, request) => {
         status: 400,
         headers: {
           "Content-Type": "application/json",
-          ...setCorsHeaders(),
+          ...getStreamingCorsHeaders(isDev),
         },
       });
     }
@@ -110,7 +101,7 @@ export const streamChat = httpAction(async (ctx, request) => {
           status: 400,
           headers: {
             "Content-Type": "application/json",
-            ...setCorsHeaders(),
+            ...getStreamingCorsHeaders(isDev),
           },
         }
       );
@@ -143,7 +134,7 @@ export const streamChat = httpAction(async (ctx, request) => {
         status: 400,
         headers: {
           "Content-Type": "application/json",
-          ...setCorsHeaders(),
+          ...getStreamingCorsHeaders(isDev),
         },
       });
     }
@@ -361,7 +352,7 @@ export const streamChat = httpAction(async (ctx, request) => {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         Connection: "keep-alive",
-        ...setCorsHeaders(),
+        ...getStreamingCorsHeaders(isDev),
       },
     });
   } catch (error) {
@@ -372,7 +363,7 @@ export const streamChat = httpAction(async (ctx, request) => {
         status: 500,
         headers: {
           "Content-Type": "application/json",
-          ...setCorsHeaders(),
+          ...getStreamingCorsHeaders(isDev),
         },
       }
     );

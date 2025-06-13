@@ -25,6 +25,7 @@ import type * as httpActions_chats from "../httpActions/chats.js";
 import type * as httpActions_messages from "../httpActions/messages.js";
 import type * as httpActions_streaming from "../httpActions/streaming.js";
 import type * as httpActions_usage from "../httpActions/usage.js";
+import type * as lib_corsConfig from "../lib/corsConfig.js";
 import type * as lib_serverCrypto from "../lib/serverCrypto.js";
 import type * as messages from "../messages.js";
 import type * as usage from "../usage.js";
@@ -50,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   "httpActions/messages": typeof httpActions_messages;
   "httpActions/streaming": typeof httpActions_streaming;
   "httpActions/usage": typeof httpActions_usage;
+  "lib/corsConfig": typeof lib_corsConfig;
   "lib/serverCrypto": typeof lib_serverCrypto;
   messages: typeof messages;
   usage: typeof usage;

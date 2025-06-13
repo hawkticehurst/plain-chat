@@ -1,26 +1,6 @@
 import { httpAction } from "../_generated/server";
 import { api } from "../_generated/api";
-
-// CORS headers for cross-origin requests
-const getCorsHeaders = (isDev = false) => {
-  const allowedOrigins = isDev
-    ? [
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:3000",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5174",
-      ]
-    : ["https://your-production-domain.com"]; // Replace with your actual production domain
-
-  return {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": isDev ? "*" : allowedOrigins[0], // More restrictive in prod
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Access-Control-Allow-Credentials": "true",
-  };
-};
+import { getCorsHeaders, isDevelopment } from "../lib/corsConfig";
 
 /**
  * Helper function to extract chat ID from Hono route parameters
@@ -48,7 +28,7 @@ function extractChatId(request: Request): string {
  * GET /chats/:chatId/messages
  */
 export const getChatMessages = httpAction(async (ctx, request) => {
-  const isDev = process.env.NODE_ENV !== "production";
+  const isDev = isDevelopment();
 
   // Handle preflight OPTIONS request
   if (request.method === "OPTIONS") {

@@ -15,7 +15,15 @@ export class AuthService {
     signInDiv: HTMLDivElement,
     isSignedInCallback: (user: UserResource) => void
   ): Promise<void> {
-    const publicKey = "pk_test_Z3Jvd24tcGVyY2gtNDcuY2xlcmsuYWNjb3VudHMuZGV2JA";
+    // Use environment variable for Clerk publishable key
+    const publicKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+    if (!publicKey) {
+      throw new Error(
+        "VITE_CLERK_PUBLISHABLE_KEY environment variable is required"
+      );
+    }
+
     const clerk = new Clerk(publicKey);
     await clerk.load();
 
