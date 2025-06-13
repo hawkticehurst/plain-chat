@@ -4,6 +4,7 @@ import "./components/ChatSidebar";
 import "./components/ChatMain";
 import "./components/AISettings";
 import "./components/UsageDashboard";
+import "./components/NotificationComponent";
 
 export class App extends Component {
   private _authStatus: AuthStatus = { isAuthenticated: false, userId: null };
@@ -23,6 +24,7 @@ export class App extends Component {
       this.innerHTML = String(html`
         <chat-sidebar></chat-sidebar>
         <chat-main></chat-main>
+        <notification-component></notification-component>
       `);
       this._setupChatEventListeners();
     });
@@ -89,13 +91,13 @@ export class App extends Component {
       const signInDiv = this.querySelector("#clerk-signin") as HTMLDivElement;
       await authService.init(signInDiv, (user) => {
         this._authStatus = { isAuthenticated: true, userId: user.id };
-        // Refresh the sidebar to update auth button state
+        // Refresh the sidebar to load chats and update auth button state
         const sidebar = document.querySelector("chat-sidebar") as any;
         if (sidebar) {
-          sidebar.render();
+          sidebar.refreshChats(); // This will check auth status and load chats
         }
+        router.navigate("/");
       });
-      router.navigate("/");
     } catch (error) {
       console.error("Error initializing Clerk:", error);
       this.innerHTML =

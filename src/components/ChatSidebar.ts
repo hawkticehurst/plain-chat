@@ -1,5 +1,6 @@
 import { Component, html, signal, config, authService } from "@lib";
 import type { Signal } from "@lib";
+import { notificationService } from "./NotificationComponent";
 
 interface ChatItem {
   id: string;
@@ -16,8 +17,11 @@ export class ChatSidebar extends Component {
 
   constructor() {
     super();
-    this.loadChats();
     this.checkAuthStatus();
+    // Only load chats if user is signed in
+    if (this._isSignedIn) {
+      this.loadChats();
+    }
   }
 
   connectedCallback() {
@@ -29,8 +33,17 @@ export class ChatSidebar extends Component {
   }
 
   private async loadChats() {
+    // Double check auth status before making API calls
+    if (!authService.isSignedIn()) {
+      console.log("User not signed in, skipping chat loading");
+      this._chats = [];
+      this._loading = false;
+      this.render();
+      return;
+    }
+
     try {
-      const response = await authService.fetchWithAuth(
+      const response = await authService.fetchWithAuthRetry(
         `${config.apiBaseUrl}/chats`
       );
 
@@ -47,11 +60,35 @@ export class ChatSidebar extends Component {
           this._chats = [];
         }
       } else {
-        console.error("Failed to load chats:", response.status);
+        if (response.status === 401) {
+          console.error(
+            "Authentication failed loading chats - user may need to refresh"
+          );
+          notificationService.warning(
+            "Authentication expired. Please refresh the page to continue."
+          );
+        } else if (response.status >= 500) {
+          console.error(
+            "Server error loading chats:",
+            response.status,
+            "- retries exhausted"
+          );
+          notificationService.error(
+            "Server is experiencing issues. Chat list couldn't be loaded."
+          );
+        } else {
+          console.error("Failed to load chats:", response.status);
+          notificationService.warning(
+            "Failed to load chat list. Please try refreshing."
+          );
+        }
         this._chats = [];
       }
     } catch (error) {
-      console.error("Error loading chats:", error);
+      console.error("Network error loading chats (retries exhausted):", error);
+      notificationService.error(
+        "Network error loading chat list. Please check your connection."
+      );
       this._chats = [];
     } finally {
       this._loading = false;
@@ -60,6 +97,14 @@ export class ChatSidebar extends Component {
   }
 
   public async refreshChats() {
+    this.checkAuthStatus();
+    if (!this._isSignedIn) {
+      this._chats = [];
+      this._loading = false;
+      this.render();
+      return;
+    }
+
     this._loading = true;
     this.render();
     await this.loadChats();

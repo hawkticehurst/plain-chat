@@ -7,3 +7,10 @@ export { router, Router } from "./ui/router";
 export { AuthService, authService } from "./auth/auth";
 export type { AuthStatus } from "./auth/auth";
 export { config } from "./config";
+export { StreamingChatService } from "./StreamingChatService";
+export type {
+  Message,
+  StreamingChatCallbacks,
+  CreateChatResult,
+  StreamMessageOptions,
+} from "./StreamingChatService";

@@ -1,24 +1,16 @@
-import { Component, config, authService, html } from "@lib";
-import { ChatInput, ChatMessages } from "@components";
-
-export interface Message {
-  role: "prompt" | "response";
-  content: string;
-  timestamp?: number;
-  isLoading?: boolean;
-  isStreaming?: boolean;
-}
+import { Component, html, StreamingChatService, type Message } from "@lib";
+import { ChatInput, ChatMessages, notificationService } from "@components";
 
 export class ChatMain extends Component {
   private _messages: Array<Message> = [];
   private _chatInput: ChatInput | null = null;
   private _chatMessages: ChatMessages | null = null;
   private _currentChatId: string | null = null;
-  private _currentEventSource: EventSource | null = null;
-  private _isStreaming: boolean = false;
+  private _streamingService: StreamingChatService;
 
   constructor() {
     super();
+    this._streamingService = new StreamingChatService();
     // Start with empty new chat state
     this.startNewChat();
   }
@@ -35,39 +27,13 @@ export class ChatMain extends Component {
     }
 
     try {
-      const response = await authService.fetchWithAuth(
-        `${config.apiBaseUrl}/chats/${chatId}/messages`
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.messages && Array.isArray(data.messages)) {
-          this._messages = data.messages.map((msg: any) => ({
-            role: msg.role || "response",
-            content: msg.content || "No content",
-            timestamp: msg.createdAt,
-          }));
-        } else {
-          this._messages = [];
-        }
-      } else {
-        console.error("Failed to load chat messages:", response.status);
-        this._messages = [
-          {
-            role: "response",
-            content:
-              "❌ Failed to load chat messages. Please try refreshing the page.",
-            timestamp: Date.now(),
-          },
-        ];
-      }
+      this._messages = await this._streamingService.loadChatMessages(chatId);
     } catch (error) {
-      console.error("Error loading chat messages:", error);
+      console.error("Error loading chat:", error);
       this._messages = [
         {
           role: "response",
-          content:
-            "❌ Network error loading messages. Please check your connection.",
+          content: "❌ Error loading chat. Please try again.",
           timestamp: Date.now(),
         },
       ];
@@ -133,53 +99,36 @@ export class ChatMain extends Component {
     );
   }
 
-  public hello() {
-    // Method can be used for testing purposes
-  }
-
   private async _handleSendMessage(event: Event) {
     const customEvent = event as CustomEvent;
     const { message } = customEvent.detail;
 
     // If no chat is selected, create a new one first
     if (!this._currentChatId) {
-      try {
-        const response = await authService.fetchWithAuth(
-          `${config.apiBaseUrl}/chats`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              title: "New Conversation",
-            }),
-          }
+      const createResult =
+        await this._streamingService.createChat("New Conversation");
+
+      if (!createResult.success) {
+        console.error("Failed to create new chat:", createResult.error);
+        notificationService.error(
+          "Failed to create new chat. Please try again."
         );
-
-        if (response.ok) {
-          const data = await response.json();
-          this._currentChatId = data.chatId;
-
-          // Re-render immediately to switch from empty state to chat interface
-          await this.render();
-
-          // Notify parent to update sidebar
-          this.dispatchEvent(
-            new CustomEvent("chat-created", {
-              detail: { chatId: this._currentChatId },
-              bubbles: true,
-              composed: true,
-            })
-          );
-        } else {
-          console.error("Failed to create new chat:", response.status);
-          return;
-        }
-      } catch (error) {
-        console.error("Error creating new chat:", error);
         return;
       }
+
+      this._currentChatId = createResult.chatId;
+
+      // Re-render immediately to switch from empty state to chat interface
+      await this.render();
+
+      // Notify parent to update sidebar
+      this.dispatchEvent(
+        new CustomEvent("chat-created", {
+          detail: { chatId: this._currentChatId },
+          bubbles: true,
+          composed: true,
+        })
+      );
     }
 
     // Add user message to conversation (local state)
@@ -205,87 +154,24 @@ export class ChatMain extends Component {
     await this._updateMessages();
 
     // Save user message to database
-    try {
-      await authService.fetchWithAuth(
-        `${config.apiBaseUrl}/chats/${this._currentChatId}/messages`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            role: "prompt",
-            content: message,
-          }),
-        }
-      );
-    } catch (error) {
-      console.error("Error saving user message:", error);
-    }
+    await this._streamingService.saveUserMessage(this._currentChatId, message);
 
     // Check if this is the first message and generate a title
     const isFirstMessage =
       this._messages.filter((m) => !m.isLoading).length === 1;
 
-    // Handle the AI response using Convex reactivity pattern
-    await this._handleConvexStreamingResponse(message, isFirstMessage);
-  }
-
-  private async _generateChatTitle(firstMessage: string) {
-    if (!this._currentChatId) return;
-
-    try {
-      const response = await authService.fetchWithAuth(
-        `${config.apiBaseUrl}/chats/${this._currentChatId}/generate-title`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            firstMessage,
-          }),
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          // Notify parent to refresh sidebar with new title
-          this.dispatchEvent(
-            new CustomEvent("chat-title-updated", {
-              detail: { chatId: this._currentChatId, title: data.title },
-              bubbles: true,
-              composed: true,
-            })
-          );
-        }
-      }
-    } catch (error) {
-      console.error("Error generating chat title:", error);
-    }
-  }
-
-  private async _updateMessages() {
-    if (this._chatMessages) {
-      this._chatMessages.updateMessages(this._messages);
-      await this._chatMessages.render();
-    }
+    // Handle the AI response using the streaming service
+    await this._handleStreamingResponse(message, isFirstMessage);
   }
 
   public cancelStreaming() {
-    if (this._currentEventSource) {
-      this._currentEventSource.close();
-      this._currentEventSource = null;
-    }
+    const cancellationMessage = this._streamingService.cancelStreaming();
 
-    if (this._isStreaming) {
-      this._isStreaming = false;
-
-      // Add cancellation message
+    if (cancellationMessage) {
+      // Add cancellation message to the last response
       const lastMessage = this._messages[this._messages.length - 1];
       if (lastMessage && lastMessage.role === "response") {
-        lastMessage.content += "\n\n❌ *Response cancelled by user*";
+        lastMessage.content += "\n\n" + cancellationMessage;
         lastMessage.isStreaming = false;
       }
 
@@ -302,165 +188,128 @@ export class ChatMain extends Component {
     this.cancelStreaming();
   }
 
-  private async _handleConvexStreamingResponse(
+  private async _handleStreamingResponse(
     message: string,
     isFirstMessage: boolean
   ) {
-    this._isStreaming = true;
+    if (!this._currentChatId) return;
+
+    // Remove loading message
+    this._messages.pop();
 
     // Notify input that streaming started
     if (this._chatInput) {
       this._chatInput.streamingStarted();
     }
 
-    // Remove loading message
-    this._messages.pop();
-
-    try {
-      // Create AI message with scheduled streaming (following Convex pattern)
-      const response = await authService.fetchWithAuth(
-        `${config.apiBaseUrl}/chats/${this._currentChatId}/messages`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            message,
-            conversation: this._messages
-              .slice(-10)
-              .filter((m) => !m.isLoading)
-              .map((m) => ({
-                role: m.role,
-                content: m.content,
-              })),
-            useConvexStreaming: true, // Flag to use the new pattern
-          }),
+    // Create callbacks for the streaming service
+    const callbacks = {
+      onMessageUpdate: (streamingMessage: Message) => {
+        // Update the message in our local state
+        const lastMessage = this._messages[this._messages.length - 1];
+        if (lastMessage && lastMessage.role === "response") {
+          lastMessage.content = streamingMessage.content;
+          lastMessage.isStreaming = streamingMessage.isStreaming;
+        } else {
+          this._messages.push(streamingMessage);
         }
-      );
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("❌ Message post failed:", errorText);
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+        // Update the UI
+        this._updateMessages();
+      },
 
-      const data = await response.json();
-      const messageId = data.messageId;
+      onStreamingComplete: () => {
+        // Notify input that streaming ended
+        if (this._chatInput) {
+          this._chatInput.streamingEnded();
+        }
 
-      if (!messageId) {
-        throw new Error("No message ID returned from server");
-      }
+        // Generate title if this is the first message
+        if (isFirstMessage) {
+          this._handleTitleGeneration(message);
+        }
 
-      // Add placeholder streaming message to UI
-      const streamingMessage: Message = {
-        role: "response",
-        content: "...",
-        timestamp: Date.now(),
-        isStreaming: true,
-      };
+        // Re-enable input
+        if (this._chatInput) {
+          this._chatInput.messageProcessed();
+        }
+      },
 
-      this._messages.push(streamingMessage);
-      this.render();
+      onError: (error: string) => {
+        // Show error message
+        const errorMessage: Message = {
+          role: "response",
+          content: `❌ ${error}`,
+          timestamp: Date.now(),
+        };
 
-      // Now poll for updates using direct database queries
-      // This simulates the reactivity that would happen in a React app
-      let isComplete = false;
-      const pollInterval = setInterval(async () => {
-        try {
-          // Query for the specific message updates
-          const updateResponse = await authService.fetchWithAuth(
-            `${config.apiBaseUrl}/messages/${messageId}`,
-            {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-              },
-            }
+        this._messages.push(errorMessage);
+        this._updateMessages();
+
+        // Also show a user-friendly notification
+        if (error.includes("Authentication")) {
+          notificationService.warning(
+            "Session expired. Please refresh the page to continue."
           );
-
-          if (updateResponse.ok) {
-            const messageData = await updateResponse.json();
-
-            // Update the content in real-time
-            streamingMessage.content = messageData.content || "...";
-
-            // Check if streaming is complete
-            if (!messageData.isStreaming) {
-              isComplete = true;
-              streamingMessage.isStreaming = false;
-              this._isStreaming = false;
-
-              // Notify input that streaming ended
-              if (this._chatInput) {
-                this._chatInput.streamingEnded();
-              }
-
-              // Generate title if this is the first message
-              if (isFirstMessage) {
-                this._generateChatTitle(message);
-              }
-
-              clearInterval(pollInterval);
-            }
-
-            // Update the UI - only update messages, don't re-render entire component
-            if (this._chatMessages) {
-              this._chatMessages.updateMessages(this._messages);
-              await this._chatMessages.render();
-            }
-          } else {
-            const errorText = await updateResponse.text();
-            console.error("❌ Poll error response:", errorText);
-          }
-        } catch (pollError) {
-          console.error("❌ Error polling for message updates:", pollError);
-          if (!isComplete) {
-            // Continue polling unless there's a persistent error
-          }
+        } else if (error.includes("Server")) {
+          notificationService.error(
+            "Server is experiencing issues. Please try again later."
+          );
+        } else {
+          notificationService.error(
+            "Failed to get AI response. Please check your connection."
+          );
         }
-      }, 100); // Poll every 100ms for very smooth updates
 
-      // Safety timeout to stop polling after 2 minutes
-      setTimeout(async () => {
-        if (!isComplete) {
-          clearInterval(pollInterval);
-          streamingMessage.content += "\n\n⚠️ Streaming timed out";
-          streamingMessage.isStreaming = false;
-          this._isStreaming = false;
-          if (this._chatInput) {
-            this._chatInput.streamingEnded();
-          }
-          // Update messages only, don't re-render entire component
-          if (this._chatMessages) {
-            this._chatMessages.updateMessages(this._messages);
-            await this._chatMessages.render();
-          }
+        // Notify input that streaming ended
+        if (this._chatInput) {
+          this._chatInput.streamingEnded();
+          this._chatInput.messageProcessed();
         }
-      }, 120000);
-    } catch (error) {
-      this._isStreaming = false;
-      console.error("Convex streaming error:", error);
+      },
+    };
 
-      // Show error message
-      const errorMessage: Message = {
-        role: "response",
-        content: `❌ Streaming error: ${error instanceof Error ? error.message : "Unknown error"}`,
-        timestamp: Date.now(),
-      };
+    // Start streaming using the service
+    await this._streamingService.startStreamingResponse(
+      {
+        chatId: this._currentChatId,
+        userMessage: message,
+        conversationHistory: this._messages
+          .slice(-10)
+          .filter((m) => !m.isLoading)
+          .map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+        isFirstMessage,
+      },
+      callbacks
+    );
+  }
 
-      this._messages.push(errorMessage);
-      this.render();
-
-      // Notify input that streaming ended
-      if (this._chatInput) {
-        this._chatInput.streamingEnded();
-      }
+  private async _updateMessages() {
+    if (this._chatMessages) {
+      this._chatMessages.updateMessages(this._messages);
+      await this._chatMessages.render();
     }
+  }
 
-    // Re-enable input
-    if (this._chatInput) {
-      this._chatInput.messageProcessed();
+  private async _handleTitleGeneration(firstMessage: string) {
+    if (!this._currentChatId) return;
+
+    const title = await this._streamingService.generateChatTitle(
+      this._currentChatId,
+      firstMessage
+    );
+    if (title) {
+      // Notify parent to refresh sidebar with new title
+      this.dispatchEvent(
+        new CustomEvent("chat-title-updated", {
+          detail: { chatId: this._currentChatId, title },
+          bubbles: true,
+          composed: true,
+        })
+      );
     }
   }
 }

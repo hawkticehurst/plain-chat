@@ -6,6 +6,7 @@
 @import "./components/ChatInput.css";
 @import "./components/AISettings.css";
 @import "./components/UsageDashboard.css";
+@import "./components/NotificationComponent.css";
 
 :root {
   /* Base colors */
