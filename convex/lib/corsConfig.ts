@@ -3,11 +3,11 @@
 
 export const CORS_CONFIG = {
   developmentOrigins: ["http://localhost:5173", "http://127.0.0.1:5173"],
-
-  productionOrigins: ["https://plain-chat.pages.dev"],
-
+  productionOrigins: [
+    "https://chat.hawkticehurst.com",
+    "https://plain-chat.pages.dev",
+  ],
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-
   headers: ["Content-Type", "Authorization"],
 };
 
@@ -53,7 +53,10 @@ export function getStreamingCorsHeaders(isDev = false): HeadersInit {
   return {
     "Access-Control-Allow-Origin": isDev
       ? "*"
-      : allowedOrigins[0] || "https://plain-chat.pages.dev",
+      : allowedOrigins[0] ||
+        "https://chat.hawkticehurst.com" ||
+        allowedOrigins[1] ||
+        "https://plain-chat.pages.dev",
     "Access-Control-Allow-Methods": CORS_CONFIG.methods.join(", "),
     "Access-Control-Allow-Headers": CORS_CONFIG.headers.join(", "),
     "Access-Control-Expose-Headers": "*",
