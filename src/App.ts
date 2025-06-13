@@ -1,5 +1,4 @@
 import { Component, html, authService, router } from "@lib";
-import type { AuthStatus } from "@lib";
 import "./components/ChatSidebar";
 import "./components/ChatMain";
 import "./components/AISettings";
@@ -7,26 +6,62 @@ import "./components/UsageDashboard";
 import "./components/NotificationComponent";
 
 export class App extends Component {
-  private _authStatus: AuthStatus = { isAuthenticated: false, userId: null };
-
   constructor() {
     super();
-    this.getAuthStatus();
+    this.initializeClerkEarly();
   }
 
-  private async getAuthStatus() {
-    this._authStatus = await authService.getAuthStatus();
+  private async initializeClerkEarly() {
+    try {
+      // Initialize Clerk early to handle OAuth redirects
+      const publicKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+      if (!publicKey) {
+        throw new Error(
+          "VITE_CLERK_PUBLISHABLE_KEY environment variable is required"
+        );
+      }
+
+      const { Clerk } = await import("@clerk/clerk-js");
+      const clerk = new Clerk(publicKey);
+
+      // Use minimal configuration - let environment variables handle redirects
+      // This avoids the deprecated redirectUrl warning
+      await clerk.load();
+
+      authService.setClerk(clerk);
+
+      // Handle OAuth redirects if present
+      if (authService.isOAuthRedirect()) {
+        console.log("OAuth redirect detected, handling callback...");
+        await authService.handleRedirectCallback();
+        // After handling the redirect, navigate to home and refresh sidebar
+        window.location.hash = "/";
+
+        // Trigger a refresh of the sidebar after OAuth completion
+        setTimeout(() => {
+          const sidebar = document.querySelector("chat-sidebar") as any;
+          if (sidebar && sidebar.refreshChats) {
+            sidebar.refreshChats();
+          }
+        }, 500);
+        return;
+      }
+    } catch (error) {
+      console.error("Error initializing Clerk:", error);
+    }
   }
 
   // Initial component setup - This will be called only once
   async init() {
+    // Set up routes first
     router.createRoute("/", () => {
       this.innerHTML = String(html`
         <chat-sidebar></chat-sidebar>
         <chat-main></chat-main>
         <notification-component></notification-component>
       `);
-      this._setupChatEventListeners();
+      this.setupChatEventListeners();
     });
 
     router.createRoute("/sign-in", () => {
@@ -35,6 +70,7 @@ export class App extends Component {
           <div id="clerk-signin"></div>
         </div>
       `);
+      this.setupSignIn();
     });
 
     router.createRoute("/ai-settings", () => {
@@ -45,14 +81,18 @@ export class App extends Component {
       this.innerHTML = String(html`<usage-dashboard></usage-dashboard>`);
     });
 
-    if (!this._authStatus.isAuthenticated) {
-      router.navigate("/sign-in");
-      await this.initializeClerk();
-      return;
+    // Always start at home
+    router.navigate("/");
+  }
+
+  private setupSignIn() {
+    const signInDiv = this.querySelector("#clerk-signin");
+    if (signInDiv && authService.getClerkInstance()) {
+      authService.getClerkInstance().mountSignIn(signInDiv);
     }
   }
 
-  private _setupChatEventListeners() {
+  private setupChatEventListeners() {
     const sidebar = this.querySelector("chat-sidebar");
     const chatMain = this.querySelector("chat-main");
 
@@ -68,40 +108,17 @@ export class App extends Component {
       // Handle new chat request (don't create DB record yet)
       sidebar.addEventListener("new-chat-requested", () => {
         (chatMain as any).startNewChat();
-        (sidebar as any).setCurrentChat(null);
       });
 
-      // Handle new chat creation from main (when sending first message)
-      chatMain.addEventListener("chat-created", (event: Event) => {
-        const customEvent = event as CustomEvent;
-        const { chatId } = customEvent.detail;
-        (sidebar as any).refreshChats();
-        (sidebar as any).setCurrentChat(chatId);
+      // Handle chat deletion
+      sidebar.addEventListener("chat-deleted", () => {
+        (chatMain as any).startNewChat();
       });
 
       // Handle chat title updates
       chatMain.addEventListener("chat-title-updated", () => {
         (sidebar as any).refreshChats();
       });
-    }
-  }
-
-  private async initializeClerk() {
-    try {
-      const signInDiv = this.querySelector("#clerk-signin") as HTMLDivElement;
-      await authService.init(signInDiv, (user) => {
-        this._authStatus = { isAuthenticated: true, userId: user.id };
-        // Refresh the sidebar to load chats and update auth button state
-        const sidebar = document.querySelector("chat-sidebar") as any;
-        if (sidebar) {
-          sidebar.refreshChats(); // This will check auth status and load chats
-        }
-        router.navigate("/");
-      });
-    } catch (error) {
-      console.error("Error initializing Clerk:", error);
-      this.innerHTML =
-        '<div class="error">Error loading authentication. Please refresh the page.</div>';
     }
   }
 }

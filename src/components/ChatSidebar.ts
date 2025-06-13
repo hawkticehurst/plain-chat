@@ -22,6 +22,28 @@ export class ChatSidebar extends Component {
     if (this._isSignedIn) {
       this.loadChats();
     }
+
+    // Listen for auth state changes
+    this.setupAuthListener();
+  }
+
+  private setupAuthListener() {
+    // Check auth status periodically
+    setInterval(() => {
+      const wasSignedIn = this._isSignedIn;
+      this.checkAuthStatus();
+
+      // If auth status changed, refresh
+      if (wasSignedIn !== this._isSignedIn) {
+        if (this._isSignedIn) {
+          this.loadChats();
+        } else {
+          this._chats = [];
+          this._loading = false;
+          this.render();
+        }
+      }
+    }, 1000);
   }
 
   connectedCallback() {
@@ -162,13 +184,24 @@ export class ChatSidebar extends Component {
     const template = html`
       <section class="header">
         <button class="new-chat-btn">New Chat</button>
-        <button class="ai-settings-btn">AI Settings</button>
-        <button class="usage-dashboard-btn">Usage Dashboard</button>
+        <button class="ai-settings-btn" ?disabled=${!this._isSignedIn}>
+          AI Settings
+        </button>
+        <button class="usage-dashboard-btn" ?disabled=${!this._isSignedIn}>
+          Usage Dashboard
+        </button>
       </section>
       <section class="chat-list">
         ${this._loading
           ? html`<div class="loading">Loading chats...</div>`
-          : ""}
+          : !this._isSignedIn
+            ? html`<div class="empty-state">
+                <p>Sign in to see your chat history</p>
+                <p class="hint">
+                  You can still start a new chat without signing in
+                </p>
+              </div>`
+            : ""}
       </section>
       <section class="footer">
         <button class="auth-btn">
@@ -199,13 +232,17 @@ export class ChatSidebar extends Component {
 
     if (aiSettingsBtn) {
       aiSettingsBtn.addEventListener("click", () => {
-        window.location.hash = "#/ai-settings";
+        if (this._isSignedIn) {
+          window.location.hash = "#/ai-settings";
+        }
       });
     }
 
     if (usageDashboardBtn) {
       usageDashboardBtn.addEventListener("click", () => {
-        window.location.hash = "#/usage";
+        if (this._isSignedIn) {
+          window.location.hash = "#/usage";
+        }
       });
     }
 

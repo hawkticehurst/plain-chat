@@ -24,7 +24,30 @@ export class AuthService {
       );
     }
 
+    // Check if Clerk is already initialized from early initialization
+    if (this.clerk) {
+      // Clerk is already initialized, just set up the sign-in component
+      if (this.clerk.user) {
+        isSignedInCallback(this.clerk.user);
+        return;
+      }
+
+      // Mount the sign-in component
+      this.clerk.mountSignIn(signInDiv);
+
+      // Listen for sign-in events
+      this.clerk.addListener((session: any) => {
+        if (session.user) {
+          isSignedInCallback(session.user);
+        }
+      });
+      return;
+    }
+
+    // If not already initialized, initialize now
     const clerk = new Clerk(publicKey);
+
+    // Use minimal configuration - environment variables handle redirects
     await clerk.load();
 
     this.setClerk(clerk);
@@ -38,9 +61,9 @@ export class AuthService {
     clerk.mountSignIn(signInDiv);
 
     // Listen for sign-in events
-    clerk.addListener(({ user }) => {
-      if (user) {
-        isSignedInCallback(user);
+    clerk.addListener((session: any) => {
+      if (session.user) {
+        isSignedInCallback(session.user);
       }
     });
   }
@@ -137,6 +160,10 @@ export class AuthService {
     this.clerk = clerk;
   }
 
+  getClerkInstance() {
+    return this.clerk;
+  }
+
   async fetchWithAuth(
     url: string,
     options: RequestInit = {}
@@ -216,6 +243,42 @@ export class AuthService {
 
     // If we get here, all retries failed
     throw lastError || new Error("All retry attempts failed");
+  }
+
+  async handleRedirectCallback(): Promise<boolean> {
+    try {
+      if (this.clerk) {
+        // Don't pass redirect URLs to handleRedirectCallback
+        // Let Clerk use the URLs configured during initialization
+        await this.clerk.handleRedirectCallback();
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error handling redirect callback:", error);
+      return false;
+    }
+  }
+
+  isOAuthRedirect(): boolean {
+    const url = window.location.href;
+    const search = window.location.search;
+    const hash = window.location.hash;
+
+    return (
+      url.includes("__clerk_status") ||
+      url.includes("__clerk_redirect") ||
+      url.includes("clerk_oauth") ||
+      search.includes("code=") || // GitHub OAuth code parameter
+      search.includes("state=") || // OAuth state parameter (used by both GitHub and Google)
+      search.includes("scope=") || // OAuth scope parameter (Google often includes this)
+      search.includes("authuser=") || // Google-specific parameter
+      search.includes("prompt=") || // Google OAuth prompt parameter
+      hash.includes("access_token=") || // Some OAuth flows use hash
+      hash.includes("id_token=") || // Google OAuth ID token
+      // Catch-all for any OAuth-related query parameters
+      /[?&](code|state|scope|authuser|prompt|session_state)=/.test(search)
+    );
   }
 }
 

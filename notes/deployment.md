@@ -34,7 +34,7 @@ npx convex deploy --prod
 Go to [Convex Dashboard](https://dashboard.convex.dev) → Your Project → Settings → Environment Variables:
 
 ```bash
-CLERK_JWT_ISSUER_DOMAIN=grown-perch-47.clerk.accounts.dev
+CLERK_JWT_ISSUER_DOMAIN=your-clerk-issuer-domain
 NODE_ENV=production
 ```
 
@@ -160,8 +160,8 @@ NODE_ENV=production
 ### Cloudflare Pages Environment Variables:
 
 ```bash
-VITE_CONVEX_URL=https://blessed-shark-458.convex.cloud
-VITE_CONVEX_HTTP_URL=https://giant-camel-264.convex.site
+VITE_CONVEX_URL=convex-cloud-url
+VITE_CONVEX_HTTP_URL=convex-site-url
 VITE_CLERK_PUBLISHABLE_KEY=pk_live_your_production_key_here
 ```
 

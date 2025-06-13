@@ -14,13 +14,13 @@ npx convex deploy --prod
 Go to your Convex dashboard → Settings → Environment Variables and add:
 
 - `NODE_ENV`: `production`
-- `CLERK_JWT_ISSUER_DOMAIN`: Your Clerk domain (e.g., `grown-perch-47.clerk.accounts.dev`)
+- `CLERK_JWT_ISSUER_DOMAIN`: Your Clerk domain
 
 ### 3. Update Cloudflare Pages Environment Variables
 
 In Cloudflare Pages → Settings → Environment Variables, ensure you have:
 
-- `VITE_CONVEX_URL`: Your production Convex URL (e.g., `https://giant-camel-264.convex.site`)
+- `VITE_CONVEX_URL`: Your production Convex URL
 - `VITE_CLERK_PUBLISHABLE_KEY`: Your **production** Clerk key (starts with `pk_live_`)
 
 ### 4. Create Production Clerk Application
