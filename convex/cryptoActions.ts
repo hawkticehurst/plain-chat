@@ -2,7 +2,7 @@
 
 // Server-side crypto actions for Convex
 import { v } from "convex/values";
-import { action } from "./_generated/server";
+import { action, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import {
   createHash,
@@ -436,3 +436,137 @@ export const performStreamingAICompletion = action({
     }
   },
 });
+
+/**
+ * Internal version of AI completion for background streaming
+ * Used by internal actions that already have verified user context
+ */
+export const performStreamingAICompletionInternal = internalAction({
+  args: {
+    userId: v.string(),
+    messageId: v.id("messages"), // For audit logging and security verification
+    message: v.string(),
+    conversation: v.array(
+      v.object({
+        role: v.string(),
+        content: v.string(),
+        timestamp: v.optional(v.number()),
+      })
+    ),
+    preferences: v.object({
+      defaultModel: v.string(),
+      temperature: v.number(),
+      maxTokens: v.number(),
+      systemPrompt: v.optional(v.string()),
+    }),
+  },
+  handler: async (
+    ctx,
+    { userId, messageId, message, conversation, preferences }
+  ) => {
+    try {
+      // SECURITY: Verify the message actually belongs to this user
+      const messageRecord = await ctx.runQuery(
+        internal.messages.getMessageByIdInternal,
+        {
+          messageId,
+        }
+      );
+
+      if (!messageRecord || messageRecord.userId !== userId) {
+        throw new Error("Message access denied - user mismatch");
+      }
+
+      // Get user's encrypted API key using the verified userId
+      const apiKeyRecord = await ctx.runQuery(
+        internal.aiKeys.getUserApiKeyRecord,
+        {
+          userId,
+        }
+      );
+
+      if (!apiKeyRecord) {
+        return {
+          success: false,
+          error: "No API key found. Please configure your API key in Settings.",
+        };
+      }
+
+      // Decrypt the API key
+      const apiKey = decryptApiKey(apiKeyRecord.encryptedApiKey);
+
+      // Prepare messages for AI API
+      const messages: Array<{ role: string; content: string }> = [];
+
+      // Add system prompt if provided
+      if (preferences.systemPrompt && preferences.systemPrompt.trim()) {
+        messages.push({
+          role: "system",
+          content: preferences.systemPrompt.trim(),
+        });
+      }
+
+      // Add conversation history
+      for (const msg of conversation) {
+        messages.push({
+          role: msg.role === "prompt" ? "user" : "assistant",
+          content: msg.content,
+        });
+      }
+
+      // Add current user message
+      messages.push({
+        role: "user",
+        content: message,
+      });
+
+      // Make API call to OpenRouter
+      const response = await fetch(
+        "https://openrouter.ai/api/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://giant-camel-264.convex.site",
+            "X-Title": "Plain Chat",
+          },
+          body: JSON.stringify({
+            model: preferences.defaultModel,
+            messages,
+            temperature: preferences.temperature,
+            max_tokens: preferences.maxTokens,
+            stream: true, // Enable streaming
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[AI Internal] API error for user ${userId}:`, errorText);
+        return {
+          success: false,
+          error: `AI API error: ${response.status} ${response.statusText}`,
+        };
+      }
+
+      // We can't return a Response object from Convex actions
+      // Instead, return success status and model info
+      return {
+        success: true,
+        model: preferences.defaultModel,
+        streamReady: true,
+      };
+    } catch (error: any) {
+      console.error(`[AI Internal] Error for user ${userId}:`, error);
+      return {
+        success: false,
+        error: error.message || "Unknown error occurred",
+      };
+    }
+  },
+});
+
+/**
+ * This is used by the SSE endpoint to stream responses
+ */

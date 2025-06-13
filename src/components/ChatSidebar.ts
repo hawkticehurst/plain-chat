@@ -31,7 +31,7 @@ export class ChatSidebar extends Component {
   private async loadChats() {
     try {
       const response = await authService.fetchWithAuth(
-        `${config.apiBaseUrl}/api/chats`
+        `${config.apiBaseUrl}/chats`
       );
 
       if (response.ok) {

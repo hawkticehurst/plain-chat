@@ -20,6 +20,7 @@ export default defineSchema({
     role: v.string(), // "prompt" or "response"
     content: v.string(),
     createdAt: v.number(),
+    isStreaming: v.optional(v.boolean()), // Indicates if message is currently streaming
     // AI-related fields for messages
     aiMetadata: v.optional(
       v.object({

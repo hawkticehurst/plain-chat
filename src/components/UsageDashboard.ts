@@ -233,7 +233,7 @@ export class UsageDashboard extends Component {
 
       // Load recent usage
       const recentResponse = await authService.fetchWithAuth(
-        `${config.apiBaseUrl}/api/usage/recent?limit=20`
+        `${config.apiBaseUrl}/usage/recent?limit=20`
       );
 
       if (recentResponse.ok) {
@@ -245,8 +245,8 @@ export class UsageDashboard extends Component {
       // Load summary data based on current period
       const summaryEndpoint =
         this._currentPeriod.value === "daily"
-          ? `/api/usage/daily?days=${this._selectedDays.value}`
-          : `/api/usage/monthly?months=${Math.ceil(this._selectedDays.value / 30)}`;
+          ? `/usage/daily?days=${this._selectedDays.value}`
+          : `/usage/monthly?months=${Math.ceil(this._selectedDays.value / 30)}`;
 
       const summaryResponse = await authService.fetchWithAuth(
         `${config.apiBaseUrl}${summaryEndpoint}`
