@@ -65,13 +65,6 @@ function encryptApiKey(apiKey: string): { encrypted: string; hash: string } {
  */
 function decryptApiKey(encryptedString: string): string {
   try {
-    console.log(
-      `[Decrypt] Starting decryption, encrypted string length: ${encryptedString.length}`
-    );
-    console.log(
-      `[Decrypt] ENCRYPTION_KEY available: ${!!ENCRYPTION_KEY}, length: ${ENCRYPTION_KEY.length}`
-    );
-
     // Parse the combined data
     const combined = Buffer.from(encryptedString, "base64");
 
@@ -83,10 +76,6 @@ function decryptApiKey(encryptedString: string): string {
     const iv = combined.subarray(16, 32);
     const authTag = combined.subarray(32, 48);
     const encrypted = combined.subarray(48);
-
-    console.log(
-      `[Decrypt] Parsed data - salt: ${salt.length}, iv: ${iv.length}, authTag: ${authTag.length}, encrypted: ${encrypted.length}`
-    );
 
     // Derive key from password using same parameters
     const key = scryptSync(ENCRYPTION_KEY, salt, 32);
@@ -475,10 +464,6 @@ export const performStreamingAICompletionInternal = internalAction({
     ctx,
     { userId, messageId, message, conversation, preferences }
   ) => {
-    console.log(
-      `[AI Internal] Starting streaming completion for user ${userId}, message ${messageId}`
-    );
-
     try {
       // SECURITY: Verify the message actually belongs to this user
       const messageRecord = await ctx.runQuery(
@@ -491,8 +476,6 @@ export const performStreamingAICompletionInternal = internalAction({
       if (!messageRecord || messageRecord.userId !== userId) {
         throw new Error("Message access denied - user mismatch");
       }
-
-      console.log(`[AI Internal] Security check passed for user ${userId}`);
 
       // Get user's encrypted API key using the verified userId
       const apiKeyRecord = await ctx.runQuery(
@@ -508,16 +491,6 @@ export const performStreamingAICompletionInternal = internalAction({
           error: "No API key found. Please configure your API key in Settings.",
         };
       }
-
-      console.log(`[AI Internal] API key found for user ${userId}`);
-
-      // Debug encryption key availability
-      console.log(
-        `[AI Internal] Encryption key available: ${!!process.env.ENCRYPTION_KEY}`
-      );
-      console.log(
-        `[AI Internal] Encryption key length: ${process.env.ENCRYPTION_KEY?.length || 0}`
-      );
 
       // Decrypt the API key
       const apiKey = decryptApiKey(apiKeyRecord.encryptedApiKey);
@@ -546,10 +519,6 @@ export const performStreamingAICompletionInternal = internalAction({
         role: "user",
         content: message,
       });
-
-      console.log(
-        `[AI Internal] Prepared ${messages.length} messages for API call`
-      );
 
       // Make API call to OpenRouter
       const response = await fetch(
@@ -580,10 +549,6 @@ export const performStreamingAICompletionInternal = internalAction({
           error: `AI API error: ${response.status} ${response.statusText}`,
         };
       }
-
-      console.log(
-        `[AI Internal] Streaming response started for user ${userId}`
-      );
 
       // We can't return a Response object from Convex actions
       // Instead, return success status and model info

@@ -48,15 +48,9 @@ function extractChatId(request: Request): string {
  */
 export const getChats = httpAction(async (ctx, request) => {
   const isDev = process.env.NODE_ENV !== "production";
-  console.log("🔧 getChats called:", {
-    method: request.method,
-    isDev,
-    nodeEnv: process.env.NODE_ENV,
-  });
 
   // Handle preflight OPTIONS request
   if (request.method === "OPTIONS") {
-    console.log("🔧 Handling OPTIONS request");
     return new Response(null, {
       headers: getCorsHeaders(isDev),
       status: 200,
@@ -66,16 +60,13 @@ export const getChats = httpAction(async (ctx, request) => {
   try {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      console.log("🔧 No identity, returning 401");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: getCorsHeaders(isDev),
       });
     }
 
-    console.log("🔧 Fetching chats for user");
     const chats = await ctx.runQuery(api.chats.getUserChats);
-    console.log("🔧 Successfully fetched chats:", chats?.length || 0);
     return new Response(JSON.stringify({ chats }), {
       headers: getCorsHeaders(isDev),
       status: 200,

@@ -24,8 +24,6 @@ export const performStreamingWithNode = internalAction({
     maxTokens: v.number(),
   },
   handler: async (ctx, args) => {
-    console.log(`[AI Node] Starting streaming for message ${args.messageId}`);
-
     try {
       // Decrypt the API key
       const apiKey = decryptApiKey(args.apiKeyRecord.encryptedApiKey);
@@ -153,10 +151,6 @@ export const performStreamingWithNode = internalAction({
           cost: totalTokens * 0.000001,
         },
       });
-
-      console.log(
-        `[AI Node] Completed streaming for message ${args.messageId}`
-      );
 
       return {
         success: true,

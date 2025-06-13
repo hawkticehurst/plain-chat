@@ -15,12 +15,3 @@ export const config = {
     temperature: 0.7,
   },
 };
-
-// Debug logging in development
-if (import.meta.env.DEV) {
-  console.log("🔧 Config Debug:", {
-    VITE_CONVEX_URL: import.meta.env.VITE_CONVEX_URL,
-    apiBaseUrl: config.apiBaseUrl,
-    isDev: import.meta.env.DEV,
-  });
-}

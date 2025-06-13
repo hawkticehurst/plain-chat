@@ -85,22 +85,10 @@ export class AuthService {
           // Add the Convex site URL as audience
           audience: convexUrl,
         });
-        console.log("🔧 Auth token debug:", {
-          hasClerk: !!this.clerk,
-          hasSession: !!this.clerk.session,
-          hasToken: !!token,
-          tokenPreview: token ? token.substring(0, 20) + "..." : null,
-          audience: convexUrl,
-        });
         return {
           Authorization: `Bearer ${token}`,
         };
       }
-
-      console.log("🔧 No Clerk session available:", {
-        hasClerk: !!this.clerk,
-        hasSession: this.clerk ? !!this.clerk.session : false,
-      });
 
       // If no Clerk session, return empty headers
       return {};

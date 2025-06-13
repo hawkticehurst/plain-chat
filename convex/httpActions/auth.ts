@@ -35,19 +35,8 @@ export const getAuthStatus = httpAction(async (ctx, request) => {
     });
   }
 
-  // Debug: Log request headers
-  const authHeader = request.headers.get("Authorization");
-  console.log("🔧 Auth status request:", {
-    hasAuthHeader: !!authHeader,
-    authHeaderPreview: authHeader ? authHeader.substring(0, 20) + "..." : null,
-  });
-
   try {
     const identity = await ctx.auth.getUserIdentity();
-    console.log("🔧 Auth identity result:", {
-      hasIdentity: !!identity,
-      userId: identity?.subject || null,
-    });
 
     return new Response(
       JSON.stringify({

@@ -120,8 +120,6 @@ export const addMessage = httpAction(async (ctx, request) => {
 
     // Handle the new Convex streaming pattern
     if (useConvexStreaming && message) {
-      console.log(`[Messages] Using Convex streaming for chat ${chatId}`);
-
       // Add user message first
       const userMessageId = await ctx.runMutation(api.messages.addUserMessage, {
         chatId: chatId as any,

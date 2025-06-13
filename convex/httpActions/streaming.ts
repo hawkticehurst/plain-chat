@@ -37,8 +37,6 @@ function setCorsHeaders(): HeadersInit {
 }
 
 export const streamChat = httpAction(async (ctx, request) => {
-  console.log(`[Streaming] ${request.method} ${request.url}`);
-
   // Handle preflight OPTIONS request
   if (request.method === "OPTIONS") {
     return new Response(null, {
@@ -50,7 +48,6 @@ export const streamChat = httpAction(async (ctx, request) => {
   // Check authentication
   const identity = await checkAuth(ctx, request);
   if (!identity) {
-    console.log("[Streaming] Authentication failed");
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: {
@@ -61,7 +58,6 @@ export const streamChat = httpAction(async (ctx, request) => {
   }
 
   const userId = identity.subject;
-  console.log(`[Streaming] Authenticated user: ${userId}`);
 
   // Extract chatId from route parameters
   const params = getRouteParams(request);
@@ -90,8 +86,6 @@ export const streamChat = httpAction(async (ctx, request) => {
         },
       });
     }
-
-    console.log(`[Streaming] Processing message for chat ${chatId}`);
 
     // Get user's AI preferences
     const preferences = await ctx.runQuery(api.aiKeys.getUserAIPreferences);
@@ -153,8 +147,6 @@ export const streamChat = httpAction(async (ctx, request) => {
         },
       });
     }
-
-    console.log(`[Streaming] Stream data prepared for ${chatId}`);
 
     // Create a readable stream for SSE
     const stream = new ReadableStream({

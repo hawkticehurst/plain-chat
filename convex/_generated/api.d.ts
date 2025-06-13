@@ -27,7 +27,6 @@ import type * as httpActions_streaming from "../httpActions/streaming.js";
 import type * as httpActions_usage from "../httpActions/usage.js";
 import type * as lib_serverCrypto from "../lib/serverCrypto.js";
 import type * as messages from "../messages.js";
-import type * as streamingMessages from "../streamingMessages.js";
 import type * as usage from "../usage.js";
 
 /**
@@ -53,7 +52,6 @@ declare const fullApi: ApiFromModules<{
   "httpActions/usage": typeof httpActions_usage;
   "lib/serverCrypto": typeof lib_serverCrypto;
   messages: typeof messages;
-  streamingMessages: typeof streamingMessages;
   usage: typeof usage;
 }>;
 export declare const api: FilterApi<
