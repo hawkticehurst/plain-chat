@@ -133,10 +133,6 @@ export class ChatMain extends Component {
     );
   }
 
-  public hello() {
-    console.log("Hello from App component!");
-  }
-
   private async _handleSendMessage(event: Event) {
     const customEvent = event as CustomEvent;
     const { message } = customEvent.detail;
@@ -277,6 +273,26 @@ export class ChatMain extends Component {
     message: string,
     isFirstMessage: boolean
   ) {
+    // Check if user has streaming enabled
+    let shouldStream = true;
+    try {
+      const prefsResponse = await authService.fetchWithAuth(
+        `${config.apiBaseUrl}/api/ai/preferences`
+      );
+      if (prefsResponse.ok) {
+        const prefs = await prefsResponse.json();
+        shouldStream = prefs.enableStreaming !== false;
+      }
+    } catch (error) {
+      console.error("Error checking streaming preference:", error);
+      // Default to streaming if we can't check
+    }
+
+    if (!shouldStream) {
+      // Use regular non-streaming approach
+      return this._handleNonStreamingResponse(message, isFirstMessage);
+    }
+
     this._isStreaming = true;
 
     // Notify input that streaming started
@@ -459,6 +475,66 @@ export class ChatMain extends Component {
     }
   }
 
+  private async _handleNonStreamingResponse(
+    message: string,
+    isFirstMessage: boolean
+  ) {
+    try {
+      // Send request to AI API (existing non-streaming logic)
+      const response = await authService.fetchWithAuth(
+        `${config.apiBaseUrl}/api/chats/${this._currentChatId}/generate-title`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message,
+            conversation: this._messages
+              .slice(-10)
+              .filter((m) => !m.isLoading) // Send last 10 non-loading messages
+              .map((m) => ({
+                role: m.role,
+                content: m.content,
+                timestamp: m.timestamp,
+              })),
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          // Notify parent to refresh sidebar with new title
+          this.dispatchEvent(
+            new CustomEvent("chat-title-updated", {
+              detail: { chatId: this._currentChatId, title: data.title },
+              bubbles: true,
+              composed: true,
+            })
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error generating chat title:", error);
+    }
+  }
+
+  private async _updateMessages() {
+    if (this._chatMessages) {
+      this._chatMessages.updateMessages(this._messages);
+      await this._chatMessages.render();
+    }
+  }
+
+    // Re-render with final messages
+    await this._updateMessages();
+
+    // Re-enable input
+    if (this._chatInput) {
+      this._chatInput.streamingStarted();
+    }
+
   private _getLastMessageElement(): any {
     if (!this._chatMessages) return null;
 
@@ -490,6 +566,10 @@ export class ChatMain extends Component {
         this._chatInput.streamingEnded();
       }
     }
+  }
+
+  private _handleCancelStreaming() {
+    this.cancelStreaming();
   }
 
   private _handleCancelStreaming() {
