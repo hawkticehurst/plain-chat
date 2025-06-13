@@ -3,6 +3,7 @@
 ## 1. Clerk Dashboard Configuration
 
 ### OAuth Providers Setup
+
 - [ ] Go to Clerk Dashboard → User & Authentication → Social Connections
 - [ ] For **GitHub**:
   - [ ] Create OAuth app at https://github.com/settings/applications/new
@@ -14,6 +15,7 @@
   - [ ] Copy Client ID and Client Secret to Clerk Dashboard
 
 ### Domain Configuration
+
 - [ ] Go to Clerk Dashboard → Domains
 - [ ] Configure DNS records as shown (may take up to 24 hours)
 - [ ] Verify domain is properly configured
@@ -32,6 +34,7 @@ frame-src 'self' https://challenges.cloudflare.com;
 ```
 
 ### Key CSP Requirements
+
 - **'unsafe-eval'** - Required for Clerk's JavaScript execution
 - **'unsafe-inline'** - Required for Clerk's runtime CSS-in-JS styling
 - **https://clerk.hawkticehurst.com** - Your Clerk FAPI hostname
@@ -76,17 +79,21 @@ After completing the above:
 ## Common Issues
 
 ### Missing Client ID
+
 - **Problem**: OAuth provider shows empty `client_id`
 - **Solution**: Configure OAuth credentials in Clerk Dashboard
 
 ### CSP Violations
+
 - **Problem**: Inline scripts blocked
 - **Solution**: Add required CSP directives above
 
 ### DNS Issues
+
 - **Problem**: Clerk domain not resolving
 - **Solution**: Wait up to 24 hours for DNS propagation
 
 ### Authorization Errors
+
 - **Problem**: OAuth providers reject requests
 - **Solution**: Verify redirect URIs match exactly in provider settings

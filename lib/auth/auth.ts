@@ -114,7 +114,7 @@ export class AuthService {
       if (this.clerk && this.clerk.session) {
         // Get token with Convex URL as audience
         const convexUrl = config.apiBaseUrl;
-        
+
         // Configure token options with production security
         const tokenOptions: any = {
           template: "convex",
@@ -124,7 +124,7 @@ export class AuthService {
 
         // Add authorizedParties for production security
         if (import.meta.env.PROD) {
-          tokenOptions.authorizedParties = ['https://chat.hawkticehurst.com'];
+          tokenOptions.authorizedParties = ["https://chat.hawkticehurst.com"];
         }
 
         const token = await this.clerk.session.getToken(tokenOptions);
@@ -152,7 +152,7 @@ export class AuthService {
     try {
       if (this.clerk && this.clerk.session) {
         const convexUrl = config.apiBaseUrl;
-        
+
         // Configure token options with production security
         const tokenOptions: any = {
           template: "convex",
@@ -161,7 +161,7 @@ export class AuthService {
 
         // Add authorizedParties for production security
         if (import.meta.env.PROD) {
-          tokenOptions.authorizedParties = ['https://chat.hawkticehurst.com'];
+          tokenOptions.authorizedParties = ["https://chat.hawkticehurst.com"];
         }
 
         const token = await this.clerk.session.getToken(tokenOptions);
