@@ -50,6 +50,8 @@ app.use(
       "http://localhost:3000",
       "http://127.0.0.1:5173",
       "http://127.0.0.1:5174",
+      "https://plain-chat.pages.dev",
+      "https://chat.hawkticehurst.com"
     ],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
