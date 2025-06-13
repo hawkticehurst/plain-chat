@@ -1,6 +1,5 @@
-import { Component } from "@lib";
+import { Component, type Message } from "@lib";
 import { ChatMessage } from "@components";
-import type { Message } from "./ChatMain";
 
 export class ChatMessages extends Component {
   private _messages: Array<Message> = [];

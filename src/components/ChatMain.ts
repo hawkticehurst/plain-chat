@@ -1,5 +1,6 @@
-import { Component, html, StreamingChatService, type Message } from "@lib";
+import { Component, html, StreamingChatService } from "@lib";
 import { ChatInput, ChatMessages, notificationService } from "@components";
+import type { Message } from "@lib";
 
 export class ChatMain extends Component {
   private _messages: Array<Message> = [];
