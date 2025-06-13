@@ -3,6 +3,11 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { HonoWithConvex, HttpRouterWithHono } from "convex-helpers/server/hono";
 import { ActionCtx } from "./_generated/server";
+import {
+  getAllowedOrigins,
+  CORS_CONFIG,
+  isDevelopment,
+} from "./lib/corsConfig";
 
 // Import all HTTP action handlers
 import { getAuthStatus } from "./httpActions/auth";
@@ -41,20 +46,14 @@ import {
 const app: HonoWithConvex<ActionCtx> = new Hono();
 
 // Add CORS middleware
+const isDev = isDevelopment();
+
 app.use(
   "*",
   cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "http://localhost:3000",
-      "http://127.0.0.1:5173",
-      "http://127.0.0.1:5174",
-      "https://plain-chat.pages.dev",
-      "https://chat.hawkticehurst.com"
-    ],
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
+    origin: isDev ? "*" : getAllowedOrigins(isDev),
+    allowMethods: CORS_CONFIG.methods,
+    allowHeaders: CORS_CONFIG.headers,
     credentials: true,
   })
 );

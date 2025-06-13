@@ -1,16 +1,27 @@
 import { httpAction } from "../_generated/server";
 import { api } from "../_generated/api";
+import { getCorsHeaders, isDevelopment } from "../lib/corsConfig";
 
 /**
  * Get recent usage
  * GET /usage/recent
  */
 export const getRecentUsage = httpAction(async (ctx, request) => {
+  const isDev = isDevelopment();
+
+  // Handle preflight OPTIONS request
+  if (request.method === "OPTIONS") {
+    return new Response(null, {
+      headers: getCorsHeaders(isDev),
+      status: 200,
+    });
+  }
+
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
-      headers: { "Content-Type": "application/json" },
+      headers: getCorsHeaders(isDev),
     });
   }
 
@@ -21,7 +32,7 @@ export const getRecentUsage = httpAction(async (ctx, request) => {
     const usage = await ctx.runQuery(api.usage.getRecentUsage, { limit });
 
     return new Response(JSON.stringify({ usage }), {
-      headers: { "Content-Type": "application/json" },
+      headers: getCorsHeaders(isDev),
       status: 200,
     });
   } catch (error: any) {
@@ -30,7 +41,7 @@ export const getRecentUsage = httpAction(async (ctx, request) => {
       JSON.stringify({ error: "Failed to fetch recent usage" }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json" },
+        headers: getCorsHeaders(isDev),
       }
     );
   }
@@ -41,11 +52,21 @@ export const getRecentUsage = httpAction(async (ctx, request) => {
  * GET /usage/daily
  */
 export const getDailyUsage = httpAction(async (ctx, request) => {
+  const isDev = isDevelopment();
+
+  // Handle preflight OPTIONS request
+  if (request.method === "OPTIONS") {
+    return new Response(null, {
+      headers: getCorsHeaders(isDev),
+      status: 200,
+    });
+  }
+
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
-      headers: { "Content-Type": "application/json" },
+      headers: getCorsHeaders(isDev),
     });
   }
 
@@ -58,7 +79,7 @@ export const getDailyUsage = httpAction(async (ctx, request) => {
     return new Response(
       JSON.stringify({ summary: summary?.dailySummaries || [] }),
       {
-        headers: { "Content-Type": "application/json" },
+        headers: getCorsHeaders(isDev),
         status: 200,
       }
     );
@@ -68,7 +89,7 @@ export const getDailyUsage = httpAction(async (ctx, request) => {
       JSON.stringify({ error: "Failed to fetch daily usage" }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json" },
+        headers: getCorsHeaders(isDev),
       }
     );
   }
@@ -79,11 +100,21 @@ export const getDailyUsage = httpAction(async (ctx, request) => {
  * GET /usage/monthly
  */
 export const getMonthlyUsage = httpAction(async (ctx, request) => {
+  const isDev = isDevelopment();
+
+  // Handle preflight OPTIONS request
+  if (request.method === "OPTIONS") {
+    return new Response(null, {
+      headers: getCorsHeaders(isDev),
+      status: 200,
+    });
+  }
+
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
-      headers: { "Content-Type": "application/json" },
+      headers: getCorsHeaders(isDev),
     });
   }
 
@@ -137,7 +168,7 @@ export const getMonthlyUsage = httpAction(async (ctx, request) => {
     const monthlySummaries = Object.values(monthlyData);
 
     return new Response(JSON.stringify({ summary: monthlySummaries }), {
-      headers: { "Content-Type": "application/json" },
+      headers: getCorsHeaders(isDev),
       status: 200,
     });
   } catch (error: any) {
@@ -146,7 +177,7 @@ export const getMonthlyUsage = httpAction(async (ctx, request) => {
       JSON.stringify({ error: "Failed to fetch monthly usage" }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json" },
+        headers: getCorsHeaders(isDev),
       }
     );
   }
