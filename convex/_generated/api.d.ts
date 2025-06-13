@@ -14,6 +14,8 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as aiKeys from "../aiKeys.js";
+import type * as aiStreaming from "../aiStreaming.js";
+import type * as aiStreamingNode from "../aiStreamingNode.js";
 import type * as chats from "../chats.js";
 import type * as cryptoActions from "../cryptoActions.js";
 import type * as http from "../http.js";
@@ -25,6 +27,7 @@ import type * as httpActions_streaming from "../httpActions/streaming.js";
 import type * as httpActions_usage from "../httpActions/usage.js";
 import type * as lib_serverCrypto from "../lib/serverCrypto.js";
 import type * as messages from "../messages.js";
+import type * as streamingMessages from "../streamingMessages.js";
 import type * as usage from "../usage.js";
 
 /**
@@ -37,6 +40,8 @@ import type * as usage from "../usage.js";
  */
 declare const fullApi: ApiFromModules<{
   aiKeys: typeof aiKeys;
+  aiStreaming: typeof aiStreaming;
+  aiStreamingNode: typeof aiStreamingNode;
   chats: typeof chats;
   cryptoActions: typeof cryptoActions;
   http: typeof http;
@@ -48,6 +53,7 @@ declare const fullApi: ApiFromModules<{
   "httpActions/usage": typeof httpActions_usage;
   "lib/serverCrypto": typeof lib_serverCrypto;
   messages: typeof messages;
+  streamingMessages: typeof streamingMessages;
   usage: typeof usage;
 }>;
 export declare const api: FilterApi<

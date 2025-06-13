@@ -20,6 +20,7 @@ export default defineSchema({
     role: v.string(), // "prompt" or "response"
     content: v.string(),
     createdAt: v.number(),
+    isStreaming: v.optional(v.boolean()), // Indicates if message is currently streaming
     // AI-related fields for messages
     aiMetadata: v.optional(
       v.object({
@@ -116,4 +117,27 @@ export default defineSchema({
   })
     .index("by_user_and_month", ["userId", "month"])
     .index("by_month", ["month"]),
+
+  // Streaming messages for real-time AI responses
+  streamingMessages: defineTable({
+    chatId: v.id("chats"),
+    userId: v.string(),
+    requestId: v.string(), // Unique identifier for this streaming request
+    content: v.string(), // Accumulated content so far
+    status: v.string(), // "streaming", "completed", "error"
+    error: v.optional(v.string()),
+    usage: v.optional(
+      v.object({
+        promptTokens: v.number(),
+        completionTokens: v.number(),
+        totalTokens: v.number(),
+        cost: v.number(),
+      })
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_request", ["requestId"])
+    .index("by_chat", ["chatId"])
+    .index("by_user", ["userId"]),
 });

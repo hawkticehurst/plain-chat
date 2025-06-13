@@ -24,7 +24,11 @@ import {
   generateChatTitle,
 } from "./httpActions/chats";
 
-import { getChatMessages, addMessage } from "./httpActions/messages";
+import {
+  getChatMessages,
+  addMessage,
+  getMessage,
+} from "./httpActions/messages";
 
 import { streamChat } from "./httpActions/streaming";
 
@@ -42,8 +46,10 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
+      "http://localhost:5174",
       "http://localhost:3000",
       "http://127.0.0.1:5173",
+      "http://127.0.0.1:5174",
     ],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
@@ -115,7 +121,11 @@ app.get("/chats/:chatId/messages", convertHttpAction(getChatMessages));
 app.options("/chats/:chatId/messages", convertHttpAction(getChatMessages));
 app.post("/chats/:chatId/messages", convertHttpAction(addMessage));
 
-// Streaming route
+// Single message route for polling updates
+app.get("/messages/:messageId", convertHttpAction(getMessage));
+app.options("/messages/:messageId", convertHttpAction(getMessage));
+
+// Streaming routes
 app.post("/chats/:chatId/stream", convertHttpAction(streamChat));
 app.options("/chats/:chatId/stream", convertHttpAction(streamChat));
 

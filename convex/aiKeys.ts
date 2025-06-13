@@ -182,7 +182,7 @@ export const setUserAIPreferences = mutation({
     monthlyUsageLimit: v.optional(v.number()),
     usageWarningThreshold: v.optional(v.number()),
     enableUsageNotifications: v.boolean(),
-    enableStreaming: v.boolean(),
+    enableStreaming: v.optional(v.boolean()), // Make optional for backward compatibility
     systemPrompt: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -198,10 +198,14 @@ export const setUserAIPreferences = mutation({
 
     const now = Date.now();
 
+    // Provide default value for enableStreaming if not provided
+    const enableStreaming = args.enableStreaming ?? true; // Default to true for Convex streaming
+
     if (existingPreferences) {
       // Update existing preferences
       await ctx.db.patch(existingPreferences._id, {
         ...args,
+        enableStreaming,
         updatedAt: now,
       });
       return existingPreferences._id;
@@ -210,6 +214,7 @@ export const setUserAIPreferences = mutation({
       const preferencesId = await ctx.db.insert("userAIPreferences", {
         userId: identity.subject,
         ...args,
+        enableStreaming,
         createdAt: now,
         updatedAt: now,
       });
@@ -478,5 +483,18 @@ export const getMonthlyUsageSummary = query({
       )
       .order("desc")
       .collect();
+  },
+});
+
+// Get user AI preferences by userId (for internal use)
+export const getUserAIPreferencesById = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const userPrefs = await ctx.db
+      .query("userAIPreferences")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .first();
+
+    return userPrefs;
   },
 });

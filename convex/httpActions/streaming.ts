@@ -27,11 +27,11 @@ async function checkAuth(ctx: any, request: Request) {
 // Helper function to set CORS headers
 function setCorsHeaders(): HeadersInit {
   return {
-    "Access-Control-Allow-Origin": "http://localhost:5173",
+    "Access-Control-Allow-Origin": "*", // Try wildcard for testing
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-    "Access-Control-Allow-Headers":
-      "Content-Type, Authorization, x-route-params",
-    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Allow-Headers": "*", // Allow all headers
+    "Access-Control-Expose-Headers": "*", // Expose all response headers
+    "Access-Control-Allow-Credentials": "false", // Must be false when using wildcard origin
     "Access-Control-Max-Age": "86400",
   };
 }

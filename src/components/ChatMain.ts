@@ -1,4 +1,11 @@
-import { Component, config, authService, html } from "@lib";
+import {
+  Component,
+  config,
+  authService,
+  html,
+  streamingClient,
+  type StreamingUpdate,
+} from "@lib";
 import { ChatInput, ChatMessages } from "@components";
 
 export interface Message {
@@ -227,8 +234,8 @@ export class ChatMain extends Component {
     const isFirstMessage =
       this._messages.filter((m) => !m.isLoading).length === 1;
 
-    // Handle the AI response (streaming or non-streaming based on user preference)
-    await this._handleStreamingResponse(message, isFirstMessage);
+    // Handle the AI response using Convex reactivity pattern
+    await this._handleConvexStreamingResponse(message, isFirstMessage);
   }
 
   private async _generateChatTitle(firstMessage: string) {
@@ -592,6 +599,314 @@ export class ChatMain extends Component {
 
   private _handleCancelStreaming() {
     this.cancelStreaming();
+  }
+
+  private async _handleDatabaseStreamingResponse(
+    message: string,
+    isFirstMessage: boolean
+  ) {
+    this._isStreaming = true;
+
+    // Notify input that streaming started
+    if (this._chatInput) {
+      this._chatInput.streamingStarted();
+    }
+
+    // Replace loading message with streaming message
+    this._messages.pop(); // Remove loading message
+
+    const streamingMessage: Message = {
+      role: "response",
+      content: "",
+      timestamp: Date.now(),
+      isStreaming: true,
+    };
+
+    this._messages.push(streamingMessage);
+    this.render();
+
+    // Get the ChatMessage component for this streaming message
+    const streamingMessageElement = this._getLastMessageElement();
+    let cleanupSubscription: (() => void) | null = null;
+
+    try {
+      // Start the database streaming request
+      const response = await authService.fetchWithAuth(
+        `${config.apiBaseUrl}/chats/${this._currentChatId}/stream-db`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message,
+            conversation: this._messages
+              .slice(-11, -1)
+              .filter((m) => !m.isLoading)
+              .map((m) => ({
+                role: m.role,
+                content: m.content,
+                timestamp: m.timestamp,
+              })),
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      const requestId = data.requestId;
+      console.log(`[ChatMain] Starting stream subscription for: ${requestId}`);
+
+      // Subscribe to database updates
+      cleanupSubscription = streamingClient.subscribeToStream(
+        requestId,
+        (update: StreamingUpdate | null) => {
+          if (!update) return;
+
+          console.log(`[ChatMain] Stream update:`, update);
+
+          // Update the streaming message content
+          streamingMessage.content = update.content;
+
+          if (streamingMessageElement) {
+            streamingMessageElement.updateStreamingContent(update.content);
+          }
+
+          // Handle completion or error
+          if (update.status === "completed") {
+            this._completeResponse(
+              update.content,
+              streamingMessage,
+              streamingMessageElement,
+              message,
+              isFirstMessage,
+              update.usage
+            );
+          } else if (update.status === "error") {
+            this._handleStreamingError(
+              update.error || "Streaming failed",
+              streamingMessage,
+              streamingMessageElement
+            );
+          }
+        },
+        (await authService.getToken()) || undefined
+      );
+    } catch (error) {
+      console.error("Database streaming error:", error);
+      this._handleStreamingError(
+        error instanceof Error ? error.message : "Streaming failed",
+        streamingMessage,
+        streamingMessageElement
+      );
+    }
+
+    // Store cleanup function for later use
+    if (cleanupSubscription) {
+      // Store it on the streaming message for cleanup
+      (streamingMessage as any)._cleanup = cleanupSubscription;
+    }
+  }
+
+  private _handleStreamingError(
+    errorMessage: string,
+    streamingMessage: Message,
+    streamingMessageElement: any
+  ) {
+    this._isStreaming = false;
+
+    // Show error in the streaming message
+    if (streamingMessageElement) {
+      streamingMessageElement.showStreamingError(errorMessage);
+    } else {
+      // Replace streaming message with error message
+      streamingMessage.content = `❌ Streaming error: ${errorMessage}`;
+      this._updateMessages();
+    }
+
+    // Notify input that streaming ended
+    if (this._chatInput) {
+      this._chatInput.streamingEnded();
+    }
+
+    // Cleanup subscription if exists
+    const cleanup = (streamingMessage as any)._cleanup;
+    if (cleanup) {
+      cleanup();
+    }
+  }
+
+  private async _handleConvexStreamingResponse(
+    message: string,
+    isFirstMessage: boolean
+  ) {
+    console.log("🚀 Starting streaming response");
+    this._isStreaming = true;
+
+    // Notify input that streaming started
+    if (this._chatInput) {
+      this._chatInput.streamingStarted();
+    }
+
+    // Remove loading message
+    this._messages.pop();
+
+    try {
+      // Create AI message with scheduled streaming (following Convex pattern)
+      const response = await authService.fetchWithAuth(
+        `${config.apiBaseUrl}/chats/${this._currentChatId}/messages`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message,
+            conversation: this._messages
+              .slice(-10)
+              .filter((m) => !m.isLoading)
+              .map((m) => ({
+                role: m.role,
+                content: m.content,
+              })),
+            useConvexStreaming: true, // Flag to use the new pattern
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Message post failed:", errorText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const messageId = data.messageId;
+
+      if (!messageId) {
+        throw new Error("No message ID returned from server");
+      }
+
+      console.log("🔄 Starting real-time polling for:", messageId);
+
+      // Add placeholder streaming message to UI
+      const streamingMessage: Message = {
+        role: "response",
+        content: "...",
+        timestamp: Date.now(),
+        isStreaming: true,
+      };
+
+      this._messages.push(streamingMessage);
+      this.render();
+
+      // Now poll for updates using direct database queries
+      // This simulates the reactivity that would happen in a React app
+      let isComplete = false;
+      const pollInterval = setInterval(async () => {
+        try {
+          // Query for the specific message updates
+          const updateResponse = await authService.fetchWithAuth(
+            `${config.apiBaseUrl}/messages/${messageId}`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          if (updateResponse.ok) {
+            const messageData = await updateResponse.json();
+
+            // Update the content in real-time
+            streamingMessage.content = messageData.content || "...";
+
+            // Check if streaming is complete
+            if (!messageData.isStreaming) {
+              console.log("✅ Streaming completed!");
+              isComplete = true;
+              streamingMessage.isStreaming = false;
+              this._isStreaming = false;
+
+              // Notify input that streaming ended
+              if (this._chatInput) {
+                this._chatInput.streamingEnded();
+              }
+
+              // Generate title if this is the first message
+              if (isFirstMessage) {
+                this._generateChatTitle(message);
+              }
+
+              clearInterval(pollInterval);
+            }
+
+            // Update the UI - only update messages, don't re-render entire component
+            if (this._chatMessages) {
+              this._chatMessages.updateMessages(this._messages);
+              await this._chatMessages.render();
+            }
+          } else {
+            const errorText = await updateResponse.text();
+            console.error("❌ Poll error response:", errorText);
+          }
+        } catch (pollError) {
+          console.error("❌ Error polling for message updates:", pollError);
+          if (!isComplete) {
+            // Continue polling unless there's a persistent error
+          }
+        }
+      }, 100); // Poll every 100ms for very smooth updates
+
+      // Safety timeout to stop polling after 2 minutes
+      setTimeout(async () => {
+        if (!isComplete) {
+          clearInterval(pollInterval);
+          streamingMessage.content += "\n\n⚠️ Streaming timed out";
+          streamingMessage.isStreaming = false;
+          this._isStreaming = false;
+          if (this._chatInput) {
+            this._chatInput.streamingEnded();
+          }
+          // Update messages only, don't re-render entire component
+          if (this._chatMessages) {
+            this._chatMessages.updateMessages(this._messages);
+            await this._chatMessages.render();
+          }
+        }
+      }, 120000);
+    } catch (error) {
+      this._isStreaming = false;
+      console.error("Convex streaming error:", error);
+
+      // Show error message
+      const errorMessage: Message = {
+        role: "response",
+        content: `❌ Streaming error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        timestamp: Date.now(),
+      };
+
+      this._messages.push(errorMessage);
+      this.render();
+
+      // Notify input that streaming ended
+      if (this._chatInput) {
+        this._chatInput.streamingEnded();
+      }
+    }
+
+    // Re-enable input
+    if (this._chatInput) {
+      this._chatInput.messageProcessed();
+    }
   }
 }
 

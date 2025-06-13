@@ -110,6 +110,23 @@ export class AuthService {
     }
   }
 
+  async getToken(): Promise<string | null> {
+    try {
+      if (this.clerk && this.clerk.session) {
+        const convexUrl = config.apiBaseUrl;
+        const token = await this.clerk.session.getToken({
+          template: "convex",
+          audience: convexUrl,
+        });
+        return token;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error getting auth token:", error);
+      return null;
+    }
+  }
+
   setClerk(clerk: Clerk) {
     this.clerk = clerk;
   }
