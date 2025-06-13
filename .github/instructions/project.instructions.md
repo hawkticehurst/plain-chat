@@ -46,7 +46,7 @@ Below is an example of the web component format that must be used in this projec
 - Internal state is always stored in private properties (e.g. `_id`, `_selected`)
 
 ```ts
-import { Component, html } from "./lib/index";
+import { Component, html } from "@lib";
 
 const adjectives = [
   "pretty",
@@ -397,3 +397,5 @@ bench-button button {
 ## General Guidelines
 
 - Remember to always check for missing or unused imports when adding, removing, or refactoring code.
+- Padding, margin, and border should always be defined in pixels (px) for consistency.
+- Font sizes should always be defined in rem units for consistency.

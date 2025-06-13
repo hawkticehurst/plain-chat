@@ -1,4 +1,4 @@
-import { Component, html } from "../lib/index";
+import { Component, html } from "@lib";
 
 export class ChatInput extends Component {
   private _isLoading = false;

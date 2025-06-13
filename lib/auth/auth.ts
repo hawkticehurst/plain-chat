@@ -1,4 +1,6 @@
-import { config } from "./config";
+import type { UserResource } from "@clerk/types";
+import { config } from "../config";
+import { Clerk } from "@clerk/clerk-js";
 
 export interface AuthStatus {
   isAuthenticated: boolean;
@@ -8,6 +10,53 @@ export interface AuthStatus {
 
 export class AuthService {
   private clerk: any = null;
+
+  async init(
+    signInDiv: HTMLDivElement,
+    isSignedInCallback: (user: UserResource) => void
+  ): Promise<void> {
+    const publicKey = "pk_test_Z3Jvd24tcGVyY2gtNDcuY2xlcmsuYWNjb3VudHMuZGV2JA";
+    const clerk = new Clerk(publicKey);
+    await clerk.load();
+
+    this.setClerk(clerk);
+
+    if (clerk.user) {
+      isSignedInCallback(clerk.user);
+      return;
+    }
+
+    // Mount the sign-in component
+    clerk.mountSignIn(signInDiv);
+
+    // Listen for sign-in events
+    clerk.addListener(({ user }) => {
+      if (user) {
+        isSignedInCallback(user);
+      }
+    });
+  }
+
+  async signOut(): Promise<void> {
+    try {
+      if (this.clerk) {
+        await this.clerk.signOut();
+        // Force page reload to clear any cached state
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("Error signing out:", error);
+      throw error;
+    }
+  }
+
+  getCurrentUser(): UserResource | null {
+    return this.clerk?.user || null;
+  }
+
+  isSignedIn(): boolean {
+    return !!this.clerk?.user;
+  }
 
   async getAuthStatus(): Promise<AuthStatus> {
     try {
@@ -40,7 +89,7 @@ export class AuthService {
     }
   }
 
-  setClerk(clerk: any) {
+  setClerk(clerk: Clerk) {
     this.clerk = clerk;
   }
 

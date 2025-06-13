@@ -1,4 +1,5 @@
 // Reference: https://plainvanillaweb.com/pages/applications.html
+// Reference: https://github.com/hawkticehurst/slim-ssr/blob/main/slim-ssr/index.js
 
 class Html extends String {}
 
@@ -37,6 +38,9 @@ export const htmlEncode = (value: any) => {
 
 /**
  * HTML tagged template literal, auto-encodes entities and flattens arrays
+ * @param {TemplateStringsArray} strings
+ * @param {...any} values
+ * @returns {Html}
  */
 export const html = (strings: TemplateStringsArray, ...values: any[]) => {
   const processedValues = values.map((value) => {
