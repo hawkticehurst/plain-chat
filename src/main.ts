@@ -9,8 +9,7 @@ const init = async () => {
   }
 
   // Initialize the app
-  const app = new App();
-  render(app, root);
+  render(App, root);
 
   // Initialize router with default route
   if (!window.location.hash) {
