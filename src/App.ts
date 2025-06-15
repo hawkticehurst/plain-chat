@@ -56,7 +56,7 @@ export class App extends Component {
   async init() {
     // Set up routes first
     router.createRoute("/", () => {
-      this.innerHTML = String(html`
+      this.append(html`
         <chat-sidebar></chat-sidebar>
         <chat-main></chat-main>
         <notification-component></notification-component>
@@ -65,7 +65,7 @@ export class App extends Component {
     });
 
     router.createRoute("/sign-in", () => {
-      this.innerHTML = String(html`
+      this.append(html`
         <div class="auth-required">
           <div id="clerk-signin"></div>
         </div>
@@ -74,11 +74,11 @@ export class App extends Component {
     });
 
     router.createRoute("/ai-settings", () => {
-      this.innerHTML = String(html`<ai-settings></ai-settings>`);
+      this.append(html`<ai-settings></ai-settings>`);
     });
 
     router.createRoute("/usage", () => {
-      this.innerHTML = String(html`<usage-dashboard></usage-dashboard>`);
+      this.append(html`<usage-dashboard></usage-dashboard>`);
     });
 
     // Always start at home
