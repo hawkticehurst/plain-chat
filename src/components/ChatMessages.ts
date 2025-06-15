@@ -34,7 +34,7 @@ export class ChatMessages extends Component {
         message.isLoading || false,
         message.isStreaming || false
       );
-      this.insert(this, messageComponent, null);
+      this.insert(this, messageComponent);
     }
 
     // Update content of the last message if it's streaming (FIXED LOGIC)

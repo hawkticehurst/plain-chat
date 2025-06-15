@@ -181,7 +181,7 @@ export class ChatSidebar extends Component {
   render() {
     this.checkAuthStatus(); // Update auth status before render
 
-    const template = html`
+    this.append(html`
       <section class="header">
         <button class="new-chat-btn">New Chat</button>
         <button class="ai-settings-btn" ?disabled=${!this._isSignedIn}>
@@ -208,9 +208,7 @@ export class ChatSidebar extends Component {
           ${this._isSignedIn ? "Sign Out" : "Sign In"}
         </button>
       </section>
-    `;
-
-    this.innerHTML = String(template);
+    `);
 
     // Add event listeners
     const newChatBtn = this.querySelector(".new-chat-btn");
@@ -321,8 +319,8 @@ class ChatSidebarItem extends Component {
 
   constructor(chat: ChatItem) {
     super();
-    this._id = signal<string>(chat.id, []);
-    this._title = signal<string>(chat.title, []);
+    this._id = signal<string>(chat.id);
+    this._title = signal<string>(chat.title);
   }
 
   connectedCallback() {
@@ -330,16 +328,15 @@ class ChatSidebarItem extends Component {
   }
 
   render() {
-    const template = html`
+    this.append(html`
       <li class="header">
-        <p class="title">${this._title.value}</p>
+        <p class="title">${this._title()}</p>
       </li>
-    `;
-    this.innerHTML = String(template);
+    `);
   }
 
   get id() {
-    return this._id.value;
+    return this._id();
   }
 }
 

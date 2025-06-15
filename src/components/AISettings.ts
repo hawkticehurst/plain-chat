@@ -2,20 +2,15 @@ import { Component, html, signal, config, authService } from "@lib";
 import type { Signal } from "@lib";
 
 export class AISettings extends Component {
-  private _isLoading: Signal<boolean> = signal(false, []);
-  private _isSaving: Signal<boolean> = signal(false, []);
-  private _apiKey: Signal<string> = signal("", []);
-  private _hasValidKey: Signal<boolean> = signal(false, []);
-  private _selectedModel: Signal<string> = signal(
-    "google/gemini-2.5-flash-preview-05-20",
-    []
-  );
-  private _temperature: Signal<number> = signal(0.7, []);
-  private _maxTokens: Signal<number> = signal(2000, []);
-  private _systemPrompt: Signal<string> = signal("", []);
+  private _isLoading: Signal<boolean> = signal(false);
+  private _isSaving: Signal<boolean> = signal(false);
+  private _apiKey: Signal<string> = signal("");
+  private _hasValidKey: Signal<boolean> = signal(false);
+  private _temperature: Signal<number> = signal(0.7);
+  private _maxTokens: Signal<number> = signal(2000);
+  private _systemPrompt: Signal<string> = signal("");
 
   private _apiKeyInput!: HTMLInputElement;
-  private _modelSelect!: HTMLSelectElement;
   private _temperatureInput!: HTMLInputElement;
   private _temperatureValue!: HTMLSpanElement;
   private _maxTokensInput!: HTMLInputElement;
@@ -28,7 +23,7 @@ export class AISettings extends Component {
   }
 
   private _initializeComponent() {
-    const template = html`
+    this.append(html`
       <div class="ai-settings">
         <div class="ai-settings-header">
           <h2>AI Settings</h2>
@@ -67,28 +62,9 @@ export class AISettings extends Component {
             </div>
           </div>
 
-          <!-- Model Selection -->
+          <!-- Model Configuration -->
           <div class="settings-section">
             <h3>Model Configuration</h3>
-            <div class="form-group">
-              <label for="model-select">AI Model</label>
-              <select id="model-select" class="form-select">
-                <option value="google/gemini-2.5-flash-preview-05-20">
-                  Gemini 2.5 Flash (Recommended)
-                </option>
-                <option value="openai/gpt-4">GPT-4</option>
-                <option value="openai/gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                <option value="anthropic/claude-3-haiku">Claude 3 Haiku</option>
-                <option value="anthropic/claude-3-sonnet">
-                  Claude 3 Sonnet
-                </option>
-                <option value="google/gemini-pro">Gemini Pro</option>
-                <option value="meta-llama/llama-3-8b-instruct">
-                  Llama 3 8B
-                </option>
-              </select>
-            </div>
-
             <div class="form-group">
               <label for="temperature">
                 Temperature: <span class="temperature-value">0.7</span>
@@ -160,9 +136,8 @@ export class AISettings extends Component {
           </div>
         </div>
       </div>
-    `;
+    `);
 
-    this.innerHTML = String(template);
     this._bindElements();
     this._setupEventListeners();
     this._loadCurrentSettings();
@@ -170,9 +145,6 @@ export class AISettings extends Component {
 
   private _bindElements() {
     this._apiKeyInput = this.querySelector("#api-key") as HTMLInputElement;
-    this._modelSelect = this.querySelector(
-      "#model-select"
-    ) as HTMLSelectElement;
     this._temperatureInput = this.querySelector(
       "#temperature"
     ) as HTMLInputElement;
@@ -193,34 +165,29 @@ export class AISettings extends Component {
   private _setupEventListeners() {
     // API Key input and test
     this._apiKeyInput.addEventListener("input", () => {
-      this._apiKey.value = this._apiKeyInput.value;
+      this._apiKey(this._apiKeyInput.value);
       const testBtn = this.querySelector(".btn-test-key") as HTMLButtonElement;
-      testBtn.disabled = !this._apiKey.value.trim();
+      testBtn.disabled = !this._apiKey().trim();
     });
 
     const testBtn = this.querySelector(".btn-test-key") as HTMLButtonElement;
     testBtn.addEventListener("click", () => this._testApiKey());
 
-    // Model selection
-    this._modelSelect.addEventListener("change", () => {
-      this._selectedModel.value = this._modelSelect.value;
-    });
-
     // Temperature slider
     this._temperatureInput.addEventListener("input", () => {
-      this._temperature.value = parseFloat(this._temperatureInput.value);
-      this._temperatureValue.textContent = this._temperature.value.toString();
+      this._temperature(parseFloat(this._temperatureInput.value));
+      this._temperatureValue.textContent = this._temperature().toString();
     });
 
     // Max tokens slider
     this._maxTokensInput.addEventListener("input", () => {
-      this._maxTokens.value = parseInt(this._maxTokensInput.value);
-      this._maxTokensValue.textContent = this._maxTokens.value.toString();
+      this._maxTokens(parseInt(this._maxTokensInput.value));
+      this._maxTokensValue.textContent = this._maxTokens().toString();
     });
 
     // System prompt
     this._systemPromptTextarea.addEventListener("input", () => {
-      this._systemPrompt.value = this._systemPromptTextarea.value;
+      this._systemPrompt(this._systemPromptTextarea.value);
     });
 
     // Action buttons
@@ -233,7 +200,7 @@ export class AISettings extends Component {
 
   private async _loadCurrentSettings() {
     try {
-      this._isLoading.value = true;
+      this._isLoading(true);
       this._showMessage("Loading current settings...", "info");
 
       // Check if user has API key
@@ -243,7 +210,7 @@ export class AISettings extends Component {
 
       if (hasKeyResponse.ok) {
         const hasKeyData = await hasKeyResponse.json();
-        this._hasValidKey.value = hasKeyData.hasValidKey || false;
+        this._hasValidKey(hasKeyData.hasValidKey || false);
 
         if (hasKeyData.hasValidKey) {
           // Load API key status (masked)
@@ -268,56 +235,45 @@ export class AISettings extends Component {
       if (preferencesResponse.ok) {
         const preferences = await preferencesResponse.json();
         if (preferences) {
-          // Handle model name migration from old to new
-          let defaultModel =
-            preferences.defaultModel || "google/gemini-2.5-flash-preview-05-20";
-          if (defaultModel === "google/gemini-2.0-flash-exp") {
-            defaultModel = "google/gemini-2.5-flash-preview-05-20";
-          }
-
-          this._selectedModel.value = defaultModel;
-          this._temperature.value = preferences.temperature || 0.7;
-          this._maxTokens.value = preferences.maxTokens || 2000;
-          this._systemPrompt.value = preferences.systemPrompt || "";
+          this._temperature(preferences.temperature || 0.7);
+          this._maxTokens(preferences.maxTokens || 2000);
+          this._systemPrompt(preferences.systemPrompt || "");
 
           // Update UI
-          this._modelSelect.value = this._selectedModel.value;
-          this._temperatureInput.value = this._temperature.value.toString();
+          this._temperatureInput.value = this._temperature().toString();
           this._temperatureValue.textContent =
-            this._temperature.value.toString();
-          this._maxTokensInput.value = this._maxTokens.value.toString();
-          this._maxTokensValue.textContent = this._maxTokens.value.toString();
-          this._systemPromptTextarea.value = this._systemPrompt.value;
+            this._temperature().toString();
+          this._maxTokensInput.value = this._maxTokens().toString();
+          this._maxTokensValue.textContent = this._maxTokens().toString();
+          this._systemPromptTextarea.value = this._systemPrompt();
         } else {
           // No preferences found, set defaults
-          this._modelSelect.value = this._selectedModel.value;
-          this._temperatureInput.value = this._temperature.value.toString();
+          this._temperatureInput.value = this._temperature().toString();
           this._temperatureValue.textContent =
-            this._temperature.value.toString();
-          this._maxTokensInput.value = this._maxTokens.value.toString();
-          this._maxTokensValue.textContent = this._maxTokens.value.toString();
-          this._systemPromptTextarea.value = this._systemPrompt.value;
+            this._temperature().toString();
+          this._maxTokensInput.value = this._maxTokens().toString();
+          this._maxTokensValue.textContent = this._maxTokens().toString();
+          this._systemPromptTextarea.value = this._systemPrompt();
         }
       } else {
         // Failed to load preferences, set defaults
-        this._modelSelect.value = this._selectedModel.value;
-        this._temperatureInput.value = this._temperature.value.toString();
-        this._temperatureValue.textContent = this._temperature.value.toString();
-        this._maxTokensInput.value = this._maxTokens.value.toString();
-        this._maxTokensValue.textContent = this._maxTokens.value.toString();
-        this._systemPromptTextarea.value = this._systemPrompt.value;
+        this._temperatureInput.value = this._temperature().toString();
+        this._temperatureValue.textContent = this._temperature().toString();
+        this._maxTokensInput.value = this._maxTokens().toString();
+        this._maxTokensValue.textContent = this._maxTokens().toString();
+        this._systemPromptTextarea.value = this._systemPrompt();
       }
 
       this._clearMessages();
     } catch (error: any) {
       this._showMessage(`Failed to load settings: ${error.message}`, "error");
     } finally {
-      this._isLoading.value = false;
+      this._isLoading(false);
     }
   }
 
   private async _testApiKey() {
-    if (!this._apiKey.value.trim()) return;
+    if (!this._apiKey().trim()) return;
 
     try {
       this._showMessage("Testing API key...", "info");
@@ -334,7 +290,7 @@ export class AISettings extends Component {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            apiKey: this._apiKey.value,
+            apiKey: this._apiKey(),
           }),
         }
       );
@@ -343,10 +299,10 @@ export class AISettings extends Component {
         const result = await response.json();
         if (result.valid) {
           this._showMessage("API key is valid!", "success");
-          this._hasValidKey.value = true;
+          this._hasValidKey(true);
         } else {
           this._showMessage(`API key invalid: ${result.error}`, "error");
-          this._hasValidKey.value = false;
+          this._hasValidKey(false);
         }
       } else {
         const errorData = await response.json();
@@ -354,11 +310,11 @@ export class AISettings extends Component {
           `Test failed: ${errorData.message || "Unknown error"}`,
           "error"
         );
-        this._hasValidKey.value = false;
+        this._hasValidKey(false);
       }
     } catch (error: any) {
       this._showMessage(`Test failed: ${error.message}`, "error");
-      this._hasValidKey.value = false;
+      this._hasValidKey(false);
     } finally {
       const testBtn = this.querySelector(".btn-test-key") as HTMLButtonElement;
       testBtn.disabled = false;
@@ -368,11 +324,11 @@ export class AISettings extends Component {
 
   private async _saveSettings() {
     try {
-      this._isSaving.value = true;
+      this._isSaving(true);
       this._showMessage("Saving settings...", "info");
 
       // Save API key if provided
-      if (this._apiKey.value.trim()) {
+      if (this._apiKey().trim()) {
         const keyResponse = await authService.fetchWithAuth(
           `${config.apiBaseUrl}/ai-settings/set-key`,
           {
@@ -381,7 +337,7 @@ export class AISettings extends Component {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              apiKey: this._apiKey.value,
+              apiKey: this._apiKey(),
             }),
           }
         );
@@ -401,10 +357,9 @@ export class AISettings extends Component {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            defaultModel: this._selectedModel.value,
-            temperature: this._temperature.value,
-            maxTokens: this._maxTokens.value,
-            systemPrompt: this._systemPrompt.value || undefined,
+            temperature: this._temperature(),
+            maxTokens: this._maxTokens(),
+            systemPrompt: this._systemPrompt() || undefined,
             enableUsageNotifications: true, // Default value
           }),
         }
@@ -419,7 +374,7 @@ export class AISettings extends Component {
 
       // Clear API key input for security
       this._apiKeyInput.value = "";
-      this._apiKey.value = "";
+      this._apiKey("");
 
       // Navigate back after a short delay
       setTimeout(() => {
@@ -428,7 +383,7 @@ export class AISettings extends Component {
     } catch (error: any) {
       this._showMessage(`Failed to save settings: ${error.message}`, "error");
     } finally {
-      this._isSaving.value = false;
+      this._isSaving(false);
     }
   }
 

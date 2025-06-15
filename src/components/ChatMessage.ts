@@ -44,7 +44,7 @@ export class ChatMessage extends Component {
       markup = await marked(processedContent);
     }
 
-    const template = html`
+    this.append(html`
       <div class="message ${role}${extraClasses}">
         <div class="content">
           <div class="text">${htmlRaw(markup)}</div>
@@ -53,9 +53,7 @@ export class ChatMessage extends Component {
             : ""}
         </div>
       </div>
-    `;
-
-    this.innerHTML = String(template);
+    `);
   }
 
   // Method to update content during streaming - simple and efficient

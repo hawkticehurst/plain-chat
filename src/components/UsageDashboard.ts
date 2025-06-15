@@ -27,20 +27,14 @@ interface UsageSummary {
 }
 
 export class UsageDashboard extends Component {
-  private _isLoading: Signal<boolean> = signal(false, []);
-  private _recentUsage: Signal<UsageRecord[]> = signal<UsageRecord[]>([], []);
-  private _dailySummary: Signal<UsageSummary[]> = signal<UsageSummary[]>(
-    [],
-    []
-  );
-  private _monthlySummary: Signal<UsageSummary[]> = signal<UsageSummary[]>(
-    [],
-    []
-  );
+  private _isLoading: Signal<boolean> = signal(false);
+  private _recentUsage: Signal<UsageRecord[]> = signal<UsageRecord[]>([]);
+  private _dailySummary: Signal<UsageSummary[]> = signal<UsageSummary[]>([]);
+  private _monthlySummary: Signal<UsageSummary[]> = signal<UsageSummary[]>([]);
   private _currentPeriod: Signal<"daily" | "monthly"> = signal<
     "daily" | "monthly"
-  >("daily", []);
-  private _selectedDays: Signal<number> = signal(7, []);
+  >("daily");
+  private _selectedDays: Signal<number> = signal<number>(7);
 
   constructor() {
     super();
@@ -48,7 +42,7 @@ export class UsageDashboard extends Component {
   }
 
   private _initializeComponent() {
-    const template = html`
+    this.append(html`
       <div class="usage-dashboard">
         <div class="usage-header">
           <h2>Usage Dashboard</h2>
@@ -178,9 +172,8 @@ export class UsageDashboard extends Component {
           </div>
         </div>
       </div>
-    `;
+    `);
 
-    this.innerHTML = String(template);
     this._setupEventListeners();
     this._loadUsageData();
   }
@@ -199,7 +192,7 @@ export class UsageDashboard extends Component {
     // Days selector
     const daysSelect = this.querySelector("#days-select") as HTMLSelectElement;
     daysSelect.addEventListener("change", () => {
-      this._selectedDays.value = parseInt(daysSelect.value);
+      this._selectedDays(parseInt(daysSelect.value));
       this._loadUsageData();
     });
 
@@ -212,7 +205,7 @@ export class UsageDashboard extends Component {
   }
 
   private _switchPeriod(period: "daily" | "monthly") {
-    this._currentPeriod.value = period;
+    this._currentPeriod(period);
 
     // Update active button
     const periodBtns = this.querySelectorAll(".period-btn");
@@ -228,7 +221,7 @@ export class UsageDashboard extends Component {
 
   private async _loadUsageData() {
     try {
-      this._isLoading.value = true;
+      this._isLoading(true);
       this._showMessage("Loading usage data...", "info");
 
       // Load recent usage
@@ -238,15 +231,15 @@ export class UsageDashboard extends Component {
 
       if (recentResponse.ok) {
         const recentData = await recentResponse.json();
-        this._recentUsage.value = recentData.usage || [];
+        this._recentUsage(recentData.usage || []);
         this._renderRecentUsage();
       }
 
       // Load summary data based on current period
       const summaryEndpoint =
-        this._currentPeriod.value === "daily"
-          ? `/usage/daily?days=${this._selectedDays.value}`
-          : `/usage/monthly?months=${Math.ceil(this._selectedDays.value / 30)}`;
+        this._currentPeriod() === "daily"
+          ? `/usage/daily?days=${this._selectedDays()}`
+          : `/usage/monthly?months=${Math.ceil(this._selectedDays() / 30)}`;
 
       const summaryResponse = await authService.fetchWithAuth(
         `${config.apiBaseUrl}${summaryEndpoint}`
@@ -254,10 +247,10 @@ export class UsageDashboard extends Component {
 
       if (summaryResponse.ok) {
         const summaryData = await summaryResponse.json();
-        if (this._currentPeriod.value === "daily") {
-          this._dailySummary.value = summaryData.summary || [];
+        if (this._currentPeriod() === "daily") {
+          this._dailySummary(summaryData.summary || []);
         } else {
-          this._monthlySummary.value = summaryData.summary || [];
+          this._monthlySummary(summaryData.summary || []);
         }
         this._renderSummaryCards();
         this._renderModelBreakdown();
@@ -268,15 +261,15 @@ export class UsageDashboard extends Component {
     } catch (error: any) {
       this._showMessage(`Failed to load usage data: ${error.message}`, "error");
     } finally {
-      this._isLoading.value = false;
+      this._isLoading(false);
     }
   }
 
   private _renderSummaryCards() {
     const currentData =
-      this._currentPeriod.value === "daily"
-        ? this._dailySummary.value
-        : this._monthlySummary.value;
+      this._currentPeriod() === "daily"
+        ? this._dailySummary()
+        : this._monthlySummary();
 
     const totals = currentData.reduce(
       (acc, item) => ({
@@ -306,9 +299,9 @@ export class UsageDashboard extends Component {
 
   private _renderModelBreakdown() {
     const currentData =
-      this._currentPeriod.value === "daily"
-        ? this._dailySummary.value
-        : this._monthlySummary.value;
+      this._currentPeriod() === "daily"
+        ? this._dailySummary()
+        : this._monthlySummary();
 
     const modelStats: Record<
       string,
@@ -316,7 +309,7 @@ export class UsageDashboard extends Component {
     > = {};
 
     // Aggregate model usage across all periods
-    currentData.forEach((item) => {
+    currentData.forEach((item: any) => {
       Object.entries(item.modelUsage).forEach(([model, usage]) => {
         if (!modelStats[model]) {
           modelStats[model] = { tokens: 0, cost: 0, requests: 0 };
@@ -376,9 +369,9 @@ export class UsageDashboard extends Component {
     if (!chartEl) return;
 
     const currentData =
-      this._currentPeriod.value === "daily"
-        ? this._dailySummary.value
-        : this._monthlySummary.value;
+      this._currentPeriod() === "daily"
+        ? this._dailySummary()
+        : this._monthlySummary();
 
     if (currentData.length === 0) {
       chartEl.innerHTML =
@@ -420,13 +413,13 @@ export class UsageDashboard extends Component {
     const tableBody = this.querySelector("#usage-table-body");
     if (!tableBody) return;
 
-    if (this._recentUsage.value.length === 0) {
+    if (this._recentUsage().length === 0) {
       tableBody.innerHTML =
         '<tr><td colspan="5" class="no-data">No recent usage data</td></tr>';
       return;
     }
 
-    const rowsHtml = this._recentUsage.value
+    const rowsHtml = this._recentUsage()
       .map((usage) => {
         const time = new Date(usage.timestamp).toLocaleString();
         const status = usage.success

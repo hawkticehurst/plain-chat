@@ -100,7 +100,7 @@ export class NotificationComponent extends Component {
       return;
     }
 
-    this.innerHTML = String(html`
+    this.append(html`
       <div class="notification-container">
         ${this._notifications.map(
           (notification) => html`

@@ -52,7 +52,7 @@ export class ChatMain extends Component {
   async render() {
     // Show empty state if no chat is selected
     if (!this._currentChatId) {
-      this.innerHTML = String(html`
+      this.append(html`
         <div class="empty-state">
           <h2>Start a New Conversation</h2>
           <p>
@@ -84,8 +84,8 @@ export class ChatMain extends Component {
     // Clear previous content
     this.innerHTML = "";
 
-    this.insert(this, this._chatMessages, null);
-    this.insert(this, this._chatInput, null);
+    this.insert(this, this._chatMessages);
+    this.insert(this, this._chatInput);
 
     // Listen for send-message events from ChatInput
     this._chatInput.addEventListener(
