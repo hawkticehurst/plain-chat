@@ -13,7 +13,7 @@
   --color-primary: #646cff;
   --color-primary-hover: #535bf2;
   --color-primary-light: rgba(100, 108, 255, 0.1);
-  --color-accent: #007aff;
+  --color-accent: #0055ff;
   --color-success: #34c759;
   --color-success-light: rgba(52, 199, 89, 0.1);
   --color-error: #ff3b30;
@@ -58,6 +58,7 @@ body {
   margin: 0;
   display: flex;
   min-height: 100vh;
+  overflow: hidden;
 }
 
 #root {
