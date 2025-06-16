@@ -162,6 +162,43 @@ export class ChatMain extends Component {
     this.#messages([]);
   }
 
+  public async deleteChat(chatId: string) {
+    try {
+      // Use the streaming service to delete the chat
+      const success = await this.#streamingService.deleteChat(chatId);
+      
+      if (!success) {
+        throw new Error("Failed to delete chat");
+      }
+
+      // If the deleted chat was the current chat, start a new chat
+      if (this.#currentChatId() === chatId) {
+        this.startNewChat();
+      }
+
+      // Dispatch success event
+      this.dispatchEvent(
+        new CustomEvent("chat-deleted", {
+          detail: { id: chatId },
+          bubbles: true,
+          composed: true,
+        })
+      );
+    } catch (error) {
+      console.error("Error deleting chat:", error);
+      // Dispatch error event for notification
+      this.dispatchEvent(
+        new CustomEvent("chat-error", {
+          detail: { 
+            message: error instanceof Error ? error.message : "Failed to delete chat"
+          },
+          bubbles: true,
+          composed: true,
+        })
+      );
+    }
+  }
+
   // Event handlers
   async #handleSendMessage(event: Event) {
     const customEvent = event as CustomEvent;

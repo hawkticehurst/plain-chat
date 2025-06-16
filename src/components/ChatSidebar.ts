@@ -206,8 +206,16 @@ export class ChatSidebar extends Component {
           chatItem.classList.add("active");
         }
 
-        chatItem.addEventListener("click", () => {
+        // Handle chat selection
+        chatItem.addEventListener("chat-item-selected", () => {
           this.#handleChatSelect(chat.id);
+        });
+
+        // Handle chat deletion
+        chatItem.addEventListener("chat-item-delete", (event) => {
+          const customEvent = event as CustomEvent;
+          const { id, title } = customEvent.detail;
+          this.#handleChatDelete(id, title);
         });
 
         this.#chatListSection.appendChild(chatItem);
@@ -375,6 +383,17 @@ export class ChatSidebar extends Component {
     );
   };
 
+  #handleChatDelete = (chatId: string, chatTitle: string) => {
+    // Dispatch event to parent to show confirmation dialog
+    this.dispatchEvent(
+      new CustomEvent("chat-delete-requested", {
+        detail: { id: chatId, title: chatTitle },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  };
+
   // Public API methods
   public async refreshChats() {
     this.#checkAuthStatus();
@@ -392,9 +411,16 @@ export class ChatSidebar extends Component {
     this.#currentChatId(chatId);
   }
 
-  // Legacy render method for backward compatibility
-  public render() {
-    // No-op since we use reactive updates now
+  public removeChat(chatId: string) {
+    // Remove the chat from the local state
+    const currentChats = this.#chats();
+    const updatedChats = currentChats.filter((chat) => chat.id !== chatId);
+    this.#chats(updatedChats);
+
+    // If the removed chat was the current chat, clear selection
+    if (this.#currentChatId() === chatId) {
+      this.#currentChatId(null);
+    }
   }
 }
 
@@ -415,8 +441,17 @@ class ChatSidebarItem extends Component {
 
   init() {
     this.append(html`
-      <li class="header">
-        <p class="title"></p>
+      <li class="chat-item-container">
+        <div class="chat-item-content" @click="handleItemClick">
+          <p class="title"></p>
+        </div>
+        <button class="delete-btn" @click="handleDeleteClick" title="Delete chat">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18"></path>
+            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+            <path d="M8 6V4c0-1 1-2 2-2h4c0 1 1 2 2 2v2"></path>
+          </svg>
+        </button>
       </li>
     `);
 
@@ -428,6 +463,32 @@ class ChatSidebarItem extends Component {
       }
     });
   }
+
+  handleItemClick = (event: Event) => {
+    event.stopPropagation();
+    // Dispatch the chat selection event
+    this.dispatchEvent(
+      new CustomEvent("chat-item-selected", {
+        detail: { id: this.#id() },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  };
+
+  handleDeleteClick = (event: Event) => {
+    event.stopPropagation();
+    event.preventDefault();
+    
+    // Dispatch the delete event
+    this.dispatchEvent(
+      new CustomEvent("chat-item-delete", {
+        detail: { id: this.#id(), title: this.#title() },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  };
 
   get id() {
     return this.#id();

@@ -123,12 +123,11 @@ chat-sidebar {
 }
 
 chat-sidebar-item {
-  padding: 8px;
+  display: block;
   margin-bottom: 4px;
   border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
   border: 1px solid transparent;
+  transition: all 0.2s ease;
 
   &:hover {
     background: var(--color-surface-raised);
@@ -139,9 +138,24 @@ chat-sidebar-item {
     border-color: var(--color-primary) !important;
   }
 
-  .header {
+  &:hover .delete-btn {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .chat-item-container {
     display: flex;
-    justify-content: space-between;
+    align-items: center;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .chat-item-content {
+    flex: 1;
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
     align-items: center;
   }
 
@@ -151,5 +165,42 @@ chat-sidebar-item {
     font-size: 0.875rem;
     padding: 0;
     margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .delete-btn {
+    padding: 4px;
+    margin-right: 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+    color: var(--color-text-secondary);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .delete-btn:hover {
+    background: var(--color-error);
+    color: white;
+  }
+
+  .delete-btn:focus {
+    opacity: 1;
+    visibility: visible;
+    outline: 2px solid var(--color-primary);
+    outline-offset: 1px;
+  }
+
+  .delete-btn svg {
+    width: 14px;
+    height: 14px;
   }
 }

@@ -14,7 +14,7 @@ export class ChatMessages extends Component {
   }
 
   init() {
-    // Build the DOM structure once
+    this.innerHTML = "";
     this.append(html`
       <div class="messages-container">
         <!-- Message components will be reconciled here -->

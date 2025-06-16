@@ -1,20 +1,82 @@
 import { Component, html, authService, router } from "@lib";
-import "./App.css";
+import { notificationService } from "./components/NotificationComponent";
+import type { ChatSidebar } from "./components/ChatSidebar";
+import type { ChatMain } from "./components/ChatMain";
+import type { ConfirmDialog } from "./components/ConfirmDialog";
 import "./components/ChatSidebar";
 import "./components/ChatMain";
 import "./components/ChatSettings";
 import "./components/UsageDashboard";
 import "./components/NotificationComponent";
+import "./components/ConfirmDialog";
+import "./App.css";
 
 export class App extends Component {
-  #pageContainer: HTMLElement | null = null;
+  #sidebar: ChatSidebar | null = null;
+  #chat: ChatMain | null = null;
+  #confirmDialog: ConfirmDialog | null = null;
 
   constructor() {
     super();
-    this.initializeClerkEarly();
+    this.initClerk();
   }
 
-  private async initializeClerkEarly() {
+  hello() {
+    console.log("Hello from App component!");
+  }
+
+  async init() {
+    router.createRoute("/", () => {
+      this.innerHTML = ""; // Clear previous content
+      this.append(html`
+        <chat-sidebar
+          @chat-selected="selectChat"
+          @new-chat-requested="newChat"
+          @chat-deleted="deleteChat"
+          @chat-delete-requested="handleDeleteRequest"
+          @chat-title-updated="chatTitleUpdated"
+        ></chat-sidebar>
+        <chat-main
+          @chat-deleted="handleChatDeleted"
+          @chat-error="handleChatError"
+        ></chat-main>
+        <notification-component></notification-component>
+        <confirm-dialog></confirm-dialog>
+      `);
+      this.#sidebar = this.querySelector("chat-sidebar") as ChatSidebar;
+      this.#chat = this.querySelector("chat-main") as ChatMain;
+      this.#confirmDialog = this.querySelector(
+        "confirm-dialog"
+      ) as ConfirmDialog;
+      // Process event attributes after components are created
+      this._processEventAttributes();
+    });
+
+    router.createRoute("/sign-in", () => {
+      this.innerHTML = "";
+      this.append(html`
+        <div class="auth-required">
+          <div id="clerk-signin"></div>
+        </div>
+      `);
+      this.setupSignIn();
+    });
+
+    router.createRoute("/chat-settings", () => {
+      this.innerHTML = "";
+      this.append(html`<chat-settings></chat-settings>`);
+    });
+
+    router.createRoute("/usage", () => {
+      this.innerHTML = "";
+      this.append(html`<usage-dashboard></usage-dashboard>`);
+    });
+
+    // Initialize router
+    router.init();
+  }
+
+  private async initClerk() {
     try {
       // Initialize Clerk early to handle OAuth redirects
       const publicKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -28,8 +90,6 @@ export class App extends Component {
       const { Clerk } = await import("@clerk/clerk-js");
       const clerk = new Clerk(publicKey);
 
-      // Use minimal configuration - let environment variables handle redirects
-      // This avoids the deprecated redirectUrl warning
       await clerk.load();
 
       authService.setClerk(clerk);
@@ -55,91 +115,97 @@ export class App extends Component {
     }
   }
 
-  // Initial component setup - This will be called only once
-  async init() {
-    // Create the stable app shell structure
-    this.append(html` <div id="page-content"></div> `);
-
-    // Get reference to the stable container
-    this.#pageContainer = this.querySelector("#page-content");
-
-    // Set up routes using Component-Scoped Routing pattern
-    router.createRoute("/", () => {
-      this.#clearAndRender(html`
-        <chat-sidebar></chat-sidebar>
-        <chat-main></chat-main>
-        <notification-component></notification-component>
-      `);
-      this.setupChatEventListeners();
-    });
-
-    router.createRoute("/sign-in", () => {
-      this.#clearAndRender(html`
-        <div class="auth-required">
-          <div id="clerk-signin"></div>
-        </div>
-      `);
-      this.setupSignIn();
-    });
-
-    router.createRoute("/chat-settings", () => {
-      this.#clearAndRender(html`<chat-settings></chat-settings>`);
-    });
-
-    router.createRoute("/usage", () => {
-      this.#clearAndRender(html`<usage-dashboard></usage-dashboard>`);
-    });
-
-    // Initialize router
-    router.init();
-  }
-
-  /**
-   * Helper method to clear the page container and render new content
-   * This prevents pages from stacking on top of each other
-   */
-  #clearAndRender(content: DocumentFragment) {
-    if (this.#pageContainer) {
-      this.#pageContainer.innerHTML = "";
-      this.#pageContainer.append(content);
-    }
-  }
-
   private setupSignIn() {
-    const signInDiv = this.#pageContainer?.querySelector("#clerk-signin");
+    const signInDiv = this.querySelector("#clerk-signin");
     if (signInDiv && authService.getClerkInstance()) {
       authService.getClerkInstance().mountSignIn(signInDiv);
     }
   }
 
-  private setupChatEventListeners() {
-    const sidebar = this.#pageContainer?.querySelector("chat-sidebar");
-    const chatMain = this.#pageContainer?.querySelector("chat-main");
-
-    if (sidebar && chatMain) {
-      // Handle chat selection
-      sidebar.addEventListener("chat-selected", (event: Event) => {
-        const customEvent = event as CustomEvent;
-        const { id } = customEvent.detail;
-        (chatMain as any).loadChat(id);
-        (sidebar as any).setCurrentChat(id);
-      });
-
-      // Handle new chat request (don't create DB record yet)
-      sidebar.addEventListener("new-chat-requested", () => {
-        (chatMain as any).startNewChat();
-      });
-
-      // Handle chat deletion
-      sidebar.addEventListener("chat-deleted", () => {
-        (chatMain as any).startNewChat();
-      });
-
-      // Handle chat title updates
-      chatMain.addEventListener("chat-title-updated", () => {
-        (sidebar as any).refreshChats();
-      });
+  public selectChat(event: Event) {
+    if (!this.#chat || !this.#sidebar) {
+      console.error("Chat components not initialized");
+      return;
     }
+    const customEvent = event as CustomEvent;
+    const { id } = customEvent.detail;
+    this.#chat.loadChat(id);
+    this.#sidebar.setCurrentChat(id);
+  }
+
+  public newChat() {
+    if (!this.#chat || !this.#sidebar) {
+      console.error("Chat components not initialized");
+      return;
+    }
+    this.#chat.startNewChat();
+  }
+
+  public deleteChat(event: Event) {
+    if (!this.#chat || !this.#sidebar) {
+      console.error("Chat components not initialized");
+      return;
+    }
+    const customEvent = event as CustomEvent;
+    const { id } = customEvent.detail;
+    this.#chat.deleteChat(id);
+    this.#sidebar.removeChat(id);
+  }
+
+  public chatTitleUpdated() {
+    if (!this.#sidebar) {
+      console.error("ChatSidebar component not initialized");
+      return;
+    }
+    this.#sidebar.refreshChats();
+  }
+
+  public async handleDeleteRequest(event: Event) {
+    if (!this.#chat || !this.#sidebar || !this.#confirmDialog) {
+      console.error("Components not initialized");
+      return;
+    }
+
+    const customEvent = event as CustomEvent;
+    const { id, title } = customEvent.detail;
+
+    // Show confirmation dialog
+    const confirmed = await this.#confirmDialog.show({
+      title: "Delete Chat",
+      message: `Are you sure you want to delete "${title}"? This action cannot be undone.`,
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      onConfirm: () => {
+        // This will be handled by the promise resolution
+      },
+      onCancel: () => {
+        // This will be handled by the promise resolution
+      },
+    });
+
+    if (confirmed) {
+      // Proceed with deletion
+      await this.#chat.deleteChat(id);
+      // Remove from sidebar immediately for better UX
+      this.#sidebar.removeChat(id);
+    }
+  }
+
+  public handleChatDeleted() {
+    // Refresh the sidebar to sync with server state
+    if (!this.#sidebar) {
+      console.error("ChatSidebar component not initialized");
+      return;
+    }
+    this.#sidebar.refreshChats();
+  }
+
+  public handleChatError(event: Event) {
+    const customEvent = event as CustomEvent;
+    const { message } = customEvent.detail;
+
+    // Show notification using the notification service
+    notificationService.error(message);
   }
 }
 

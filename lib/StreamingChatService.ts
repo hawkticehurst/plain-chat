@@ -267,6 +267,25 @@ export class StreamingChatService {
   }
 
   /**
+   * Deletes a chat and all its messages
+   */
+  public async deleteChat(chatId: string): Promise<boolean> {
+    try {
+      const response = await authService.fetchWithAuth(
+        `${config.apiBaseUrl}/chats/${chatId}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      return response.ok;
+    } catch (error) {
+      console.error("Error deleting chat:", error);
+      return false;
+    }
+  }
+
+  /**
    * Private method to handle the polling mechanism
    */
   private async _startPolling(

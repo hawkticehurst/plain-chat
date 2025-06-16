@@ -97,7 +97,7 @@ export const updateChatTimestamp = mutation({
   },
 });
 
-// Delete a chat (soft delete)
+// Delete a chat (hard delete)
 export const deleteChat = mutation({
   args: {
     chatId: v.id("chats"),
@@ -114,10 +114,18 @@ export const deleteChat = mutation({
       throw new Error("Chat not found or access denied");
     }
 
-    await ctx.db.patch(chatId, {
-      isActive: false,
-      updatedAt: Date.now(),
-    });
+    // Delete all messages associated with this chat
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_chat", (q) => q.eq("chatId", chatId))
+      .collect();
+
+    for (const message of messages) {
+      await ctx.db.delete(message._id);
+    }
+
+    // Delete the chat itself
+    await ctx.db.delete(chatId);
 
     return chatId;
   },

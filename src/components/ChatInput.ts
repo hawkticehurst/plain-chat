@@ -15,7 +15,7 @@ export class ChatInput extends Component {
   #modelSelect: HTMLSelectElement | null = null;
 
   init() {
-    // Build the DOM structure once
+    this.innerHTML = "";
     this.append(html`
       <div class="wrapper">
         <div class="input-container">
