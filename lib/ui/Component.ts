@@ -50,11 +50,17 @@ export class Component<P = any> extends HTMLElement {
   }
 
   // Reference: https://github.com/hawkticehurst/stellar/blob/main/index.ts
-  private _processEventAttributes() {
+  protected _processEventAttributes() {
     const iterator = document.createNodeIterator(this, NodeFilter.SHOW_ELEMENT);
     let node: Element | null;
     while ((node = iterator.nextNode() as Element | null)) {
       if (node instanceof HTMLElement) {
+        // Skip the root element (this component itself) - its event attributes
+        // should be processed by the parent component that created it
+        if (node === this) {
+          continue;
+        }
+
         for (const attr of [...node.attributes]) {
           if (attr.name.startsWith("@")) {
             const eventName = attr.name.slice(1);
