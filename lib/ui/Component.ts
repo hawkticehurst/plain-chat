@@ -40,41 +40,43 @@ export class Component<P = any> extends HTMLElement {
    *
    * @param props The initial data for the component, typically provided
    *              by the router or at application startup.
-  */
- init(props?: P): void {
-   this.props = props;
+   */
+  init(props?: P): void {
+    this.props = props;
   }
-  
+
   protected _addCleanup(fn: () => void) {
     this._cleanupCallbacks.push(fn);
   }
-  
+
   // Reference: https://github.com/hawkticehurst/stellar/blob/main/index.ts
   private _processEventAttributes() {
     const iterator = document.createNodeIterator(this, NodeFilter.SHOW_ELEMENT);
-    let node: any;
-    while ((node = iterator.nextNode())) {
+    let node: Element | null;
+    while ((node = iterator.nextNode() as Element | null)) {
       if (node instanceof HTMLElement) {
         for (const attr of [...node.attributes]) {
           if (attr.name.startsWith("@")) {
             const eventName = attr.name.slice(1);
             const handlerName = attr.value;
-            
+
             if (typeof (this as any)[handlerName] === "function") {
               const handler = (e: Event) => (this as any)[handlerName](e);
               node.addEventListener(eventName, handler);
+              // Capture node by value to avoid null reference in cleanup
+              const nodeRef = node;
               this._addCleanup(() =>
-                node.removeEventListener(eventName, handler)
-            );
-            node.removeAttribute(attr.name);
-          } else {
-            console.warn(
-              `Handler method "${handlerName}" not found on component ${this.tagName}.`
-            );
+                nodeRef.removeEventListener(eventName, handler)
+              );
+              node.removeAttribute(attr.name);
+            } else {
+              console.warn(
+                `Handler method "${handlerName}" not found on component ${this.tagName}.`
+              );
+            }
           }
         }
       }
     }
   }
-}
 }
