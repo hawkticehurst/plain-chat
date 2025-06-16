@@ -559,13 +559,11 @@ export default defineConfig({
 });
 ```
 
-4. **Zero-Specificity Prefix:** Use the `:where()` pseudo-class on the host element selector. This makes your component's default styles easy to override with utility classes or themes.
-
 **Example `MyComponent.css`:**
 
 ```css
 /* Use PostCSS Nesting for clean, scoped styles */
-:where(my-component) {
+my-component {
   display: block;
   border: 1px solid #eee;
   padding: 16px;
