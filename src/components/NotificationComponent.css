@@ -4,94 +4,94 @@ notification-component {
   right: 20px;
   z-index: 9999;
   max-width: 400px;
-}
 
-.notification-container {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+  .notification-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
 
-.notification {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
-  border-left: 4px solid #ccc;
-  min-width: 300px;
-  animation: slideIn 0.3s ease-out;
-}
+  .notification {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    border-left: 4px solid #ccc;
+    min-width: 300px;
+    animation: slideIn 0.3s ease-out;
 
-.notification--info {
-  border-left-color: #2563eb;
-}
+    &--info {
+      border-left-color: #2563eb;
 
-.notification--info .notification__content::before {
-  content: "ℹ️";
-  margin-right: 8px;
-}
+      .notification__content::before {
+        content: "ℹ️";
+        margin-right: 8px;
+      }
+    }
 
-.notification--warning {
-  border-left-color: #f59e0b;
-}
+    &--warning {
+      border-left-color: #f59e0b;
 
-.notification--warning .notification__content::before {
-  content: "⚠️";
-  margin-right: 8px;
-}
+      .notification__content::before {
+        content: "⚠️";
+        margin-right: 8px;
+      }
+    }
 
-.notification--error {
-  border-left-color: #dc2626;
-}
+    &--error {
+      border-left-color: #dc2626;
 
-.notification--error .notification__content::before {
-  content: "❌";
-  margin-right: 8px;
-}
+      .notification__content::before {
+        content: "❌";
+        margin-right: 8px;
+      }
+    }
 
-.notification--success {
-  border-left-color: #16a34a;
-}
+    &--success {
+      border-left-color: #16a34a;
 
-.notification--success .notification__content::before {
-  content: "✅";
-  margin-right: 8px;
-}
+      .notification__content::before {
+        content: "✅";
+        margin-right: 8px;
+      }
+    }
+  }
 
-.notification__content {
-  padding: 16px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
+  .notification__content {
+    padding: 16px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
 
-.notification__message {
-  flex: 1;
-  font-size: 0.9rem;
-  line-height: 1.4;
-  color: #374151;
-}
+  .notification__message {
+    flex: 1;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    color: #374151;
+  }
 
-.notification__close {
-  background: none;
-  border: none;
-  font-size: 18px;
-  color: #9ca3af;
-  cursor: pointer;
-  padding: 0;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-}
+  .notification__close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
 
-.notification__close:hover {
-  background-color: #f3f4f6;
-  color: #6b7280;
+    &:hover {
+      background-color: #f3f4f6;
+      color: #6b7280;
+    }
+  }
 }
 
 @keyframes slideIn {

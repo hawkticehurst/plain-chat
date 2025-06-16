@@ -1,11 +1,14 @@
 import { Component, html, authService, router } from "@lib";
+import "./App.css";
 import "./components/ChatSidebar";
 import "./components/ChatMain";
-import "./components/AISettings";
+import "./components/ChatSettings";
 import "./components/UsageDashboard";
 import "./components/NotificationComponent";
 
 export class App extends Component {
+  #pageContainer: HTMLElement | null = null;
+
   constructor() {
     super();
     this.initializeClerkEarly();
@@ -54,9 +57,15 @@ export class App extends Component {
 
   // Initial component setup - This will be called only once
   async init() {
-    // Set up routes first
+    // Create the stable app shell structure
+    this.append(html` <div id="page-content"></div> `);
+
+    // Get reference to the stable container
+    this.#pageContainer = this.querySelector("#page-content");
+
+    // Set up routes using Component-Scoped Routing pattern
     router.createRoute("/", () => {
-      this.append(html`
+      this.#clearAndRender(html`
         <chat-sidebar></chat-sidebar>
         <chat-main></chat-main>
         <notification-component></notification-component>
@@ -65,7 +74,7 @@ export class App extends Component {
     });
 
     router.createRoute("/sign-in", () => {
-      this.append(html`
+      this.#clearAndRender(html`
         <div class="auth-required">
           <div id="clerk-signin"></div>
         </div>
@@ -73,28 +82,39 @@ export class App extends Component {
       this.setupSignIn();
     });
 
-    router.createRoute("/ai-settings", () => {
-      this.append(html`<ai-settings></ai-settings>`);
+    router.createRoute("/chat-settings", () => {
+      this.#clearAndRender(html`<chat-settings></chat-settings>`);
     });
 
     router.createRoute("/usage", () => {
-      this.append(html`<usage-dashboard></usage-dashboard>`);
+      this.#clearAndRender(html`<usage-dashboard></usage-dashboard>`);
     });
 
-    // Always start at home
-    router.navigate("/");
+    // Initialize router
+    router.init();
+  }
+
+  /**
+   * Helper method to clear the page container and render new content
+   * This prevents pages from stacking on top of each other
+   */
+  #clearAndRender(content: DocumentFragment) {
+    if (this.#pageContainer) {
+      this.#pageContainer.innerHTML = "";
+      this.#pageContainer.append(content);
+    }
   }
 
   private setupSignIn() {
-    const signInDiv = this.querySelector("#clerk-signin");
+    const signInDiv = this.#pageContainer?.querySelector("#clerk-signin");
     if (signInDiv && authService.getClerkInstance()) {
       authService.getClerkInstance().mountSignIn(signInDiv);
     }
   }
 
   private setupChatEventListeners() {
-    const sidebar = this.querySelector("chat-sidebar");
-    const chatMain = this.querySelector("chat-main");
+    const sidebar = this.#pageContainer?.querySelector("chat-sidebar");
+    const chatMain = this.#pageContainer?.querySelector("chat-main");
 
     if (sidebar && chatMain) {
       // Handle chat selection

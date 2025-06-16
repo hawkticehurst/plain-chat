@@ -1,113 +1,176 @@
-import { Component, html, StreamingChatService } from "@lib";
+import { Component, html, signal, effect, StreamingChatService } from "@lib";
 import { ChatInput, ChatMessages, notificationService } from "@components";
 import type { Message } from "@lib";
+import "./ChatMain.css";
 
 export class ChatMain extends Component {
-  private _messages: Array<Message> = [];
-  private _chatInput: ChatInput | null = null;
-  private _chatMessages: ChatMessages | null = null;
-  private _currentChatId: string | null = null;
-  private _streamingService: StreamingChatService;
+  // Private reactive state using signals
+  #messages = signal<Array<Message>>([]);
+  #currentChatId = signal<string | null>(null);
+  #isStreaming = signal(false);
+  #isLoading = signal(false);
+
+  // Cached DOM references
+  #chatInput: ChatInput | null = null;
+  #chatMessages: ChatMessages | null = null;
+  #emptyStateDiv: HTMLElement | null = null;
+  #chatContainer: HTMLElement | null = null;
+
+  // Services
+  #streamingService: StreamingChatService;
 
   constructor() {
     super();
-    this._streamingService = new StreamingChatService();
+    this.#streamingService = new StreamingChatService();
+  }
+
+  init() {
+    // Build the DOM structure once
+    this.append(html`
+      <div class="empty-state" style="display: none;">
+        <h2>Start a New Conversation</h2>
+        <p>
+          Type your first message below to begin a new chat. Your conversation
+          will be saved automatically.
+        </p>
+      </div>
+      <div class="chat-container" style="display: none;">
+        <!-- Chat messages and input will be added here -->
+      </div>
+    `);
+
+    // Cache DOM references
+    this.#emptyStateDiv = this.querySelector(".empty-state") as HTMLElement;
+    this.#chatContainer = this.querySelector(".chat-container") as HTMLElement;
+
+    // Create child components
+    this.#chatMessages = new ChatMessages(this.#messages());
+    this.#chatInput = new ChatInput();
+
+    // Add components to their initial containers
+    if (this.#chatContainer) {
+      this.#chatContainer.appendChild(this.#chatMessages);
+    }
+
+    // ChatInput will be placed by reactive effects based on state
+    // Initially start in empty state
+    if (this.#emptyStateDiv) {
+      this.#emptyStateDiv.appendChild(this.#chatInput);
+    }
+
+    // Set up event listeners using the component's event system
+    this.#setupEventListeners();
+
+    // Wire up reactive effects
+    this.#setupReactiveEffects();
+
     // Start with empty new chat state
     this.startNewChat();
   }
 
+  #setupEventListeners() {
+    if (this.#chatInput) {
+      // Listen for send-message events from ChatInput
+      this.#chatInput.addEventListener(
+        "send-message",
+        this.#handleSendMessage.bind(this)
+      );
+
+      // Listen for cancel-streaming events from ChatInput
+      this.#chatInput.addEventListener(
+        "cancel-streaming",
+        this.#handleCancelStreaming.bind(this)
+      );
+    }
+  }
+
+  #setupReactiveEffects() {
+    // Update UI based on whether we have a current chat
+    effect(() => {
+      const hasChat = this.#currentChatId() !== null;
+      if (this.#emptyStateDiv && this.#chatContainer && this.#chatInput) {
+        this.#emptyStateDiv.style.display = hasChat ? "none" : "flex";
+        this.#chatContainer.style.display = hasChat ? "block" : "none";
+
+        // Move ChatInput to the appropriate container
+        if (hasChat) {
+          // Move to chat container (if not already there)
+          if (!this.#chatContainer.contains(this.#chatInput)) {
+            this.#chatContainer.appendChild(this.#chatInput);
+          }
+        } else {
+          // Move to empty state (if not already there)
+          if (!this.#emptyStateDiv.contains(this.#chatInput)) {
+            this.#emptyStateDiv.appendChild(this.#chatInput);
+          }
+        }
+      }
+    });
+
+    // Update messages when they change
+    effect(() => {
+      if (this.#chatMessages) {
+        this.#chatMessages.updateMessages(this.#messages());
+      }
+    });
+
+    // Update input states based on loading/streaming
+    effect(() => {
+      if (this.#chatInput) {
+        if (this.#isStreaming()) {
+          this.#chatInput.streamingStarted();
+        } else if (this.#isLoading()) {
+          // Keep loading state
+        } else {
+          this.#chatInput.streamingEnded();
+          this.#chatInput.messageProcessed();
+        }
+      }
+    });
+  }
+
+  // Public API methods
   public async loadChat(chatId: string | null) {
-    this._currentChatId = chatId;
-    this.render();
+    this.#currentChatId(chatId);
 
     if (!chatId) {
       // Show empty state for new chat
-      this._messages = [];
-      this.render();
+      this.#messages([]);
       return;
     }
 
+    this.#isLoading(true);
     try {
-      this._messages = await this._streamingService.loadChatMessages(chatId);
+      const messages = await this.#streamingService.loadChatMessages(chatId);
+      this.#messages(messages);
     } catch (error) {
       console.error("Error loading chat:", error);
-      this._messages = [
+      this.#messages([
         {
           role: "response",
           content: "❌ Error loading chat. Please try again.",
           timestamp: Date.now(),
         },
-      ];
+      ]);
     } finally {
-      this.render();
+      this.#isLoading(false);
     }
   }
 
   public startNewChat() {
-    this._currentChatId = null;
-    this._messages = [];
-    this.render();
+    this.#currentChatId(null);
+    this.#messages([]);
   }
 
-  async render() {
-    // Show empty state if no chat is selected
-    if (!this._currentChatId) {
-      this.append(html`
-        <div class="empty-state">
-          <h2>Start a New Conversation</h2>
-          <p>
-            Type your first message below to begin a new chat. Your conversation
-            will be saved automatically.
-          </p>
-        </div>
-      `);
-
-      // Still need to create the input for new chats
-      this._chatInput = new ChatInput();
-      this._chatInput.render();
-      this.appendChild(this._chatInput);
-
-      // Listen for send-message events from ChatInput
-      this._chatInput.addEventListener(
-        "send-message",
-        this._handleSendMessage.bind(this)
-      );
-      return;
-    }
-
-    this._chatMessages = new ChatMessages(this._messages);
-    this._chatInput = new ChatInput();
-
-    await this._chatMessages.render();
-    this._chatInput.render();
-
-    // Clear previous content
-    this.innerHTML = "";
-
-    this.insert(this, this._chatMessages);
-    this.insert(this, this._chatInput);
-
-    // Listen for send-message events from ChatInput
-    this._chatInput.addEventListener(
-      "send-message",
-      this._handleSendMessage.bind(this)
-    );
-
-    // Listen for cancel-streaming events from ChatInput
-    this._chatInput.addEventListener(
-      "cancel-streaming",
-      this._handleCancelStreaming.bind(this)
-    );
-  }
-
-  private async _handleSendMessage(event: Event) {
+  // Event handlers
+  async #handleSendMessage(event: Event) {
     const customEvent = event as CustomEvent;
     const { message } = customEvent.detail;
 
     // If no chat is selected, create a new one first
-    if (!this._currentChatId) {
+    if (!this.#currentChatId()) {
       const createResult =
-        await this._streamingService.createChat("New Conversation");
+        await this.#streamingService.createChat("New Conversation");
 
       if (!createResult.success) {
         console.error("Failed to create new chat:", createResult.error);
@@ -117,15 +180,12 @@ export class ChatMain extends Component {
         return;
       }
 
-      this._currentChatId = createResult.chatId;
-
-      // Re-render immediately to switch from empty state to chat interface
-      await this.render();
+      this.#currentChatId(createResult.chatId);
 
       // Notify parent to update sidebar
       this.dispatchEvent(
         new CustomEvent("chat-created", {
-          detail: { chatId: this._currentChatId },
+          detail: { chatId: this.#currentChatId() },
           bubbles: true,
           composed: true,
         })
@@ -139,7 +199,8 @@ export class ChatMain extends Component {
       timestamp: Date.now(),
     };
 
-    this._messages.push(userMessage);
+    const currentMessages = this.#messages();
+    this.#messages([...currentMessages, userMessage]);
 
     // Add loading message for AI response
     const loadingMessage: Message = {
@@ -149,90 +210,83 @@ export class ChatMain extends Component {
       isLoading: true,
     };
 
-    this._messages.push(loadingMessage);
-
-    // Re-render to show the messages
-    await this._updateMessages();
+    this.#messages([...this.#messages(), loadingMessage]);
 
     // Save user message to database
-    await this._streamingService.saveUserMessage(this._currentChatId, message);
+    await this.#streamingService.saveUserMessage(
+      this.#currentChatId()!,
+      message
+    );
 
     // Check if this is the first message and generate a title
     const isFirstMessage =
-      this._messages.filter((m) => !m.isLoading).length === 1;
+      this.#messages().filter((m) => !m.isLoading).length === 1;
 
     // Handle the AI response using the streaming service
-    await this._handleStreamingResponse(message, isFirstMessage);
+    await this.#handleStreamingResponse(message, isFirstMessage);
   }
 
-  public cancelStreaming() {
-    const cancellationMessage = this._streamingService.cancelStreaming();
-
-    if (cancellationMessage) {
-      // Add cancellation message to the last response
-      const lastMessage = this._messages[this._messages.length - 1];
-      if (lastMessage && lastMessage.role === "response") {
-        lastMessage.content += "\n\n" + cancellationMessage;
-        lastMessage.isStreaming = false;
-      }
-
-      this._updateMessages();
-
-      // Notify input that streaming ended
-      if (this._chatInput) {
-        this._chatInput.streamingEnded();
-      }
-    }
-  }
-
-  private _handleCancelStreaming() {
+  #handleCancelStreaming() {
     this.cancelStreaming();
   }
 
-  private async _handleStreamingResponse(
-    message: string,
-    isFirstMessage: boolean
-  ) {
-    if (!this._currentChatId) return;
+  public cancelStreaming() {
+    const cancellationMessage = this.#streamingService.cancelStreaming();
+
+    if (cancellationMessage) {
+      // Add cancellation message to the last response
+      const messages = this.#messages();
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage && lastMessage.role === "response") {
+        const updatedMessage = {
+          ...lastMessage,
+          content: lastMessage.content + "\n\n" + cancellationMessage,
+          isStreaming: false,
+        };
+        const updatedMessages = [...messages];
+        updatedMessages[updatedMessages.length - 1] = updatedMessage;
+        this.#messages(updatedMessages);
+      }
+
+      this.#isStreaming(false);
+    }
+  }
+
+  async #handleStreamingResponse(message: string, isFirstMessage: boolean) {
+    if (!this.#currentChatId()) return;
 
     // Remove loading message
-    this._messages.pop();
+    const messages = this.#messages();
+    this.#messages(messages.slice(0, -1));
 
-    // Notify input that streaming started
-    if (this._chatInput) {
-      this._chatInput.streamingStarted();
-    }
+    this.#isStreaming(true);
 
     // Create callbacks for the streaming service
     const callbacks = {
       onMessageUpdate: (streamingMessage: Message) => {
         // Update the message in our local state
-        const lastMessage = this._messages[this._messages.length - 1];
-        if (lastMessage && lastMessage.role === "response") {
-          lastMessage.content = streamingMessage.content;
-          lastMessage.isStreaming = streamingMessage.isStreaming;
-        } else {
-          this._messages.push(streamingMessage);
-        }
+        const currentMessages = this.#messages();
+        const lastMessage = currentMessages[currentMessages.length - 1];
 
-        // Update the UI
-        this._updateMessages();
+        if (lastMessage && lastMessage.role === "response") {
+          const updatedMessages = [...currentMessages];
+          updatedMessages[updatedMessages.length - 1] = {
+            ...lastMessage,
+            content: streamingMessage.content,
+            isStreaming: streamingMessage.isStreaming,
+          };
+          this.#messages(updatedMessages);
+        } else {
+          this.#messages([...currentMessages, streamingMessage]);
+        }
       },
 
       onStreamingComplete: () => {
-        // Notify input that streaming ended
-        if (this._chatInput) {
-          this._chatInput.streamingEnded();
-        }
+        this.#isStreaming(false);
 
         // Generate title if this is the first message
         if (isFirstMessage) {
-          this._handleTitleGeneration(message);
-        }
-
-        // Re-enable input
-        if (this._chatInput) {
-          this._chatInput.messageProcessed();
+          this.#handleTitleGeneration(message);
         }
       },
 
@@ -244,8 +298,7 @@ export class ChatMain extends Component {
           timestamp: Date.now(),
         };
 
-        this._messages.push(errorMessage);
-        this._updateMessages();
+        this.#messages([...this.#messages(), errorMessage]);
 
         // Also show a user-friendly notification
         if (error.includes("Authentication")) {
@@ -262,20 +315,16 @@ export class ChatMain extends Component {
           );
         }
 
-        // Notify input that streaming ended
-        if (this._chatInput) {
-          this._chatInput.streamingEnded();
-          this._chatInput.messageProcessed();
-        }
+        this.#isStreaming(false);
       },
     };
 
     // Start streaming using the service
-    await this._streamingService.startStreamingResponse(
+    await this.#streamingService.startStreamingResponse(
       {
-        chatId: this._currentChatId,
+        chatId: this.#currentChatId()!,
         userMessage: message,
-        conversationHistory: this._messages
+        conversationHistory: this.#messages()
           .slice(-10)
           .filter((m) => !m.isLoading)
           .map((m) => ({
@@ -288,25 +337,18 @@ export class ChatMain extends Component {
     );
   }
 
-  private async _updateMessages() {
-    if (this._chatMessages) {
-      this._chatMessages.updateMessages(this._messages);
-      await this._chatMessages.render();
-    }
-  }
+  async #handleTitleGeneration(firstMessage: string) {
+    if (!this.#currentChatId()) return;
 
-  private async _handleTitleGeneration(firstMessage: string) {
-    if (!this._currentChatId) return;
-
-    const title = await this._streamingService.generateChatTitle(
-      this._currentChatId,
+    const title = await this.#streamingService.generateChatTitle(
+      this.#currentChatId()!,
       firstMessage
     );
     if (title) {
       // Notify parent to refresh sidebar with new title
       this.dispatchEvent(
         new CustomEvent("chat-title-updated", {
-          detail: { chatId: this._currentChatId, title },
+          detail: { chatId: this.#currentChatId(), title },
           bubbles: true,
           composed: true,
         })

@@ -1,19 +1,21 @@
-import { Component, html } from "@lib";
+import { Component, html, signal, effect } from "@lib";
+import "./ChatInput.css";
 
 export class ChatInput extends Component {
-  private _isLoading = false;
-  private _isStreaming = false;
-  private _selectedModel = "google/gemini-2.5-flash-preview-05-20";
+  // Private reactive state using signals
+  #isLoading = signal(false);
+  #isStreaming = signal(false);
+  #selectedModel = signal("google/gemini-2.5-flash-preview-05-20");
+  #textValue = signal("");
 
-  constructor() {
-    super();
-  }
+  // Cached DOM references (queried once in init)
+  #textarea: HTMLTextAreaElement | null = null;
+  #sendBtn: HTMLButtonElement | null = null;
+  #cancelBtn: HTMLButtonElement | null = null;
+  #modelSelect: HTMLSelectElement | null = null;
 
-  connectedCallback() {
-    this.render();
-  }
-
-  render() {
+  init() {
+    // Build the DOM structure once
     this.append(html`
       <div class="wrapper">
         <div class="input-container">
@@ -21,29 +23,35 @@ export class ChatInput extends Component {
             class="input"
             placeholder="Type your message here..."
             rows="1"
-            ${this._isLoading || this._isStreaming ? "disabled" : ""}
+            @input="handleTextareaInput"
+            @keydown="handleKeyDown"
           ></textarea>
           <div class="actions">
-            ${this._isStreaming
-              ? html`<button
-                  class="cancel-btn"
-                  type="button"
-                  title="Cancel streaming response"
-                >
-                  ⏹️
-                </button>`
-              : html`<button
-                  class="send-btn"
-                  type="button"
-                  title="Send message"
-                  ${this._isLoading ? "disabled" : ""}
-                >
-                  ${this._isLoading ? "⏳" : "➤"}
-                </button>`}
+            <button
+              class="send-btn"
+              type="button"
+              title="Send message"
+              @click="handleSend"
+            >
+              ➤
+            </button>
+            <button
+              class="cancel-btn"
+              type="button"
+              title="Cancel streaming response"
+              @click="handleCancel"
+              style="display: none;"
+            >
+              ⏹️
+            </button>
           </div>
         </div>
         <div class="model-selector">
-          <select class="model-select" title="Select AI Model">
+          <select
+            class="model-select"
+            title="Select AI Model"
+            @change="handleModelChange"
+          >
             <option value="google/gemini-2.5-flash-preview-05-20">
               Gemini 2.5 Flash
             </option>
@@ -58,81 +66,98 @@ export class ChatInput extends Component {
       </div>
     `);
 
-    // Add event listeners for auto-resize and send functionality
-    const textarea = this.querySelector(".input") as HTMLTextAreaElement;
-    const sendBtn = this.querySelector(".send-btn") as HTMLButtonElement;
-    const cancelBtn = this.querySelector(".cancel-btn") as HTMLButtonElement;
-    const modelSelect = this.querySelector(
+    // Cache DOM references
+    this.#textarea = this.querySelector(".input") as HTMLTextAreaElement;
+    this.#sendBtn = this.querySelector(".send-btn") as HTMLButtonElement;
+    this.#cancelBtn = this.querySelector(".cancel-btn") as HTMLButtonElement;
+    this.#modelSelect = this.querySelector(
       ".model-select"
     ) as HTMLSelectElement;
 
-    if (textarea) {
-      textarea.addEventListener("input", this._handleTextareaResize.bind(this));
-      textarea.addEventListener("keydown", this._handleKeyDown.bind(this));
+    // Set initial model value
+    if (this.#modelSelect) {
+      this.#modelSelect.value = this.#selectedModel();
     }
 
-    if (sendBtn) {
-      sendBtn.addEventListener("click", this._handleSend.bind(this));
-    }
-
-    if (cancelBtn) {
-      cancelBtn.addEventListener("click", this._handleCancel.bind(this));
-    }
-
-    if (modelSelect) {
-      modelSelect.value = this._selectedModel;
-      modelSelect.addEventListener(
-        "change",
-        this._handleModelChange.bind(this)
-      );
-    }
+    // Wire up reactive effects for granular updates
+    this.#setupReactiveEffects();
   }
 
-  private _handleTextareaResize(event: Event) {
+  #setupReactiveEffects() {
+    // Update textarea disabled state based on loading/streaming
+    effect(() => {
+      if (this.#textarea) {
+        this.#textarea.disabled = this.#isLoading() || this.#isStreaming();
+      }
+    });
+
+    // Update send button based on loading state
+    effect(() => {
+      if (this.#sendBtn) {
+        this.#sendBtn.disabled = this.#isLoading();
+        this.#sendBtn.textContent = this.#isLoading() ? "⏳" : "➤";
+        this.#sendBtn.style.display = this.#isStreaming() ? "none" : "block";
+      }
+    });
+
+    // Update cancel button based on streaming state
+    effect(() => {
+      if (this.#cancelBtn) {
+        this.#cancelBtn.style.display = this.#isStreaming() ? "block" : "none";
+      }
+    });
+  }
+
+  // Event handlers (called via @ attributes)
+  handleTextareaInput(event: Event) {
     const textarea = event.target as HTMLTextAreaElement;
+    this.#textValue(textarea.value);
+
+    // Auto-resize functionality
     textarea.style.height = "auto";
     textarea.style.height = Math.min(textarea.scrollHeight, 120) + "px";
   }
 
-  private _handleKeyDown(event: KeyboardEvent) {
+  handleKeyDown(event: KeyboardEvent) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      this._handleSend();
+      this.handleSend();
     }
   }
 
-  private _handleModelChange(event: Event) {
+  handleModelChange(event: Event) {
     const select = event.target as HTMLSelectElement;
-    this._selectedModel = select.value;
+    this.#selectedModel(select.value);
 
     // Dispatch event to notify parent of model change
     this.dispatchEvent(
       new CustomEvent("model-changed", {
-        detail: { model: this._selectedModel },
+        detail: { model: this.#selectedModel() },
         bubbles: true,
         composed: true,
       })
     );
   }
 
-  private async _handleSend() {
-    const textarea = this.querySelector(".input") as HTMLTextAreaElement;
-    if (!textarea || !textarea.value.trim() || this._isLoading) {
+  handleSend() {
+    if (!this.#textarea || !this.#textValue().trim() || this.#isLoading()) {
       return;
     }
 
-    const message = textarea.value.trim();
-    textarea.value = "";
-    textarea.style.height = "auto";
+    const message = this.#textValue().trim();
+
+    // Clear the input
+    this.#textarea.value = "";
+    this.#textValue("");
+    this.#textarea.style.height = "auto";
 
     try {
-      this._isLoading = true;
-      this.render(); // Re-render to show loading state
+      this.#isLoading(true);
 
       // Dispatch event to ChatMain to handle the AI conversation
       this.dispatchEvent(
         new CustomEvent("send-message", {
-          detail: { message, model: this._selectedModel },
+          detail: { message, model: this.#selectedModel() },
           bubbles: true,
           composed: true,
         })
@@ -140,13 +165,12 @@ export class ChatInput extends Component {
     } catch (error) {
       console.error("Error sending message:", error);
       // Re-enable input on error
-      this._isLoading = false;
-      this.render();
+      this.#isLoading(false);
     }
   }
 
-  private _handleCancel() {
-    if (this._isStreaming) {
+  handleCancel() {
+    if (this.#isStreaming()) {
       // Dispatch cancel event to ChatMain
       this.dispatchEvent(
         new CustomEvent("cancel-streaming", {
@@ -157,40 +181,30 @@ export class ChatInput extends Component {
     }
   }
 
-  // Method to be called by parent when message processing is complete
-  public messageProcessed() {
-    this._isLoading = false;
-    this._isStreaming = false;
-    this.render();
+  // Public API methods for parent components
+  messageProcessed() {
+    this.#isLoading(false);
+    this.#isStreaming(false);
   }
 
-  // Method to be called by parent when streaming starts
-  public streamingStarted() {
-    this._isStreaming = true;
-    this._isLoading = false;
-    this.render();
+  streamingStarted() {
+    this.#isStreaming(true);
+    this.#isLoading(false);
   }
 
-  // Method to be called by parent when streaming ends
-  public streamingEnded() {
-    this._isStreaming = false;
-    this._isLoading = false;
-    this.render();
+  streamingEnded() {
+    this.#isStreaming(false);
+    this.#isLoading(false);
   }
 
-  // Method to get the currently selected model
-  public getSelectedModel(): string {
-    return this._selectedModel;
+  getSelectedModel(): string {
+    return this.#selectedModel();
   }
 
-  // Method to set the selected model programmatically
-  public setSelectedModel(model: string) {
-    this._selectedModel = model;
-    const modelSelect = this.querySelector(
-      ".model-select"
-    ) as HTMLSelectElement;
-    if (modelSelect) {
-      modelSelect.value = model;
+  setSelectedModel(model: string) {
+    this.#selectedModel(model);
+    if (this.#modelSelect) {
+      this.#modelSelect.value = model;
     }
   }
 }

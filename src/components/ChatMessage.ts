@@ -1,103 +1,132 @@
-import { Component, html, htmlRaw } from "@lib";
+import { Component, html, signal, effect, computed } from "@lib";
 import { marked } from "marked";
+import "./ChatMessage.css";
 
 export class ChatMessage extends Component {
-  private _content: string = "";
-  private _isStreaming: boolean = false;
-  private _role: "prompt" | "response" = "response";
-  private _hasError: boolean = false;
-  private _errorMessage: string = "";
+  // Private reactive state using signals
+  #role = signal<"prompt" | "response">("response");
+  #content = signal<string>("");
+  #isLoading = signal<boolean>(false);
+  #isStreaming = signal<boolean>(false);
+  #hasError = signal<boolean>(false);
+  #errorMessage = signal<string>("");
 
-  async render(
-    role: "prompt" | "response",
-    content: string,
-    isLoading = false,
-    isStreaming = false
-  ) {
-    this._role = role;
-    this._content = content;
-    this._isStreaming = isStreaming;
+  // DOM references
+  #messageContainer: HTMLElement | null = null;
+  #textElement: HTMLElement | null = null;
+  #errorElement: HTMLElement | null = null;
 
-    let processedContent = content;
-    let extraClasses = "";
+  // Computed values
+  #processedContent = computed(() => {
+    const content = this.#content();
+    const isLoading = this.#isLoading();
 
     if (isLoading) {
-      extraClasses = " loading";
-      processedContent = content + " <span class='loading-indicator'>⏳</span>";
-    } else if (isStreaming) {
-      extraClasses = " streaming";
-      // For streaming, just show the content directly - no complex animation
-      processedContent = content;
+      return content + " <span class='loading-indicator'>⏳</span>";
     }
+    return content;
+  });
+
+  #cssClasses = computed(() => {
+    const role = this.#role();
+    const isLoading = this.#isLoading();
+    const isStreaming = this.#isStreaming();
+
+    let classes = `message ${role}`;
+    if (isLoading) classes += " loading";
+    if (isStreaming) classes += " streaming";
+
+    return classes;
+  });
+
+  init() {
+    // Build the DOM structure once
+    this.append(html`
+      <div class="message">
+        <div class="content">
+          <div class="text"></div>
+          <div class="error-box" style="display: none;"></div>
+        </div>
+      </div>
+    `);
+
+    // Cache DOM references
+    this.#messageContainer = this.querySelector(".message") as HTMLElement;
+    this.#textElement = this.querySelector(".text") as HTMLElement;
+    this.#errorElement = this.querySelector(".error-box") as HTMLElement;
+
+    // Wire up reactive effects
+    this.#setupReactiveEffects();
+  }
+
+  #setupReactiveEffects() {
+    // Update CSS classes when role, loading, or streaming state changes
+    effect(() => {
+      if (!this.#messageContainer) return;
+      this.#messageContainer.className = this.#cssClasses();
+    });
+
+    // Update text content when content or loading state changes
+    effect(() => {
+      if (!this.#textElement) return;
+
+      const content = this.#processedContent();
+      const isStreaming = this.#isStreaming();
+      const role = this.#role();
+
+      this.#updateTextContent(content, isStreaming, role);
+    });
+
+    // Show/hide error message
+    effect(() => {
+      if (!this.#errorElement) return;
+
+      const hasError = this.#hasError();
+      const errorMessage = this.#errorMessage();
+
+      if (hasError && errorMessage) {
+        this.#errorElement.textContent = errorMessage;
+        this.#errorElement.style.display = "block";
+      } else {
+        this.#errorElement.style.display = "none";
+      }
+    });
+  }
+
+  async #updateTextContent(
+    content: string,
+    isStreaming: boolean,
+    role: "prompt" | "response"
+  ) {
+    if (!this.#textElement) return;
 
     // Process markdown for all content, including streaming
     let markup: string;
     if (isStreaming && role === "response") {
       // For streaming, render markdown carefully to handle partial content
       try {
-        markup = await marked(processedContent);
+        markup = await marked(content);
       } catch (error) {
         // Fallback to raw content if markdown parsing fails on partial content
-        markup = processedContent.replace(/\n/g, "<br>");
+        markup = this.#escapeHtml(content).replace(/\n/g, "<br>");
       }
     } else {
-      markup = await marked(processedContent);
+      try {
+        markup = await marked(content);
+      } catch (error) {
+        markup = this.#escapeHtml(content).replace(/\n/g, "<br>");
+      }
     }
 
-    this.append(html`
-      <div class="message ${role}${extraClasses}">
-        <div class="content">
-          <div class="text">${htmlRaw(markup)}</div>
-          ${this._hasError
-            ? html`<div class="error-box">${this._errorMessage}</div>`
-            : ""}
-        </div>
-      </div>
-    `);
+    // Use requestAnimationFrame to batch DOM updates and reduce layout thrashing
+    requestAnimationFrame(() => {
+      if (this.#textElement && this.#content() === content) {
+        this.#textElement.innerHTML = markup;
+      }
+    });
   }
 
-  // Method to update content during streaming - simple and efficient
-  async updateStreamingContent(newContent: string) {
-    if (!this._isStreaming) {
-      // If not streaming, just update content normally
-      this._content = newContent;
-      await this.render(this._role, newContent, false, false);
-      return;
-    }
-
-    // Only update if content actually changed
-    if (this._content === newContent) {
-      return;
-    }
-
-    this._content = newContent;
-
-    // Simple approach: just update the text content directly
-    // This prevents the flickering caused by constant markdown re-parsing
-    const textElement = this.querySelector(".text") as HTMLElement;
-    if (textElement) {
-      // Use requestAnimationFrame to batch DOM updates and reduce layout thrashing
-      requestAnimationFrame(async () => {
-        try {
-          const markdownHtml = await marked(newContent);
-          // Only update if the element still exists and content is still current
-          if (textElement.parentNode && this._content === newContent) {
-            textElement.innerHTML = markdownHtml;
-          }
-        } catch (error) {
-          // Fallback to plain text with line breaks
-          if (textElement.parentNode && this._content === newContent) {
-            textElement.innerHTML = this._escapeHtml(newContent).replace(
-              /\n/g,
-              "<br>"
-            );
-          }
-        }
-      });
-    }
-  }
-
-  private _escapeHtml(text: string): string {
+  #escapeHtml(text: string): string {
     return text
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
@@ -106,32 +135,37 @@ export class ChatMessage extends Component {
       .replace(/'/g, "&#39;");
   }
 
-  // Method to finalize streaming (remove streaming class, ensure final render)
-  async finalizeStream() {
-    this._isStreaming = false;
+  // Public API methods
+  public async render(
+    role: "prompt" | "response",
+    content: string,
+    isLoading = false,
+    isStreaming = false
+  ) {
+    this.#role(role);
+    this.#content(content);
+    this.#isLoading(isLoading);
+    this.#isStreaming(isStreaming);
+    this.#hasError(false);
+    this.#errorMessage("");
+  }
 
-    // Render final content with full markdown
-    const markup = await marked(this._content);
-
-    const messageDiv = this.querySelector(".message");
-    const textElement = this.querySelector(".text") as HTMLElement;
-
-    if (messageDiv) {
-      messageDiv.classList.remove("streaming");
-    }
-
-    if (textElement) {
-      textElement.innerHTML = markup;
+  public async updateStreamingContent(newContent: string) {
+    // Only update if content actually changed
+    if (this.#content() !== newContent) {
+      this.#content(newContent);
     }
   }
 
-  // Method to show error during streaming
-  showStreamingError(errorMessage: string) {
-    this._hasError = true;
-    this._errorMessage = errorMessage;
+  public async finalizeStream() {
+    this.#isStreaming(false);
+    // Content will be re-rendered automatically due to reactive effects
+  }
 
-    // Re-render to show error
-    this.render(this._role, this._content, false, false);
+  public showStreamingError(errorMessage: string) {
+    this.#hasError(true);
+    this.#errorMessage(errorMessage);
+    this.#isStreaming(false);
   }
 }
 

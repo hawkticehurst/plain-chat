@@ -1,13 +1,3 @@
-/* Import chat components styles */
-@import "./components/ChatSidebar.css";
-@import "./components/ChatMain.css";
-@import "./components/ChatMessage.css";
-@import "./components/ChatMessages.css";
-@import "./components/ChatInput.css";
-@import "./components/AISettings.css";
-@import "./components/UsageDashboard.css";
-@import "./components/NotificationComponent.css";
-
 :root {
   /* Base colors */
   --color-primary: #646cff;
@@ -64,12 +54,6 @@ body {
 #root {
   margin: 0;
   padding: 0;
-  width: 100%;
-}
-
-chat-app {
-  display: flex;
-  height: 100vh;
   width: 100%;
 }
 

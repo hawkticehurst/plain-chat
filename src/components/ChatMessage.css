@@ -1,80 +1,182 @@
 chat-message {
   display: block;
   width: 100%;
+
+  .message {
+    display: flex;
+    gap: 12px;
+    width: fit-content;
+    max-width: 70%;
+    margin-bottom: 8px;
+
+    &.prompt {
+      margin-left: auto;
+      margin-right: 0;
+      flex-direction: row-reverse;
+
+      .text {
+        background: linear-gradient(
+          135deg,
+          var(--color-accent),
+          var(--color-primary)
+        );
+        color: var(--color-text-primary);
+      }
+    }
+
+    &.response {
+      margin-left: 0;
+      margin-right: auto;
+      max-width: 100%;
+
+      .text {
+        color: var(--color-text-primary);
+        box-shadow: none;
+      }
+    }
+
+    &.loading .text {
+      opacity: 0.7;
+      animation: pulse 2s infinite ease-in-out;
+    }
+
+    &.streaming .text {
+      position: relative;
+
+      /* Ensure markdown elements work well with streaming */
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        margin: 0.5em 0;
+        line-height: 1.3;
+      }
+
+      p {
+        margin: 0.5em 0;
+      }
+
+      ul,
+      ol {
+        margin: 0.5em 0;
+        padding-left: 24px;
+      }
+
+      li {
+        margin: 0.2em 0;
+      }
+
+      code {
+        background: var(--color-code-bg, #f5f5f5);
+        padding: 0.1em 0.3em;
+        border-radius: 0.2em;
+        font-size: 0.9em;
+      }
+
+      pre {
+        background: var(--color-code-bg, #f5f5f5);
+        padding: 16px;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin: 0.5em 0;
+      }
+
+      blockquote {
+        border-left: 3px solid var(--color-border, #ddd);
+        padding-left: 16px;
+        margin: 0.5em 0;
+        color: var(--color-text-secondary, #666);
+      }
+
+      table {
+        border-collapse: collapse;
+        margin: 0.5em 0;
+        width: 100%;
+      }
+
+      th,
+      td {
+        border: 1px solid var(--color-border, #ddd);
+        padding: 8px;
+        text-align: left;
+      }
+
+      th {
+        background: var(--color-bg-secondary, #f8f8f8);
+        font-weight: bold;
+      }
+    }
+
+    /* Common paragraph styles */
+    p:first-child {
+      margin: 0;
+    }
+
+    p {
+      margin: 10px 0 0 0;
+    }
+  }
+
+  .content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .text {
+    padding: 10px 20px;
+    border-radius: 10px;
+    margin-bottom: 6px;
+    line-height: 1.75;
+    font-size: 1rem;
+    position: relative;
+    box-shadow: 0 1px 2px var(--color-border);
+  }
+
+  .loading-indicator {
+    animation: spin 1.5s linear infinite;
+    display: inline-block;
+  }
+
+  .error-box {
+    background: var(--color-error);
+    color: var(--color-text-primary);
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-top: 8px;
+    font-size: 0.875rem;
+    border: 1px solid rgba(255, 0, 0, 0.3);
+    box-shadow: 0 1px 3px rgba(255, 0, 0, 0.1);
+
+    &::before {
+      content: "⚠️ ";
+      margin-right: 4px;
+    }
+  }
+
+  /* Responsive design */
+  @media (max-width: 768px) {
+    .message {
+      max-width: 85%;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .message {
+      max-width: 95%;
+    }
+
+    .text {
+      padding: 12px 16px;
+      font-size: 0.875rem;
+    }
+  }
 }
 
-chat-message .message {
-  display: flex;
-  gap: 12px;
-  width: fit-content;
-  max-width: 70%;
-  margin-bottom: 8px;
-}
-
-chat-message .message.prompt {
-  margin-left: auto;
-  margin-right: 0;
-  flex-direction: row-reverse;
-}
-
-chat-message .message.response {
-  margin-left: 0;
-  margin-right: auto;
-  max-width: 100%;
-}
-
-chat-message .message.prompt p:first-child,
-chat-message .message.response p:first-child {
-  margin: 0;
-}
-
-chat-message .message.prompt p,
-chat-message .message.response p {
-  margin: 10px 0 0 0;
-}
-
-chat-message .content {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-chat-message .text {
-  padding: 10px 20px;
-  border-radius: 10px;
-  margin-bottom: 6px;
-  line-height: 1.75;
-  font-size: 1rem;
-  position: relative;
-  box-shadow: 0 1px 2px var(--color-border);
-}
-
-chat-message .message.prompt .text {
-  background: linear-gradient(
-    135deg,
-    var(--color-accent),
-    var(--color-primary)
-  );
-  color: var(--color-text-primary);
-}
-
-chat-message .message.response .text {
-  color: var(--color-text-primary);
-  box-shadow: none;
-}
-
-/* Loading state styles */
-chat-message .message.loading .text {
-  opacity: 0.7;
-  animation: pulse 2s infinite ease-in-out;
-}
-
-chat-message .loading-indicator {
-  animation: spin 1.5s linear infinite;
-  display: inline-block;
-}
-
+/* Animations */
 @keyframes pulse {
   0%,
   100% {
@@ -92,108 +194,4 @@ chat-message .loading-indicator {
   100% {
     transform: rotate(360deg);
   }
-}
-
-/* Streaming state styles */
-chat-message .message.streaming .text {
-  position: relative;
-}
-
-/* Error box styles */
-chat-message .error-box {
-  background: var(--color-error);
-  color: var(--color-text-primary);
-  padding: 8px 12px;
-  border-radius: 6px;
-  margin-top: 8px;
-  font-size: 0.875rem;
-  border: 1px solid rgba(255, 0, 0, 0.3);
-  box-shadow: 0 1px 3px rgba(255, 0, 0, 0.1);
-}
-
-chat-message .error-box::before {
-  content: "⚠️ ";
-  margin-right: 4px;
-}
-
-@media (max-width: 768px) {
-  chat-message .message {
-    max-width: 85%;
-  }
-}
-
-@media (max-width: 480px) {
-  chat-message .message {
-    max-width: 95%;
-  }
-
-  chat-message .text {
-    padding: 12px 16px;
-    font-size: 0.875rem;
-  }
-}
-
-/* Ensure markdown elements work well with streaming animation */
-chat-message .message.streaming .text h1,
-chat-message .message.streaming .text h2,
-chat-message .message.streaming .text h3,
-chat-message .message.streaming .text h4,
-chat-message .message.streaming .text h5,
-chat-message .message.streaming .text h6 {
-  margin: 0.5em 0;
-  line-height: 1.3;
-}
-
-chat-message .message.streaming .text p {
-  margin: 0.5em 0;
-}
-
-chat-message .message.streaming .text ul,
-chat-message .message.streaming .text ol {
-  margin: 0.5em 0;
-  padding-left: 24px;
-}
-
-chat-message .message.streaming .text li {
-  margin: 0.2em 0;
-}
-
-chat-message .message.streaming .text code {
-  background: var(--color-code-bg, #f5f5f5);
-  padding: 0.1em 0.3em;
-  border-radius: 0.2em;
-  font-size: 0.9em;
-}
-
-chat-message .message.streaming .text pre {
-  background: var(--color-code-bg, #f5f5f5);
-  padding: 16px;
-  border-radius: 8px;
-  overflow-x: auto;
-  margin: 0.5em 0;
-}
-
-chat-message .message.streaming .text blockquote {
-  border-left: 3px solid var(--color-border, #ddd);
-  padding-left: 16px;
-  margin: 0.5em 0;
-  color: var(--color-text-secondary, #666);
-}
-
-chat-message .message.streaming .text table {
-  border-collapse: collapse;
-  margin: 0.5em 0;
-  width: 100%;
-}
-
-chat-message .message.streaming .text th,
-chat-message .message.streaming .text td {
-  border: 1px solid var(--color-border, #ddd);
-  padding: 8px;
-  text-align: left;
-}
-
-chat-message .message.streaming .text th {
-  background: var(--color-bg-secondary, #f8f8f8);
-  font-weight: bold;
 }

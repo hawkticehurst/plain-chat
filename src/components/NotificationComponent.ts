@@ -1,6 +1,8 @@
-import { Component, html } from "@lib";
+import { Component, html, signal, effect } from "@lib";
+import "./NotificationComponent.css";
 
 interface NotificationData {
+  id: string;
   type: "info" | "warning" | "error" | "success";
   message: string;
   duration?: number; // Auto-dismiss after this many ms (0 = manual dismiss)
@@ -8,9 +10,7 @@ interface NotificationData {
 
 export class NotificationService {
   private static instance: NotificationService;
-  private notifications: Map<string, NotificationData> = new Map();
-  private listeners: Set<(notifications: NotificationData[]) => void> =
-    new Set();
+  private notifications = signal<Map<string, NotificationData>>(new Map());
 
   static getInstance(): NotificationService {
     if (!NotificationService.instance) {
@@ -19,10 +19,14 @@ export class NotificationService {
     return NotificationService.instance;
   }
 
-  show(notification: NotificationData): string {
+  show(notification: Omit<NotificationData, "id">): string {
     const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-    this.notifications.set(id, notification);
-    this.notifyListeners();
+    const notificationWithId = { ...notification, id };
+
+    const currentNotifications = this.notifications();
+    const newNotifications = new Map(currentNotifications);
+    newNotifications.set(id, notificationWithId);
+    this.notifications(newNotifications);
 
     // Auto-dismiss if duration is set
     if (notification.duration && notification.duration > 0) {
@@ -35,23 +39,18 @@ export class NotificationService {
   }
 
   dismiss(id: string): void {
-    this.notifications.delete(id);
-    this.notifyListeners();
+    const currentNotifications = this.notifications();
+    const newNotifications = new Map(currentNotifications);
+    newNotifications.delete(id);
+    this.notifications(newNotifications);
   }
 
   clear(): void {
-    this.notifications.clear();
-    this.notifyListeners();
+    this.notifications(new Map());
   }
 
-  subscribe(listener: (notifications: NotificationData[]) => void): () => void {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
-  }
-
-  private notifyListeners(): void {
-    const notifications = Array.from(this.notifications.values());
-    this.listeners.forEach((listener) => listener(notifications));
+  getNotifications() {
+    return this.notifications;
   }
 
   // Convenience methods
@@ -74,67 +73,90 @@ export class NotificationService {
 }
 
 export class NotificationComponent extends Component {
-  private _notifications: NotificationData[] = [];
-  private _service: NotificationService;
-  private _unsubscribe: (() => void) | null = null;
+  #service: NotificationService;
+  #container: HTMLElement | null = null;
 
   constructor() {
     super();
-    this._service = NotificationService.getInstance();
-    this._unsubscribe = this._service.subscribe((notifications) => {
-      this._notifications = notifications;
-      this.render();
-    });
-    this.render();
+    this.#service = NotificationService.getInstance();
   }
 
-  disconnectedCallback() {
-    if (this._unsubscribe) {
-      this._unsubscribe();
-    }
-  }
-
-  render() {
-    if (this._notifications.length === 0) {
-      this.innerHTML = "";
-      return;
-    }
-
+  init() {
+    // Build the DOM structure once
     this.append(html`
       <div class="notification-container">
-        ${this._notifications.map(
-          (notification) => html`
-            <div class="notification notification--${notification.type}">
-              <div class="notification__content">
-                <span class="notification__message"
-                  >${notification.message}</span
-                >
-                <button
-                  class="notification__close"
-                  onclick="this.closest('.notification').remove()"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          `
-        )}
+        <!-- Notifications will be added here by reactive effects -->
       </div>
     `);
 
-    // Add event listeners to close buttons
-    const closeButtons = this.querySelectorAll(".notification__close");
-    closeButtons.forEach((button) => {
-      button.addEventListener("click", (e) => {
-        e.preventDefault();
-        const notificationElement = button.closest(
-          ".notification"
-        ) as HTMLElement;
-        if (notificationElement) {
-          notificationElement.remove();
-        }
-      });
+    // Cache DOM references
+    this.#container = this.querySelector(
+      ".notification-container"
+    ) as HTMLElement;
+
+    // Wire up reactive effects
+    this.#setupReactiveEffects();
+  }
+
+  #setupReactiveEffects() {
+    // Update notifications when they change
+    effect(() => {
+      if (!this.#container) return;
+
+      const notificationsMap = this.#service.getNotifications()();
+      const notifications = Array.from(notificationsMap.values());
+
+      this.#renderNotifications(notifications);
     });
+  }
+
+  #renderNotifications(notifications: NotificationData[]) {
+    if (!this.#container) return;
+
+    // Clear existing notifications
+    this.#container.innerHTML = "";
+
+    if (notifications.length === 0) {
+      return;
+    }
+
+    // Create notification elements
+    notifications.forEach((notification) => {
+      const notificationElement = this.#createNotificationElement(notification);
+      this.#container!.appendChild(notificationElement);
+    });
+  }
+
+  #createNotificationElement(notification: NotificationData): HTMLElement {
+    const element = document.createElement("div");
+    element.className = `notification notification--${notification.type}`;
+    element.setAttribute("data-notification-id", notification.id);
+
+    element.innerHTML = `
+      <div class="notification__content">
+        <span class="notification__message">${this.#escapeHtml(notification.message)}</span>
+        <button class="notification__close" type="button">×</button>
+      </div>
+    `;
+
+    // Add event listener to close button
+    const closeButton = element.querySelector(".notification__close");
+    if (closeButton) {
+      closeButton.addEventListener("click", () => {
+        this.#service.dismiss(notification.id);
+      });
+    }
+
+    return element;
+  }
+
+  #escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 }
 
