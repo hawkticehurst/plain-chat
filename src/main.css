@@ -40,48 +40,6 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  min-height: 100vh;
-  overflow: hidden;
-}
-
-#root {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-}
-
-.auth-required {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  padding: 32px;
-  text-align: center;
-}
-
-.error {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  color: #ff6b6b;
-  font-size: 18px;
-}
-
-@media (max-width: 768px) {
-  chat-app {
-    flex-direction: column;
-  }
-}
-
 @media (prefers-color-scheme: light) {
   :root {
     /* Text colors */
@@ -97,4 +55,23 @@ body {
     /* Border colors */
     --color-border: rgba(0, 0, 0, 0.1);
   }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
 }
