@@ -1,4 +1,4 @@
-export { AISettings } from "./AISettings";
+export { ChatSettings } from "./ChatSettings";
 export { ChatInput } from "./ChatInput";
 export { ChatMain } from "./ChatMain";
 export { ChatMessage } from "./ChatMessage";
