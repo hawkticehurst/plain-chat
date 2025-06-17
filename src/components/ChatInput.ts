@@ -33,7 +33,17 @@ export class ChatInput extends Component {
               title="Send message"
               @click="handleSend"
             >
-              ➤
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 17a.75.75 0 0 1-.75-.75V5.612L5.29 9.77a.75.75 0 0 1-1.08-1.04l5.25-5.5a.75.75 0 0 1 1.08 0l5.25 5.5a.75.75 0 1 1-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0 1 10 17Z"
+                  clip-rule="evenodd"
+                />
+              </svg>
             </button>
             <button
               class="cancel-btn"
@@ -42,7 +52,17 @@ export class ChatInput extends Component {
               @click="handleCancel"
               style="display: none;"
             >
-              ⏹️
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M4.5 7.5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-9a3 3 0 0 1-3-3v-9Z"
+                  clip-rule="evenodd"
+                />
+              </svg>
             </button>
           </div>
         </div>
@@ -95,15 +115,29 @@ export class ChatInput extends Component {
     effect(() => {
       if (this.#sendBtn) {
         this.#sendBtn.disabled = this.#isLoading();
-        this.#sendBtn.textContent = this.#isLoading() ? "⏳" : "➤";
-        this.#sendBtn.style.display = this.#isStreaming() ? "none" : "block";
+        this.#sendBtn.innerHTML = "";
+        const markup = this.#isLoading()
+          ? html`<span>Loading</span>`
+          : html`<svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 17a.75.75 0 0 1-.75-.75V5.612L5.29 9.77a.75.75 0 0 1-1.08-1.04l5.25-5.5a.75.75 0 0 1 1.08 0l5.25 5.5a.75.75 0 1 1-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0 1 10 17Z"
+                clip-rule="evenodd"
+              />
+            </svg>`;
+        this.#sendBtn.appendChild(markup);
+        this.#sendBtn.style.display = this.#isStreaming() ? "none" : "flex";
       }
     });
 
     // Update cancel button based on streaming state
     effect(() => {
       if (this.#cancelBtn) {
-        this.#cancelBtn.style.display = this.#isStreaming() ? "block" : "none";
+        this.#cancelBtn.style.display = this.#isStreaming() ? "flex" : "none";
       }
     });
   }

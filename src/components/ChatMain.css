@@ -1,17 +1,21 @@
 chat-main {
-  display: flex;
-  flex-direction: column;
   flex: 1;
-  height: 100vh;
-  min-height: 100vh;
-  /* overflow: hidden; */
+  height: calc(100vh - 42px);
+  background: color-mix(in srgb, var(--color-surface) 95%, transparent);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  position: relative;
 
   .empty-state {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100vh;
+    height: 100%;
     text-align: center;
     padding: 32px;
     color: var(--color-text-secondary);
@@ -32,9 +36,9 @@ chat-main {
   }
 
   .chat-container {
-    display: flex;
-    flex-direction: column;
     height: 100%;
+    padding-bottom: 60px;
+    overflow-y: scroll;
   }
 
   .loading {

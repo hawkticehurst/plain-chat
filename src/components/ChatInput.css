@@ -1,25 +1,31 @@
 chat-input {
-  display: block;
-  position: sticky;
-  bottom: 0;
-  background: transparent;
-  backdrop-filter: blur(0px);
-  border-right: 1px solid transparent;
-  border-left: 1px solid transparent;
-  border-radius: 20px;
-  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   padding: 0;
+  margin: 0;
+  height: 67px;
   width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
-  transition: all 0.3s ease;
+  max-width: max-content;
+  background: rgba(52, 52, 52, 0.8);
+  backdrop-filter: blur(100px);
+  /* background: var(--color-background); */
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  font-weight: 500;
+  font-size: 1rem;
+  position: absolute;
+  z-index: 1000;
+  left: 50%;
+  transform: translateX(-50%) translateY(0%);
+  bottom: 10px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.3s ease, height 0.3s ease;
 
   &:hover,
   &:focus-within {
-    background: rgba(52, 52, 52, 0.3);
-    backdrop-filter: blur(16px);
-    border-right: 1px solid var(--color-border);
-    border-left: 1px solid var(--color-border);
+    height: 110px;
   }
 
   .wrapper {
@@ -37,19 +43,9 @@ chat-input {
       display: flex;
       align-items: center;
       gap: 12px;
-      width: 50%;
+      width: 500px;
       margin: 0 auto;
       transition: width 0.4s ease;
-
-      &:focus-within .input {
-        outline: solid 2px var(--color-accent);
-        outline-offset: 2px;
-      }
-    }
-
-    &:hover .input-container,
-    &:focus-within .input-container {
-      width: 100%;
     }
 
     &:hover .model-select,
@@ -99,8 +95,8 @@ chat-input {
     width: 32px;
     height: 32px;
     border: none;
-    border-radius: 50%;
-    background: var(--color-accent);
+    border-radius: 10px;
+    background: var(--color-surface-raised);
     color: var(--color-accent-text);
     cursor: pointer;
     font-size: 1rem;
@@ -108,13 +104,18 @@ chat-input {
 
     &:hover {
       background: var(--color-accent-hover);
-      transform: scale(1.05);
     }
 
     &:disabled {
       opacity: 0.6;
       cursor: not-allowed;
       transform: none;
+    }
+
+    svg {
+      --size: 18px;
+      width: var(--size);
+      height: var(--size);
     }
   }
 

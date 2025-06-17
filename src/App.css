@@ -1,9 +1,75 @@
 chat-app {
-  display: block;
-  width: 100%;
-  height: 100vh;
+  width: calc(100% - 20px);
+  height: calc(100vh - 20px);
   position: relative;
   display: flex;
+  gap: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 30px;
+  margin: 10px;
+  overflow: hidden;
+  background: rgba(52, 52, 52, 0);
+  backdrop-filter: blur(16px);
+
+  .gradient {
+    height: calc(100vh - 10px);
+    width: 100%;
+    background: linear-gradient(90deg, #3f2b96 0%, #a8c0ff 100%);
+    opacity: 0.2;
+    background-size: 800% 800%;
+    animation: gradientAnimation 3s ease-in-out infinite;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: -10;
+  }
+
+  @keyframes gradientAnimation {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  .chat-settings-btn {
+    display: flex;
+    align-items: center;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 0 20px 0 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+
+    &:hover {
+      opacity: 0.9;
+    }
+
+    &[disabled] {
+      opacity: 0.6;
+      cursor: not-allowed;
+
+      &:hover {
+        background: var(--color-accent) !important;
+        opacity: 0.6;
+      }
+    }
+
+    svg {
+      --size: 16px;
+      width: var(--size);
+      height: var(--size);
+    }
+  }
 
   .auth-required {
     display: flex;

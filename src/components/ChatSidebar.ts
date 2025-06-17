@@ -66,9 +66,6 @@ export class ChatSidebar extends Component {
     this.append(html`
       <section class="header">
         <button class="new-chat-btn" @click="handleNewChat">New Chat</button>
-        <button class="chat-settings-btn" @click="handleChatSettings">
-          Chat Settings
-        </button>
         <button class="usage-dashboard-btn" @click="handleUsageDashboard">
           Usage Dashboard
         </button>
@@ -180,7 +177,6 @@ export class ChatSidebar extends Component {
       this.#chatListSection.appendChild(html`
         <div class="empty-state">
           <p>Sign in to see your chat history</p>
-          <p class="hint">You can still start a new chat without signing in</p>
         </div>
       `);
       return;
@@ -445,8 +441,19 @@ class ChatSidebarItem extends Component {
         <div class="chat-item-content" @click="handleItemClick">
           <p class="title"></p>
         </div>
-        <button class="delete-btn" @click="handleDeleteClick" title="Delete chat">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button
+          class="delete-btn"
+          @click="handleDeleteClick"
+          title="Delete chat"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <path d="M3 6h18"></path>
             <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
             <path d="M8 6V4c0-1 1-2 2-2h4c0 1 1 2 2 2v2"></path>
@@ -479,7 +486,7 @@ class ChatSidebarItem extends Component {
   handleDeleteClick = (event: Event) => {
     event.stopPropagation();
     event.preventDefault();
-    
+
     // Dispatch the delete event
     this.dispatchEvent(
       new CustomEvent("chat-item-delete", {

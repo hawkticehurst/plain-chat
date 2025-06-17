@@ -2,7 +2,6 @@ chat-messages {
   display: block;
   flex: 1;
   padding: 32px calc(50% - 350px);
-  background: var(--color-background);
   scroll-behavior: smooth;
   overflow: scroll;
   display: flex;

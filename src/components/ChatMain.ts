@@ -34,9 +34,7 @@ export class ChatMain extends Component {
           will be saved automatically.
         </p>
       </div>
-      <div class="chat-container" style="display: none;">
-        <!-- Chat messages and input will be added here -->
-      </div>
+      <div class="chat-container" style="display: none;"></div>
     `);
 
     // Cache DOM references
@@ -52,58 +50,17 @@ export class ChatMain extends Component {
       this.#chatContainer.appendChild(this.#chatMessages);
     }
 
-    // ChatInput will be placed by reactive effects based on state
-    // Initially start in empty state
-    if (this.#emptyStateDiv) {
-      this.#emptyStateDiv.appendChild(this.#chatInput);
-    }
+    this.appendChild(this.#chatInput);
 
     // Set up event listeners using the component's event system
     this.#setupEventListeners();
 
-    // Wire up reactive effects
-    this.#setupReactiveEffects();
-
-    // Start with empty new chat state
-    this.startNewChat();
-  }
-
-  #setupEventListeners() {
-    if (this.#chatInput) {
-      // Listen for send-message events from ChatInput
-      this.#chatInput.addEventListener(
-        "send-message",
-        this.#handleSendMessage.bind(this)
-      );
-
-      // Listen for cancel-streaming events from ChatInput
-      this.#chatInput.addEventListener(
-        "cancel-streaming",
-        this.#handleCancelStreaming.bind(this)
-      );
-    }
-  }
-
-  #setupReactiveEffects() {
     // Update UI based on whether we have a current chat
     effect(() => {
       const hasChat = this.#currentChatId() !== null;
-      if (this.#emptyStateDiv && this.#chatContainer && this.#chatInput) {
+      if (this.#emptyStateDiv && this.#chatContainer) {
         this.#emptyStateDiv.style.display = hasChat ? "none" : "flex";
         this.#chatContainer.style.display = hasChat ? "block" : "none";
-
-        // Move ChatInput to the appropriate container
-        if (hasChat) {
-          // Move to chat container (if not already there)
-          if (!this.#chatContainer.contains(this.#chatInput)) {
-            this.#chatContainer.appendChild(this.#chatInput);
-          }
-        } else {
-          // Move to empty state (if not already there)
-          if (!this.#emptyStateDiv.contains(this.#chatInput)) {
-            this.#emptyStateDiv.appendChild(this.#chatInput);
-          }
-        }
       }
     });
 
@@ -127,6 +84,25 @@ export class ChatMain extends Component {
         }
       }
     });
+
+    // Start with empty new chat state
+    this.startNewChat();
+  }
+
+  #setupEventListeners() {
+    if (this.#chatInput) {
+      // Listen for send-message events from ChatInput
+      this.#chatInput.addEventListener(
+        "send-message",
+        this.#handleSendMessage.bind(this)
+      );
+
+      // Listen for cancel-streaming events from ChatInput
+      this.#chatInput.addEventListener(
+        "cancel-streaming",
+        this.cancelStreaming.bind(this)
+      );
+    }
   }
 
   // Public API methods
@@ -166,7 +142,7 @@ export class ChatMain extends Component {
     try {
       // Use the streaming service to delete the chat
       const success = await this.#streamingService.deleteChat(chatId);
-      
+
       if (!success) {
         throw new Error("Failed to delete chat");
       }
@@ -189,8 +165,9 @@ export class ChatMain extends Component {
       // Dispatch error event for notification
       this.dispatchEvent(
         new CustomEvent("chat-error", {
-          detail: { 
-            message: error instanceof Error ? error.message : "Failed to delete chat"
+          detail: {
+            message:
+              error instanceof Error ? error.message : "Failed to delete chat",
           },
           bubbles: true,
           composed: true,
@@ -249,22 +226,12 @@ export class ChatMain extends Component {
 
     this.#messages([...this.#messages(), loadingMessage]);
 
-    // Save user message to database
-    await this.#streamingService.saveUserMessage(
-      this.#currentChatId()!,
-      message
-    );
-
     // Check if this is the first message and generate a title
     const isFirstMessage =
       this.#messages().filter((m) => !m.isLoading).length === 1;
 
     // Handle the AI response using the streaming service
     await this.#handleStreamingResponse(message, isFirstMessage);
-  }
-
-  #handleCancelStreaming() {
-    this.cancelStreaming();
   }
 
   public cancelStreaming() {

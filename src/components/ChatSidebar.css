@@ -2,13 +2,12 @@ chat-sidebar {
   display: flex;
   flex-direction: column;
   width: 280px;
-  background: rgba(52, 52, 52, 0.3);
+  background: color-mix(in srgb, var(--color-surface) 95%, transparent);
   backdrop-filter: blur(16px);
-  border-right: 1px solid var(--color-border);
-  border-left: 1px solid var(--color-border);
+  border: 1px solid var(--color-border);
   flex-shrink: 0;
   height: calc(
-    100vh - 20px
+    100vh - 42px
   ); /* Ensures that the sidebar fits within the viewport */
   border-radius: 20px;
   margin: 10px;
@@ -40,7 +39,7 @@ chat-sidebar {
   .usage-dashboard-btn,
   .auth-btn {
     border: none;
-    padding: 8px 14px;
+    padding: 10px 14px;
     border-radius: 8px;
     width: 100%;
     font-size: 0.8rem;
@@ -79,6 +78,7 @@ chat-sidebar {
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 8px;
   }
 
@@ -140,15 +140,14 @@ chat-sidebar-item {
 
   &:hover .delete-btn {
     opacity: 1;
-    visibility: visible;
+    transform: translateY(-50%) translateX(30%);
   }
 
   .chat-item-container {
-    display: flex;
-    align-items: center;
     list-style: none;
     margin: 0;
     padding: 0;
+    position: relative;
   }
 
   .chat-item-content {
@@ -157,6 +156,7 @@ chat-sidebar-item {
     cursor: pointer;
     display: flex;
     align-items: center;
+    overflow: hidden;
   }
 
   .title {
@@ -171,25 +171,32 @@ chat-sidebar-item {
   }
 
   .delete-btn {
+    right: 8px;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%) translateX(150%);
     padding: 4px;
     margin-right: 8px;
-    background: none;
-    border: none;
     cursor: pointer;
+    border: none;
     border-radius: 4px;
-    color: var(--color-text-secondary);
     opacity: 0;
-    visibility: hidden;
-    transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    background: var(--color-surface-raised);
+    color: white;
+    transition:
+      transform 0.2s ease,
+      opacity 0.2s ease,
+      background 0.2s ease;
   }
 
   .delete-btn:hover {
-    background: var(--color-error);
-    color: white;
+    outline: 2px solid var(--color-primary);
+    outline-offset: 0px;
+    transform: translateY(-50%) translateX(30%);
   }
 
   .delete-btn:focus {
@@ -197,10 +204,12 @@ chat-sidebar-item {
     visibility: visible;
     outline: 2px solid var(--color-primary);
     outline-offset: 1px;
+    transform: translateY(-50%) translateX(30%);
   }
 
   .delete-btn svg {
-    width: 14px;
-    height: 14px;
+    --size: 16px;
+    width: var(--size);
+    height: var(--size);
   }
 }

@@ -16,9 +16,7 @@ export class ChatMessages extends Component {
   init() {
     this.innerHTML = "";
     this.append(html`
-      <div class="messages-container">
-        <!-- Message components will be reconciled here -->
-      </div>
+      <div class="messages-container"></div>
     `);
 
     // Cache DOM references
@@ -26,17 +24,11 @@ export class ChatMessages extends Component {
       ".messages-container"
     ) as HTMLElement;
 
-    // Wire up reactive effects
-    this.#setupReactiveEffects();
-  }
-
-  #setupReactiveEffects() {
-    // Update message list when messages change using reconcile for efficiency
     effect(() => {
       if (!this.#messagesContainer) return;
-
+  
       const messages = this.#messages();
-
+  
       // Use reconcile to efficiently update the DOM
       this.#messageNodes = reconcile(
         this.#messagesContainer,
@@ -68,7 +60,7 @@ export class ChatMessages extends Component {
           );
         }
       );
-
+  
       // Auto-scroll to bottom after message updates
       this.#scrollToBottom();
     });
@@ -81,12 +73,12 @@ export class ChatMessages extends Component {
         if (this.#messagesContainer) {
           this.#messagesContainer.scrollTop =
             this.#messagesContainer.scrollHeight;
+          console.log(this.#messagesContainer.scrollHeight);
         }
       });
     }
   }
 
-  // Public API methods
   public updateMessages(messages: Array<Message>) {
     this.#messages(messages);
   }
@@ -103,11 +95,6 @@ export class ChatMessages extends Component {
       newMessages[newMessages.length - 1] = message;
       this.#messages(newMessages);
     }
-  }
-
-  public async render() {
-    // This method is kept for backward compatibility but does nothing
-    // since we use reactive updates now
   }
 }
 
