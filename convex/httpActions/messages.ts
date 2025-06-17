@@ -96,6 +96,7 @@ export const addMessage = httpAction(async (ctx, request) => {
       message,
       conversation = [],
       useConvexStreaming = false,
+      model, // Extract the model parameter
     } = requestBody;
 
     // Handle the new Convex streaming pattern
@@ -114,6 +115,7 @@ export const addMessage = httpAction(async (ctx, request) => {
           chatId: chatId as any,
           userMessage: message,
           conversation,
+          model, // Pass the model to the streaming mutation
         }
       );
 

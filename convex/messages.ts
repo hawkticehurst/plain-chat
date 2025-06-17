@@ -202,6 +202,7 @@ export const createAIMessageWithStreaming = mutation({
         content: v.string(),
       })
     ),
+    model: v.optional(v.string()), // Add model parameter
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -226,6 +227,7 @@ export const createAIMessageWithStreaming = mutation({
       userMessage: args.userMessage,
       chatId: args.chatId,
       conversation: args.conversation,
+      model: args.model, // Pass the model to the streaming action
     });
 
     return messageId;

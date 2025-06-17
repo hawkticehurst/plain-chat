@@ -18,6 +18,7 @@ export const streamAIResponse = internalAction({
         content: v.string(),
       })
     ),
+    model: v.optional(v.string()), // Add model parameter
   },
   handler: async (ctx, args) => {
     try {
@@ -116,6 +117,7 @@ export const streamAIResponse = internalAction({
       });
 
       const modelToUse =
+        args.model || // Prioritize the model selected in the UI
         authResult.model ||
         preferences?.defaultModel ||
         "google/gemini-2.5-flash-preview-05-20";

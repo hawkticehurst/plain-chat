@@ -184,7 +184,7 @@ export class ChatMain extends Component {
   // Event handlers
   async #handleSendMessage(event: Event) {
     const customEvent = event as CustomEvent;
-    const { message } = customEvent.detail;
+    const { message, model } = customEvent.detail;
 
     // If no chat is selected, create a new one first
     if (!this.#currentChatId()) {
@@ -236,7 +236,7 @@ export class ChatMain extends Component {
       this.#messages().filter((m) => !m.isLoading).length === 1;
 
     // Handle the AI response using the streaming service
-    await this.#handleStreamingResponse(message, isFirstMessage);
+    await this.#handleStreamingResponse(message, isFirstMessage, model);
   }
 
   public cancelStreaming() {
@@ -261,7 +261,11 @@ export class ChatMain extends Component {
     }
   }
 
-  async #handleStreamingResponse(message: string, isFirstMessage: boolean) {
+  async #handleStreamingResponse(
+    message: string,
+    isFirstMessage: boolean,
+    model?: string
+  ) {
     if (!this.#currentChatId()) return;
 
     // Remove loading message
@@ -341,6 +345,7 @@ export class ChatMain extends Component {
             content: m.content,
           })),
         isFirstMessage,
+        model, // Pass the selected model to the service
       },
       callbacks
     );

@@ -1,4 +1,4 @@
-import { Component, html, signal, effect } from "@lib";
+import { Component, html, signal, effect, config, authService } from "@lib";
 import "./ChatInput.css";
 
 export class ChatInput extends Component {
@@ -73,13 +73,18 @@ export class ChatInput extends Component {
             @change="handleModelChange"
           >
             <option value="google/gemini-2.5-flash-preview-05-20">
-              Gemini 2.5 Flash
+              Gemini 2.5 Flash (Preview)
             </option>
+            <option value="anthropic/claude-sonnet-4">Claude Sonnet 4</option>
+            <option value="anthropic/claude-3.7-sonnet">
+              Claude Sonnet 3.7
+            </option>
+            <option value="google/gemini-2.5-pro-preview">
+              Gemini 2.5 Pro (Preview)
+            </option>
+            <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+            <option value="openai/o4-mini">o4 mini</option>
             <option value="openai/gpt-4">GPT-4</option>
-            <option value="openai/gpt-3.5-turbo">GPT-3.5 Turbo</option>
-            <option value="anthropic/claude-3-haiku">Claude 3 Haiku</option>
-            <option value="anthropic/claude-3-sonnet">Claude 3 Sonnet</option>
-            <option value="google/gemini-pro">Gemini Pro</option>
             <option value="meta-llama/llama-3-8b-instruct">Llama 3 8B</option>
           </select>
         </div>
@@ -98,6 +103,9 @@ export class ChatInput extends Component {
     if (this.#modelSelect) {
       this.#modelSelect.value = this.#selectedModel();
     }
+
+    // Load user's preferred model
+    this.#loadUserPreferences();
 
     // Wire up reactive effects for granular updates
     this.#setupReactiveEffects();
@@ -140,6 +148,41 @@ export class ChatInput extends Component {
         this.#cancelBtn.style.display = this.#isStreaming() ? "flex" : "none";
       }
     });
+  }
+
+  async #loadUserPreferences() {
+    try {
+      // Wait for auth to be ready
+      if (!authService.isReady()) {
+        await authService.waitForReady(5000);
+      }
+
+      // Only load preferences if user is signed in
+      if (!authService.isSignedIn()) {
+        return;
+      }
+
+      // Fetch user preferences
+      const response = await authService.fetchWithAuth(
+        `${config.apiBaseUrl}/ai-settings/preferences`
+      );
+
+      if (response.ok) {
+        const preferences = await response.json();
+        if (preferences && preferences.defaultModel) {
+          // Update the selected model
+          this.#selectedModel(preferences.defaultModel);
+
+          // Update the dropdown value if it exists
+          if (this.#modelSelect) {
+            this.#modelSelect.value = preferences.defaultModel;
+          }
+        }
+      }
+    } catch (error) {
+      // Silently fail - use default model if preferences can't be loaded
+      console.warn("Failed to load user model preferences:", error);
+    }
   }
 
   // Event handlers (called via @ attributes)

@@ -25,6 +25,7 @@ export interface StreamMessageOptions {
   userMessage: string;
   conversationHistory: Array<{ role: string; content: string }>;
   isFirstMessage: boolean;
+  model?: string; // Selected model from the UI
 }
 
 export class StreamingChatService {
@@ -133,6 +134,7 @@ export class StreamingChatService {
             message: options.userMessage,
             conversation: options.conversationHistory,
             useConvexStreaming: true,
+            model: options.model, // Pass the selected model
           }),
         }
       );
