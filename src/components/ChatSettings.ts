@@ -15,6 +15,7 @@ export class ChatSettings extends Component {
   #isSaving = signal<boolean>(false);
   #apiKey = signal<string>("");
   #hasValidKey = signal<boolean>(false);
+  #defaultModel = signal<string>("google/gemini-2.5-flash-preview-05-20");
   #temperature = signal<number>(0.7);
   #maxTokens = signal<number>(2000);
   #systemPrompt = signal<string>("");
@@ -353,6 +354,9 @@ export class ChatSettings extends Component {
       if (preferencesResponse.ok) {
         const preferences = await preferencesResponse.json();
         if (preferences) {
+          this.#defaultModel(
+            preferences.defaultModel || "google/gemini-2.5-flash-preview-05-20"
+          );
           this.#temperature(preferences.temperature || 0.7);
           this.#maxTokens(preferences.maxTokens || 2000);
           this.#systemPrompt(preferences.systemPrompt || "");
@@ -461,9 +465,10 @@ export class ChatSettings extends Component {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            defaultModel: this.#defaultModel(),
             temperature: this.#temperature(),
             maxTokens: this.#maxTokens(),
-            systemPrompt: this.#systemPrompt() || undefined,
+            systemPrompt: this.#systemPrompt(), // Send empty string to clear, don't convert to undefined
             enableUsageNotifications: true, // Default value
           }),
         }
@@ -482,10 +487,11 @@ export class ChatSettings extends Component {
       }
       this.#apiKey("");
 
-      // Navigate back after a short delay
+      // Don't navigate away - stay on settings page
+      // Optionally reload the current settings to reflect any server-side changes
       setTimeout(() => {
-        window.location.hash = "#/";
-      }, 1500);
+        this.#loadCurrentSettings();
+      }, 1000);
     } catch (error: any) {
       this.#message({
         text: `Failed to save settings: ${error.message}`,

@@ -293,7 +293,7 @@ export class StreamingChatService {
   private async _startPolling(
     messageId: string,
     streamingMessage: Message,
-    options: StreamMessageOptions,
+    _options: StreamMessageOptions, // Prefix with underscore to indicate unused
     callbacks: StreamingChatCallbacks
   ): Promise<void> {
     let isComplete = false;
@@ -333,12 +333,7 @@ export class StreamingChatService {
               this._activePollingInterval = null;
             }
 
-            // Generate title if this is the first message
-            if (options.isFirstMessage) {
-              this.generateChatTitle(options.chatId, options.userMessage);
-              // Title updates should be handled by the UI layer through events
-            }
-
+            // Note: Title generation is now handled by ChatMain in parallel with the response
             callbacks.onStreamingComplete();
           }
 

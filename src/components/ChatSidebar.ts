@@ -391,6 +391,39 @@ export class ChatSidebar extends Component {
     await this.#loadChats();
   }
 
+  /**
+   * Updates a specific chat's title without doing a full refresh
+   * This provides immediate UI feedback when titles are generated
+   */
+  public updateChatTitle(chatId: string, newTitle: string) {
+    const currentChats = this.#chats();
+    const updatedChats = currentChats.map((chat) =>
+      chat.id === chatId
+        ? { ...chat, title: newTitle, timestamp: new Date() }
+        : chat
+    );
+
+    // Check if we found and updated the chat
+    const chatFound = updatedChats.some(
+      (chat) => chat.id === chatId && chat.title === newTitle
+    );
+    if (chatFound) {
+      this.#chats(updatedChats);
+
+      // Also update the specific chat item in the DOM with animation
+      const chatItem = this.#chatListSection?.querySelector(
+        `chat-sidebar-item[data-chat-id="${chatId}"]`
+      ) as any;
+      if (chatItem && typeof chatItem.updateTitleWithAnimation === "function") {
+        chatItem.updateTitleWithAnimation(newTitle);
+      }
+    } else {
+      // The chat might be new and not yet in our local state
+      // Do a full refresh to ensure we have the latest data
+      this.refreshChats();
+    }
+  }
+
   public setCurrentChat(chatId: string | null) {
     // Prevent duplicate setting of the same chat
     if (this.#currentChatId() === chatId) {
@@ -506,6 +539,33 @@ class ChatSidebarItem extends Component {
 
   get id() {
     return this.#id();
+  } /**
+   * Updates the title with a smooth fade animation
+   */
+  public updateTitleWithAnimation(newTitle: string) {
+    const titleElement = this.querySelector(".title") as HTMLElement;
+    if (!titleElement) {
+      // Fallback to signal update if element not found
+      this.#title(newTitle);
+      return;
+    }
+
+    // Start fade out using CSS class
+    titleElement.classList.add("updating");
+
+    // After fade out completes, update text and fade in
+    setTimeout(() => {
+      this.#title(newTitle); // Update the signal
+      titleElement.textContent = newTitle; // Update DOM directly for immediate effect
+      titleElement.classList.remove("updating");
+    }, 200);
+  }
+
+  /**
+   * Updates the title without animation (for regular updates)
+   */
+  public updateTitle(newTitle: string) {
+    this.#title(newTitle);
   }
 }
 

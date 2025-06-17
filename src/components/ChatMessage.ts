@@ -1,5 +1,7 @@
 import { Component, html, signal, effect, computed } from "@lib";
 import { marked } from "marked";
+// @ts-ignore - Shiki ESM import
+import { codeToHtml } from "https://esm.sh/shiki@3.6.0";
 import "./ChatMessage.css";
 
 export class ChatMessage extends Component {
@@ -15,6 +17,9 @@ export class ChatMessage extends Component {
   #messageContainer: HTMLElement | null = null;
   #textElement: HTMLElement | null = null;
   #errorElement: HTMLElement | null = null;
+
+  // Shiki configuration
+  #shikiLoaded = false;
 
   // Computed values
   #processedContent = computed(() => {
@@ -40,6 +45,9 @@ export class ChatMessage extends Component {
   });
 
   init() {
+    // Initialize Shiki asynchronously - don't block component initialization
+    this.#initializeShiki();
+
     // Build the DOM structure once
     this.append(html`
       <div class="message">
@@ -57,6 +65,30 @@ export class ChatMessage extends Component {
 
     // Wire up reactive effects
     this.#setupReactiveEffects();
+  }
+
+  async #initializeShiki() {
+    try {
+      // Test that codeToHtml is available with a simple example
+      const testResult = await codeToHtml("console.log('test');", {
+        lang: "javascript",
+        theme: "github-dark",
+      });
+
+      if (testResult && testResult.includes("<pre")) {
+        this.#shikiLoaded = true;
+      } else {
+        throw new Error("Shiki returned invalid result");
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      console.warn(
+        "⚠️ Shiki initialization failed, using fallback styling:",
+        errorMessage
+      );
+      this.#shikiLoaded = false;
+    }
   }
 
   #setupReactiveEffects() {
@@ -91,6 +123,21 @@ export class ChatMessage extends Component {
         this.#errorElement.style.display = "none";
       }
     });
+
+    // Re-render with full syntax highlighting when streaming completes
+    effect(() => {
+      const isStreaming = this.#isStreaming();
+      const content = this.#content();
+      const role = this.#role();
+
+      // When streaming stops, re-process content for better syntax highlighting
+      if (!isStreaming && content && role === "response") {
+        // Small delay to ensure the content has been fully set
+        setTimeout(() => {
+          this.#updateTextContent(content, false, role);
+        }, 100);
+      }
+    });
   }
 
   async #updateTextContent(
@@ -105,14 +152,14 @@ export class ChatMessage extends Component {
     if (isStreaming && role === "response") {
       // For streaming, render markdown carefully to handle partial content
       try {
-        markup = await marked(content);
+        markup = await this.#processMarkdownWithSyntaxHighlighting(content);
       } catch (error) {
         // Fallback to raw content if markdown parsing fails on partial content
         markup = this.#escapeHtml(content).replace(/\n/g, "<br>");
       }
     } else {
       try {
-        markup = await marked(content);
+        markup = await this.#processMarkdownWithSyntaxHighlighting(content);
       } catch (error) {
         markup = this.#escapeHtml(content).replace(/\n/g, "<br>");
       }
@@ -124,6 +171,181 @@ export class ChatMessage extends Component {
         this.#textElement.innerHTML = markup;
       }
     });
+  }
+
+  async #processMarkdownWithSyntaxHighlighting(
+    content: string
+  ): Promise<string> {
+    // Configure marked to use custom renderer for code blocks
+    const renderer = new marked.Renderer();
+
+    // Override code block rendering to use Shiki
+    renderer.code = ({ text, lang }: { text: string; lang?: string }) => {
+      return this.#renderCodeBlock(text, lang || "");
+    };
+
+    // Override inline code rendering
+    renderer.codespan = ({ text }: { text: string }) => {
+      return `<code class="inline-code">${this.#escapeHtml(text)}</code>`;
+    };
+
+    marked.setOptions({ renderer });
+
+    const html = await marked(content);
+
+    // Post-process to apply syntax highlighting to code blocks
+    return await this.#applySyntaxHighlighting(html);
+  }
+
+  #renderCodeBlock(code: string, language: string): string {
+    return `<pre class="code-block" data-language="${language}"><code class="hljs">${this.#escapeHtml(code)}</code></pre>`;
+  }
+
+  async #applySyntaxHighlighting(html: string): Promise<string> {
+    if (!this.#shikiLoaded) {
+      return html;
+    }
+
+    // Create a temporary DOM to process code blocks
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = html;
+
+    const codeBlocks = tempDiv.querySelectorAll("pre.code-block code");
+
+    for (const codeBlock of codeBlocks) {
+      const pre = codeBlock.parentElement as HTMLPreElement;
+      const language = pre.getAttribute("data-language") || "text";
+      const code = codeBlock.textContent || "";
+
+      try {
+        // Determine theme based on color scheme
+        const isDark = window.matchMedia(
+          "(prefers-color-scheme: dark)"
+        ).matches;
+        const theme = isDark ? "github-dark" : "github-light";
+        const mappedLang = this.#mapLanguage(language);
+
+        const highlightedHtml = await codeToHtml(code, {
+          lang: mappedLang,
+          theme: theme,
+        });
+
+        // Extract the highlighted code from Shiki's output
+        const parser = new DOMParser();
+        const shikiDoc = parser.parseFromString(highlightedHtml, "text/html");
+        const shikiPre = shikiDoc.querySelector("pre");
+
+        if (shikiPre) {
+          // Copy attributes and classes from our custom pre to Shiki's pre
+          shikiPre.className = `code-block hljs ${shikiPre.className}`;
+          shikiPre.setAttribute("data-language", language);
+
+          // Preserve any additional styling
+          const originalStyle = pre.getAttribute("style");
+          if (originalStyle) {
+            shikiPre.setAttribute("style", originalStyle);
+          }
+
+          pre.replaceWith(shikiPre);
+        }
+      } catch (error) {
+        console.warn(
+          `Failed to highlight ${language} code block:`,
+          error instanceof Error ? error.message : "Unknown error"
+        );
+
+        // Apply basic fallback styling for failed highlighting
+        pre.classList.add("hljs", "hljs-fallback");
+        codeBlock.innerHTML = this.#escapeHtml(code);
+      }
+    }
+
+    return tempDiv.innerHTML;
+  }
+
+  #mapLanguage(language: string): string {
+    console.log(`Mapping language: ${language}`);
+    // Map common language aliases to Shiki-supported languages
+    const languageMap: Record<string, string> = {
+      js: "javascript",
+      ts: "typescript",
+      htm: "html",
+      py: "python",
+      sh: "bash",
+      shell: "bash",
+      yml: "yaml",
+      md: "markdown",
+      "c++": "cpp",
+      csharp: "c#",
+      cs: "c#",
+      dockerfile: "docker",
+      makefile: "make",
+      vim: "viml",
+      zsh: "bash",
+      fish: "bash",
+    };
+
+    const mappedLang =
+      languageMap[language.toLowerCase()] || language.toLowerCase();
+
+    const supportedLanguages = [
+      "javascript",
+      "typescript",
+      "jsx",
+      "tsx",
+      "python",
+      "json",
+      "html",
+      "css",
+      "scss",
+      "sass",
+      "svelte",
+      "vue",
+      "astro",
+      "bash",
+      "sql",
+      "markdown",
+      "yaml",
+      "xml",
+      "java",
+      "cpp",
+      "c",
+      "go",
+      "rust",
+      "php",
+      "ruby",
+      "swift",
+      "kotlin",
+      "scala",
+      "dart",
+      "r",
+      "matlab",
+      "lua",
+      "perl",
+      "haskell",
+      "clojure",
+      "erlang",
+      "elixir",
+      "ocaml",
+      "fsharp",
+      "powershell",
+      "dockerfile",
+      "nginx",
+      "apache",
+      "ini",
+      "toml",
+      "vim",
+      "tex",
+      "latex",
+      "makefile",
+      "cmake",
+      "graphql",
+      "prisma",
+      "solidity",
+    ];
+
+    // Fallback to 'text' for unsupported languages to prevent errors
+    return supportedLanguages.includes(mappedLang) ? mappedLang : "text";
   }
 
   #escapeHtml(text: string): string {

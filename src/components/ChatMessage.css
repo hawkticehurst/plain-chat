@@ -70,9 +70,18 @@ chat-message {
 
       code {
         background: var(--color-code-bg, #f5f5f5);
+        border-radius: 0.2em;
+        font-size: 0.9em;
+        font-family: var(--font-family-code);
+      }
+
+      .inline-code {
+        background: var(--color-code-bg, #f5f5f5);
         padding: 0.1em 0.3em;
         border-radius: 0.2em;
         font-size: 0.9em;
+        font-family: var(--font-family-code);
+        border: 1px solid var(--color-code-border, transparent);
       }
 
       pre {
@@ -81,6 +90,66 @@ chat-message {
         border-radius: 8px;
         overflow-x: auto;
         margin: 0.5em 0;
+        font-family: var(--font-family-code);
+        border: 1px solid var(--color-code-border, transparent);
+        position: relative;
+      }
+
+      /* Enhanced styling for syntax highlighted code blocks */
+      .code-block {
+        background: var(--color-code-bg, #f5f5f5) !important;
+        border: 1px solid var(--color-code-border, transparent);
+        border-radius: 8px;
+        overflow-x: auto;
+        margin: 0.8em 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        position: relative;
+        font-family: var(--font-family-code);
+        line-height: 1.4;
+
+        /* Language badge */
+        &[data-language]:not([data-language=""]):before {
+          content: attr(data-language);
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          background: var(--color-surface-raised);
+          color: var(--color-text-muted);
+          padding: 2px 8px;
+          border-radius: 4px;
+          font-size: 0.7rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          z-index: 1;
+          border: 1px solid var(--color-border);
+        }
+
+        /* Shiki overrides for better integration */
+        &.hljs {
+          background: var(--color-code-bg, #f5f5f5) !important;
+
+          /* Ensure proper scrolling */
+          overflow-x: auto;
+          overflow-y: hidden;
+
+          /* Make sure text doesn't wrap */
+          white-space: pre;
+
+          /* Padding for language badge */
+          padding-top: 20px;
+        }
+
+        /* Fallback styling when Shiki fails */
+        &.hljs-fallback {
+          background: var(--color-code-bg, #f5f5f5) !important;
+          color: var(--color-text-primary);
+
+          code {
+            color: inherit;
+            font-family: var(--font-family-code);
+          }
+        }
       }
 
       blockquote {
@@ -162,6 +231,30 @@ chat-message {
     .message {
       max-width: 85%;
     }
+
+    /* Responsive code block improvements */
+    .code-block {
+      margin: 0.6em -10px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+
+      &[data-language]:not([data-language=""]):before {
+        font-size: 0.65rem;
+        padding: 1px 6px;
+        top: 6px;
+        right: 8px;
+      }
+
+      &.hljs {
+        padding: 12px;
+        padding-top: 16px;
+      }
+    }
+
+    .inline-code {
+      font-size: 0.85rem;
+      padding: 0.05em 0.25em;
+    }
   }
 
   @media (max-width: 480px) {
@@ -172,6 +265,15 @@ chat-message {
     .text {
       padding: 12px 16px;
       font-size: 0.875rem;
+    }
+
+    .code-block {
+      font-size: 0.75rem;
+
+      &.hljs {
+        padding: 8px;
+        padding-top: 14px;
+      }
     }
   }
 }

@@ -168,6 +168,12 @@ chat-sidebar-item {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition: opacity 0.2s ease-out;
+  }
+
+  /* Animation class for smooth title updates */
+  .title.updating {
+    opacity: 0.3;
   }
 
   .delete-btn {

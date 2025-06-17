@@ -125,7 +125,7 @@ export class ChatInput extends Component {
         this.#sendBtn.disabled = this.#isLoading();
         this.#sendBtn.innerHTML = "";
         const markup = this.#isLoading()
-          ? html`<span>Loading</span>`
+          ? html`<span></span>`
           : html`<svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
@@ -272,6 +272,12 @@ export class ChatInput extends Component {
   streamingEnded() {
     this.#isStreaming(false);
     this.#isLoading(false);
+  }
+
+  focus() {
+    if (this.#textarea) {
+      this.#textarea.focus();
+    }
   }
 
   getSelectedModel(): string {

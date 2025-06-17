@@ -1,6 +1,7 @@
 import { Component, html, signal, effect, StreamingChatService } from "@lib";
 import { ChatInput, ChatMessages, notificationService } from "@components";
 import type { Message } from "@lib";
+import { titleGenerationService } from "../services";
 import "./ChatMain.css";
 
 export class ChatMain extends Component {
@@ -143,6 +144,12 @@ export class ChatMain extends Component {
     this.#messages([]);
   }
 
+  public focusInput() {
+    if (this.#chatInput) {
+      this.#chatInput.focus();
+    }
+  }
+
   public async deleteChat(chatId: string) {
     try {
       // Use the streaming service to delete the chat
@@ -274,6 +281,11 @@ export class ChatMain extends Component {
 
     this.#isStreaming(true);
 
+    // Start title generation in parallel if this is the first message
+    if (isFirstMessage && this.#currentChatId()) {
+      this.#startParallelTitleGeneration(message);
+    }
+
     // Create callbacks for the streaming service
     const callbacks = {
       onMessageUpdate: (streamingMessage: Message) => {
@@ -297,10 +309,22 @@ export class ChatMain extends Component {
       onStreamingComplete: () => {
         this.#isStreaming(false);
 
-        // Generate title if this is the first message
-        if (isFirstMessage) {
-          this.#handleTitleGeneration(message);
+        // Update the last message to mark streaming as complete
+        // This will trigger the reactive effect in ChatMessage for final syntax highlighting
+        const messages = this.#messages();
+        if (messages.length > 0) {
+          const lastMessage = messages[messages.length - 1];
+          if (lastMessage && lastMessage.role === "response") {
+            const updatedMessages = [...messages];
+            updatedMessages[updatedMessages.length - 1] = {
+              ...lastMessage,
+              isStreaming: false,
+            };
+            this.#messages(updatedMessages);
+          }
         }
+
+        // Note: Title generation is now started in parallel, not here
       },
 
       onError: (error: string) => {
@@ -351,21 +375,36 @@ export class ChatMain extends Component {
     );
   }
 
-  async #handleTitleGeneration(firstMessage: string) {
+  /**
+   * Starts title generation in parallel with the AI response using a web worker
+   * This allows the title to be generated and displayed as soon as it's ready
+   */
+  async #startParallelTitleGeneration(firstMessage: string) {
     if (!this.#currentChatId()) return;
 
-    const title = await this.#streamingService.generateChatTitle(
-      this.#currentChatId()!,
-      firstMessage
-    );
-    if (title) {
-      // Notify parent to refresh sidebar with new title
-      this.dispatchEvent(
-        new CustomEvent("chat-title-updated", {
-          detail: { chatId: this.#currentChatId(), title },
-          bubbles: true,
-          composed: true,
-        })
+    const chatId = this.#currentChatId()!;
+
+    try {
+      // Generate title in web worker (non-blocking)
+      const title = await titleGenerationService.generateTitle(
+        chatId,
+        firstMessage
+      );
+
+      if (title) {
+        // Immediately notify parent to update sidebar with new title
+        this.dispatchEvent(
+          new CustomEvent("chat-title-updated", {
+            detail: { chatId, title },
+            bubbles: true,
+            composed: true,
+          })
+        );
+      }
+    } catch (error) {
+      console.error(
+        `❌ Error in parallel title generation for chat ${chatId}:`,
+        error
       );
     }
   }

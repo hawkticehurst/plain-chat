@@ -164,6 +164,7 @@ export class App extends Component {
         @chat-deleted="handleChatDeleted"
         @chat-error="handleChatError"
         @chat-created="handleChatCreated"
+        @chat-title-updated="chatTitleUpdated"
       ></chat-main>
       <button class="chat-settings-btn" @click="handleChatSettings">
         <svg
@@ -247,6 +248,9 @@ export class App extends Component {
     this.#chat.startNewChat();
     this.#sidebar.setCurrentChat(null);
 
+    // Focus the chat input for better UX
+    this.#chat.focusInput();
+
     // Update URL
     window.history.pushState({}, "", "#/");
     (router as any).currentPath = "/";
@@ -263,12 +267,17 @@ export class App extends Component {
     this.#sidebar.removeChat(id);
   }
 
-  public chatTitleUpdated() {
+  public chatTitleUpdated(event: Event) {
     if (!this.#sidebar) {
       console.error("ChatSidebar component not initialized");
       return;
     }
-    this.#sidebar.refreshChats();
+
+    const customEvent = event as CustomEvent;
+    const { chatId, title } = customEvent.detail;
+
+    // Use the new optimized method that updates just the specific chat
+    this.#sidebar.updateChatTitle(chatId, title);
   }
 
   public async handleDeleteRequest(event: Event) {
