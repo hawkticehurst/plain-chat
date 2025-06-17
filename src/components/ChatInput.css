@@ -4,7 +4,7 @@ chat-input {
   align-items: center;
   padding: 0;
   margin: 0;
-  height: 67px;
+  height: fit-content;
   width: calc(100% - 20px);
   max-width: max-content;
   background: rgba(52, 52, 52, 0.8);
@@ -24,11 +24,6 @@ chat-input {
   transition:
     transform 0.3s ease,
     height 0.3s ease;
-
-  &:hover,
-  &:focus-within {
-    height: 110px;
-  }
 
   .wrapper {
     display: flex;

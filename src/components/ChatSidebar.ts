@@ -23,6 +23,7 @@ export class ChatSidebar extends Component {
   #loading = signal<boolean>(true);
   #currentChatId = signal<string | null>(null);
   #isSignedIn = signal<boolean>(false);
+  #isCollapsed = signal<boolean>(false);
 
   // DOM references
   #headerSection: HTMLElement | null = null;
@@ -57,6 +58,12 @@ export class ChatSidebar extends Component {
 
   constructor() {
     super();
+    // Load collapsed state from localStorage
+    const savedState = localStorage.getItem("sidebar-collapsed");
+    if (savedState !== null) {
+      this.#isCollapsed(savedState === "true");
+    }
+
     this.#checkAuthStatus();
     this.#setupAuthListener();
   }
@@ -125,6 +132,17 @@ export class ChatSidebar extends Component {
       ) as HTMLButtonElement;
       if (authBtn) {
         authBtn.textContent = this.#isSignedIn() ? "Sign Out" : "Sign In";
+      }
+    });
+
+    // Apply collapsed state to the component
+    effect(() => {
+      const isCollapsed = this.#isCollapsed();
+
+      if (isCollapsed) {
+        this.classList.add("collapsed");
+      } else {
+        this.classList.remove("collapsed");
       }
     });
 
@@ -367,11 +385,10 @@ export class ChatSidebar extends Component {
     );
   };
 
-  #handleChatDelete = (chatId: string, chatTitle: string) => {
-    // Dispatch event to parent to show confirmation dialog
+  #handleChatDelete = (id: string, title: string) => {
     this.dispatchEvent(
       new CustomEvent("chat-delete-requested", {
-        detail: { id: chatId, title: chatTitle },
+        detail: { id, title },
         bubbles: true,
         composed: true,
       })
@@ -379,6 +396,17 @@ export class ChatSidebar extends Component {
   };
 
   // Public API methods
+  public toggleCollapse() {
+    const newState = !this.#isCollapsed();
+    this.#isCollapsed(newState);
+    // Persist state to localStorage
+    localStorage.setItem("sidebar-collapsed", String(newState));
+  }
+
+  public isCollapsed(): boolean {
+    return this.#isCollapsed();
+  }
+
   public async refreshChats() {
     this.#checkAuthStatus();
     if (!this.#isSignedIn()) {

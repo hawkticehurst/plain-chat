@@ -45,7 +45,7 @@ export class ChatSettings extends Component {
     this.append(html`
       <div class="ai-settings">
         <div class="ai-settings-header">
-          <h2>AI Settings</h2>
+          <h2>Settings</h2>
           <p class="ai-settings-description">
             Configure your AI preferences and API settings
           </p>
@@ -142,9 +142,6 @@ export class ChatSettings extends Component {
 
           <!-- Action Buttons -->
           <div class="settings-actions">
-            <button type="button" class="btn btn-secondary" @click="cancel">
-              Cancel
-            </button>
             <button type="button" class="btn btn-primary" @click="saveSettings">
               Save Settings
             </button>
@@ -500,10 +497,6 @@ export class ChatSettings extends Component {
     } finally {
       this.#isSaving(false);
     }
-  };
-
-  cancel = () => {
-    window.location.hash = "#/";
   };
 }
 

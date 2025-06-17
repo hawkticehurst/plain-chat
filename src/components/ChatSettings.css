@@ -185,9 +185,8 @@ chat-settings {
   .settings-actions {
     display: flex;
     gap: 16px;
-    justify-content: flex-end;
+    justify-content: center;
     padding-top: 24px;
-    border-top: 1px solid var(--color-border);
   }
 
   .btn {
