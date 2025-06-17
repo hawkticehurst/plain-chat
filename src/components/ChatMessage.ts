@@ -169,6 +169,8 @@ export class ChatMessage extends Component {
     requestAnimationFrame(() => {
       if (this.#textElement && this.#content() === content) {
         this.#textElement.innerHTML = markup;
+        // Add copy button event listeners after DOM update
+        this.#setupCopyButtons();
       }
     });
   }
@@ -198,7 +200,17 @@ export class ChatMessage extends Component {
   }
 
   #renderCodeBlock(code: string, language: string): string {
-    return `<pre class="code-block" data-language="${language}"><code class="hljs">${this.#escapeHtml(code)}</code></pre>`;
+    const codeId = `code-${Math.random().toString(36).substring(2, 9)}`;
+    return `<pre class="code-block" data-language="${language}" data-code-id="${codeId}">
+      <button class="copy-button" data-code-id="${codeId}" aria-label="Copy code">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="m5 15-4-4v-9a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+        <span class="copy-text">Copy</span>
+      </button>
+      <code class="hljs">${this.#escapeHtml(code)}</code>
+    </pre>`;
   }
 
   async #applySyntaxHighlighting(html: string): Promise<string> {
@@ -239,6 +251,19 @@ export class ChatMessage extends Component {
           // Copy attributes and classes from our custom pre to Shiki's pre
           shikiPre.className = `code-block hljs ${shikiPre.className}`;
           shikiPre.setAttribute("data-language", language);
+          shikiPre.setAttribute(
+            "data-code-id",
+            pre.getAttribute("data-code-id") || ""
+          );
+
+          // Preserve the copy button
+          const copyButton = pre.querySelector(".copy-button");
+          if (copyButton) {
+            shikiPre.insertBefore(
+              copyButton.cloneNode(true),
+              shikiPre.firstChild
+            );
+          }
 
           // Preserve any additional styling
           const originalStyle = pre.getAttribute("style");
@@ -264,7 +289,6 @@ export class ChatMessage extends Component {
   }
 
   #mapLanguage(language: string): string {
-    console.log(`Mapping language: ${language}`);
     // Map common language aliases to Shiki-supported languages
     const languageMap: Record<string, string> = {
       js: "javascript",
@@ -355,6 +379,67 @@ export class ChatMessage extends Component {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
+  }
+
+  #setupCopyButtons() {
+    if (!this.#textElement) return;
+
+    const copyButtons = this.#textElement.querySelectorAll(".copy-button");
+
+    copyButtons.forEach((button) => {
+      const htmlButton = button as HTMLButtonElement;
+      const codeId = htmlButton.getAttribute("data-code-id");
+
+      // Remove existing event listeners to prevent duplicates
+      const newButton = htmlButton.cloneNode(true) as HTMLButtonElement;
+      htmlButton.parentNode?.replaceChild(newButton, htmlButton);
+
+      newButton.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        try {
+          // Find the corresponding code block
+          const codeBlock = this.#textElement?.querySelector(
+            `pre[data-code-id="${codeId}"] code`
+          );
+          if (!codeBlock) return;
+
+          const codeText = codeBlock.textContent || "";
+          await navigator.clipboard.writeText(codeText);
+
+          // Provide visual feedback
+          const copyText = newButton.querySelector(".copy-text");
+          const originalText = copyText?.textContent;
+
+          if (copyText) {
+            copyText.textContent = "Copied!";
+            newButton.classList.add("copied");
+
+            setTimeout(() => {
+              copyText.textContent = originalText || "Copy";
+              newButton.classList.remove("copied");
+            }, 2000);
+          }
+        } catch (error) {
+          console.error("Failed to copy code:", error);
+
+          // Fallback visual feedback for errors
+          const copyText = newButton.querySelector(".copy-text");
+          const originalText = copyText?.textContent;
+
+          if (copyText) {
+            copyText.textContent = "Failed";
+            newButton.classList.add("error");
+
+            setTimeout(() => {
+              copyText.textContent = originalText || "Copy";
+              newButton.classList.remove("error");
+            }, 2000);
+          }
+        }
+      });
+    });
   }
 
   // Public API methods
