@@ -107,6 +107,11 @@ export class ChatMain extends Component {
 
   // Public API methods
   public async loadChat(chatId: string | null) {
+    // Prevent duplicate loading of the same chat
+    if (this.#currentChatId() === chatId && this.#messages().length > 0) {
+      return;
+    }
+
     this.#currentChatId(chatId);
 
     if (!chatId) {

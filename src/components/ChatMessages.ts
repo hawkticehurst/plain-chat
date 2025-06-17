@@ -73,7 +73,6 @@ export class ChatMessages extends Component {
         if (this.#messagesContainer) {
           this.#messagesContainer.scrollTop =
             this.#messagesContainer.scrollHeight;
-          console.log(this.#messagesContainer.scrollHeight);
         }
       });
     }

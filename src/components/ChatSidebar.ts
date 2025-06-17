@@ -357,19 +357,7 @@ export class ChatSidebar extends Component {
   };
 
   #handleChatSelect = (chatId: string) => {
-    // Remove active class from all items
-    const allItems =
-      this.#chatListSection?.querySelectorAll("chat-sidebar-item");
-    allItems?.forEach((item) => item.classList.remove("active"));
-
-    // Add active class to clicked item
-    const clickedItem = this.#chatListSection?.querySelector(
-      `chat-sidebar-item[data-chat-id="${chatId}"]`
-    );
-    clickedItem?.classList.add("active");
-
-    this.#currentChatId(chatId);
-
+    // Just dispatch the event - let the App handle everything
     this.dispatchEvent(
       new CustomEvent("chat-selected", {
         detail: { id: chatId },
@@ -404,7 +392,26 @@ export class ChatSidebar extends Component {
   }
 
   public setCurrentChat(chatId: string | null) {
+    // Prevent duplicate setting of the same chat
+    if (this.#currentChatId() === chatId) {
+      return;
+    }
+
     this.#currentChatId(chatId);
+
+    // Update visual state immediately
+    const allItems =
+      this.#chatListSection?.querySelectorAll("chat-sidebar-item");
+    allItems?.forEach((item) => item.classList.remove("active"));
+
+    if (chatId && this.#chatListSection) {
+      const currentItem = this.#chatListSection.querySelector(
+        `chat-sidebar-item[data-chat-id="${chatId}"]`
+      );
+      if (currentItem) {
+        currentItem.classList.add("active");
+      }
+    }
   }
 
   public removeChat(chatId: string) {

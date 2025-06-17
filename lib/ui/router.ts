@@ -1,6 +1,6 @@
 // A type for the handler function that each route will execute.
 // It receives an object containing any URL parameters.
-type RouteHandler = (params: Record<string, string>) => void;
+type RouteHandler = (params: Record<string, string>) => void | Promise<void>;
 
 // The internal representation of a route.
 type Route = {
