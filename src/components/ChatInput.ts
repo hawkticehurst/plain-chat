@@ -1,107 +1,240 @@
-import { Component, html } from "@lib";
+import { Component, html, signal, effect, config, authService } from "@lib";
+import "./ChatInput.css";
 
 export class ChatInput extends Component {
-  private _isLoading = false;
-  private _isStreaming = false;
+  // Private reactive state using signals
+  #isLoading = signal(false);
+  #isStreaming = signal(false);
+  #selectedModel = signal("google/gemini-2.5-flash-preview-05-20");
+  #textValue = signal("");
 
-  constructor() {
-    super();
-  }
+  // Cached DOM references (queried once in init)
+  #textarea: HTMLTextAreaElement | null = null;
+  #sendBtn: HTMLButtonElement | null = null;
+  #cancelBtn: HTMLButtonElement | null = null;
+  #modelSelect: HTMLSelectElement | null = null;
 
-  connectedCallback() {
-    this.render();
-  }
-
-  render() {
-    const template = html`
+  init() {
+    this.innerHTML = "";
+    this.append(html`
       <div class="wrapper">
-        <textarea
-          class="input"
-          placeholder="Type your message here..."
-          rows="1"
-          ${this._isLoading || this._isStreaming ? "disabled" : ""}
-        ></textarea>
-        <div class="actions">
-          <button
-            class="attach-btn"
-            type="button"
-            title="Attach file"
-            ${this._isLoading || this._isStreaming ? "disabled" : ""}
+        <div class="input-container">
+          <textarea
+            class="input"
+            placeholder="Type your message here..."
+            rows="1"
+            @input="handleTextareaInput"
+            @keydown="handleKeyDown"
+          ></textarea>
+          <div class="actions">
+            <button
+              class="send-btn"
+              type="button"
+              title="Send message"
+              @click="handleSend"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 17a.75.75 0 0 1-.75-.75V5.612L5.29 9.77a.75.75 0 0 1-1.08-1.04l5.25-5.5a.75.75 0 0 1 1.08 0l5.25 5.5a.75.75 0 1 1-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0 1 10 17Z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </button>
+            <button
+              class="cancel-btn"
+              type="button"
+              title="Cancel streaming response"
+              @click="handleCancel"
+              style="display: none;"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M4.5 7.5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-9a3 3 0 0 1-3-3v-9Z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="model-selector">
+          <select
+            class="model-select"
+            title="Select AI Model"
+            @change="handleModelChange"
           >
-            📎
-          </button>
-          ${this._isStreaming
-            ? html`<button
-                class="cancel-btn"
-                type="button"
-                title="Cancel streaming response"
-              >
-                ⏹️
-              </button>`
-            : html`<button
-                class="send-btn"
-                type="button"
-                title="Send message"
-                ${this._isLoading ? "disabled" : ""}
-              >
-                ${this._isLoading ? "⏳" : "➤"}
-              </button>`}
+            <option value="google/gemini-2.5-flash-preview-05-20">
+              Gemini 2.5 Flash (Preview)
+            </option>
+            <option value="anthropic/claude-sonnet-4">Claude Sonnet 4</option>
+            <option value="anthropic/claude-3.7-sonnet">
+              Claude Sonnet 3.7
+            </option>
+            <option value="google/gemini-2.5-pro-preview">
+              Gemini 2.5 Pro (Preview)
+            </option>
+            <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+            <option value="openai/o4-mini">o4 mini</option>
+            <option value="openai/gpt-4">GPT-4</option>
+            <option value="meta-llama/llama-3-8b-instruct">Llama 3 8B</option>
+          </select>
         </div>
       </div>
-    `;
+    `);
 
-    this.innerHTML = String(template);
+    // Cache DOM references
+    this.#textarea = this.querySelector(".input") as HTMLTextAreaElement;
+    this.#sendBtn = this.querySelector(".send-btn") as HTMLButtonElement;
+    this.#cancelBtn = this.querySelector(".cancel-btn") as HTMLButtonElement;
+    this.#modelSelect = this.querySelector(
+      ".model-select"
+    ) as HTMLSelectElement;
 
-    // Add event listeners for auto-resize and send functionality
-    const textarea = this.querySelector(".input") as HTMLTextAreaElement;
-    const sendBtn = this.querySelector(".send-btn") as HTMLButtonElement;
-    const cancelBtn = this.querySelector(".cancel-btn") as HTMLButtonElement;
-
-    if (textarea) {
-      textarea.addEventListener("input", this._handleTextareaResize.bind(this));
-      textarea.addEventListener("keydown", this._handleKeyDown.bind(this));
+    // Set initial model value
+    if (this.#modelSelect) {
+      this.#modelSelect.value = this.#selectedModel();
     }
 
-    if (sendBtn) {
-      sendBtn.addEventListener("click", this._handleSend.bind(this));
-    }
+    // Load user's preferred model
+    this.#loadUserPreferences();
 
-    if (cancelBtn) {
-      cancelBtn.addEventListener("click", this._handleCancel.bind(this));
+    // Wire up reactive effects for granular updates
+    this.#setupReactiveEffects();
+  }
+
+  #setupReactiveEffects() {
+    // Update textarea disabled state based on loading/streaming
+    effect(() => {
+      if (this.#textarea) {
+        this.#textarea.disabled = this.#isLoading() || this.#isStreaming();
+      }
+    });
+
+    // Update send button based on loading state
+    effect(() => {
+      if (this.#sendBtn) {
+        this.#sendBtn.disabled = this.#isLoading();
+        this.#sendBtn.innerHTML = "";
+        const markup = this.#isLoading()
+          ? html`<span>Loading</span>`
+          : html`<svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 17a.75.75 0 0 1-.75-.75V5.612L5.29 9.77a.75.75 0 0 1-1.08-1.04l5.25-5.5a.75.75 0 0 1 1.08 0l5.25 5.5a.75.75 0 1 1-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0 1 10 17Z"
+                clip-rule="evenodd"
+              />
+            </svg>`;
+        this.#sendBtn.appendChild(markup);
+        this.#sendBtn.style.display = this.#isStreaming() ? "none" : "flex";
+      }
+    });
+
+    // Update cancel button based on streaming state
+    effect(() => {
+      if (this.#cancelBtn) {
+        this.#cancelBtn.style.display = this.#isStreaming() ? "flex" : "none";
+      }
+    });
+  }
+
+  async #loadUserPreferences() {
+    try {
+      // Wait for auth to be ready
+      if (!authService.isReady()) {
+        await authService.waitForReady(5000);
+      }
+
+      // Only load preferences if user is signed in
+      if (!authService.isSignedIn()) {
+        return;
+      }
+
+      // Fetch user preferences
+      const response = await authService.fetchWithAuth(
+        `${config.apiBaseUrl}/ai-settings/preferences`
+      );
+
+      if (response.ok) {
+        const preferences = await response.json();
+        if (preferences && preferences.defaultModel) {
+          // Update the selected model
+          this.#selectedModel(preferences.defaultModel);
+
+          // Update the dropdown value if it exists
+          if (this.#modelSelect) {
+            this.#modelSelect.value = preferences.defaultModel;
+          }
+        }
+      }
+    } catch (error) {
+      // Silently fail - use default model if preferences can't be loaded
+      console.warn("Failed to load user model preferences:", error);
     }
   }
 
-  private _handleTextareaResize(event: Event) {
+  // Event handlers (called via @ attributes)
+  handleTextareaInput(event: Event) {
     const textarea = event.target as HTMLTextAreaElement;
+    this.#textValue(textarea.value);
+
+    // Auto-resize functionality
     textarea.style.height = "auto";
     textarea.style.height = Math.min(textarea.scrollHeight, 120) + "px";
   }
 
-  private _handleKeyDown(event: KeyboardEvent) {
+  handleKeyDown(event: KeyboardEvent) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      this._handleSend();
+      this.handleSend();
     }
   }
 
-  private async _handleSend() {
-    const textarea = this.querySelector(".input") as HTMLTextAreaElement;
-    if (!textarea || !textarea.value.trim() || this._isLoading) {
+  handleModelChange(event: Event) {
+    const select = event.target as HTMLSelectElement;
+    this.#selectedModel(select.value);
+
+    // Dispatch event to notify parent of model change
+    this.dispatchEvent(
+      new CustomEvent("model-changed", {
+        detail: { model: this.#selectedModel() },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  handleSend() {
+    if (!this.#textarea || !this.#textValue().trim() || this.#isLoading()) {
       return;
     }
 
-    const message = textarea.value.trim();
-    textarea.value = "";
-    textarea.style.height = "auto";
+    const message = this.#textValue().trim();
+
+    // Clear the input
+    this.#textarea.value = "";
+    this.#textValue("");
+    this.#textarea.style.height = "auto";
 
     try {
-      this._isLoading = true;
-      this.render(); // Re-render to show loading state
+      this.#isLoading(true);
 
       // Dispatch event to ChatMain to handle the AI conversation
       this.dispatchEvent(
         new CustomEvent("send-message", {
-          detail: { message },
+          detail: { message, model: this.#selectedModel() },
           bubbles: true,
           composed: true,
         })
@@ -109,13 +242,12 @@ export class ChatInput extends Component {
     } catch (error) {
       console.error("Error sending message:", error);
       // Re-enable input on error
-      this._isLoading = false;
-      this.render();
+      this.#isLoading(false);
     }
   }
 
-  private _handleCancel() {
-    if (this._isStreaming) {
+  handleCancel() {
+    if (this.#isStreaming()) {
       // Dispatch cancel event to ChatMain
       this.dispatchEvent(
         new CustomEvent("cancel-streaming", {
@@ -126,25 +258,31 @@ export class ChatInput extends Component {
     }
   }
 
-  // Method to be called by parent when message processing is complete
-  public messageProcessed() {
-    this._isLoading = false;
-    this._isStreaming = false;
-    this.render();
+  // Public API methods for parent components
+  messageProcessed() {
+    this.#isLoading(false);
+    this.#isStreaming(false);
   }
 
-  // Method to be called by parent when streaming starts
-  public streamingStarted() {
-    this._isStreaming = true;
-    this._isLoading = false;
-    this.render();
+  streamingStarted() {
+    this.#isStreaming(true);
+    this.#isLoading(false);
   }
 
-  // Method to be called by parent when streaming ends
-  public streamingEnded() {
-    this._isStreaming = false;
-    this._isLoading = false;
-    this.render();
+  streamingEnded() {
+    this.#isStreaming(false);
+    this.#isLoading(false);
+  }
+
+  getSelectedModel(): string {
+    return this.#selectedModel();
+  }
+
+  setSelectedModel(model: string) {
+    this.#selectedModel(model);
+    if (this.#modelSelect) {
+      this.#modelSelect.value = model;
+    }
   }
 }
 

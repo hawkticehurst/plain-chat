@@ -1,126 +1,88 @@
-// Adapted from https://github.com/hawkticehurst/stellar/blob/main/examples/counter/index.html
-
-// function isCustomElement(tagName: string) {
-//   return tagName.includes('-');
-// }
-
-function removeAttribute(elem: HTMLElement, attr: Attr) {
-  elem?.removeAttributeNode(attr);
-}
-
-export class Component extends HTMLElement {
-  private _tracked: { elem: HTMLElement; event: string; fn: EventListener }[];
-  private _hasRendered: boolean = false;
+/**
+ * Base class for all UI components in the application.
+ *
+ * This class provides a structure for creating web components that can
+ * be initialized with props, handle lifecycle events, and manage event
+ * listeners.
+ *
+ * Components should extend this class and implement the `init` method
+ * to set up their initial state and DOM structure.
+ */
+export class Component<P = any> extends HTMLElement {
+  protected props: P | undefined;
+  private _cleanupCallbacks: (() => void)[] = [];
 
   constructor() {
     super();
-    this._tracked = [];
+  }
+
+  connectedCallback() {
+    if (this.props === undefined) {
+      this.init();
+    }
     this._processEventAttributes();
-  }
-
-  private _processEventAttributes() {
-    // Clear existing tracked listeners
-    for (const { elem, event, fn } of this._tracked) {
-      elem?.removeEventListener(event, fn);
-    }
-    this._tracked = [];
-
-    let node;
-    const changes: (() => void)[] = [];
-    // const nestedCustomElements: HTMLElement[] = [];
-    const filter = (node: Node) => {
-      // Reject any node that is not an HTML element
-      if (!(node instanceof HTMLElement)) {
-        return NodeFilter.FILTER_REJECT;
-      }
-      // Check if node is a nested custom element
-      // if (isCustomElement(node.tagName) && node.tagName !== this.tagName) {
-      //   nestedCustomElements.push(node);
-      //   return NodeFilter.FILTER_REJECT;
-      // }
-      // // Check if node is a child of a nested custom element
-      // for (const nested of nestedCustomElements) {
-      //   if (nested.contains(node)) {
-      //     return NodeFilter.FILTER_REJECT;
-      //   }
-      // }
-      return NodeFilter.FILTER_ACCEPT;
-    };
-    const iterator = document.createNodeIterator(
-      this,
-      NodeFilter.SHOW_ELEMENT,
-      { acceptNode: filter }
-    );
-    while ((node = iterator.nextNode())) {
-      if (!node || !(node instanceof HTMLElement)) return;
-      for (const attr of node.attributes) {
-        if (attr.name.startsWith('@')) {
-          changes.push(() => this.setEventHandler(attr));
-        }
-      }
-    }
-    // Process any changes that were collected after the initial iteration
-    for (const change of changes) {
-      change();
-    }
-    // Attach event listeners
-    for (const { elem, event, fn } of this._tracked) {
-      elem?.addEventListener(event, fn);
-    }
-  }
-
-  // Override innerHTML to reprocess event attributes when content changes
-  set innerHTML(value: string) {
-    super.innerHTML = value;
-    this._processEventAttributes();
-  }
-
-  get innerHTML(): string {
-    return super.innerHTML;
-  }
-
-  private setEventHandler(attr: Attr) {
-    const elem = attr.ownerElement as HTMLElement;
-    const { name: event, value: method } = attr;
-    this._tracked.push({
-      elem: elem,
-      event: event.slice(1),
-      fn: (e: Event) => {
-        (this as any)[method](e);
-      },
-    });
-    removeAttribute(elem, attr);
-  }
-
-  // @ts-ignore
-  render(...args: any[]): void {
-    if (this._hasRendered) {
-      console.error(
-        `Component ${this.tagName} has already been rendered. Use signals and DOM manipulation for updates instead of calling render() again.`
-      );
-      return;
-    }
-    this._hasRendered = true;
-    this.init(...args);
-  }
-
-  // Override this method in subclasses to implement initial rendering logic
-  init(..._args: any[]): void {
-    // Default implementation - override in subclasses
   }
 
   disconnectedCallback() {
-    // Reset render state when component is removed from DOM
-    this._hasRendered = false;
-    
-    // Clean up event listeners
-    for (const { elem, event, fn } of this._tracked) {
-      elem?.removeEventListener(event, fn);
+    for (const cleanup of this._cleanupCallbacks) {
+      cleanup();
     }
-    this._tracked = [];
+    this._cleanupCallbacks = [];
   }
 
-  insert(parent: Node, node: Element, ref: Node | null = null) {
-    parent.insertBefore(node, ref);
+  /**
+   * The component's main initialization lifecycle hook. This is where you
+   * should build the initial DOM and set up reactive effects.
+   *
+   * If this component is created as a "root" element via the global
+   * `render()` utility (from `lib/ui/render.ts`), this method will
+   * receive the `props` object passed to that function.
+   *
+   * @param props The initial data for the component, typically provided
+   *              by the router or at application startup.
+   */
+  init(props?: P): void {
+    this.props = props;
+  }
+
+  protected _addCleanup(fn: () => void) {
+    this._cleanupCallbacks.push(fn);
+  }
+
+  // Reference: https://github.com/hawkticehurst/stellar/blob/main/index.ts
+  protected _processEventAttributes() {
+    const iterator = document.createNodeIterator(this, NodeFilter.SHOW_ELEMENT);
+    let node: Element | null;
+    while ((node = iterator.nextNode() as Element | null)) {
+      if (node instanceof HTMLElement) {
+        // Skip the root element (this component itself) - its event attributes
+        // should be processed by the parent component that created it
+        if (node === this) {
+          continue;
+        }
+
+        for (const attr of [...node.attributes]) {
+          if (attr.name.startsWith("@")) {
+            const eventName = attr.name.slice(1);
+            const handlerName = attr.value;
+
+            if (typeof (this as any)[handlerName] === "function") {
+              const handler = (e: Event) => (this as any)[handlerName](e);
+              node.addEventListener(eventName, handler);
+              // Capture node by value to avoid null reference in cleanup
+              const nodeRef = node;
+              this._addCleanup(() =>
+                nodeRef.removeEventListener(eventName, handler)
+              );
+              node.removeAttribute(attr.name);
+            } else {
+              console.warn(
+                `Handler method "${handlerName}" not found on component ${this.tagName}.`
+              );
+            }
+          }
+        }
+      }
+    }
   }
 }

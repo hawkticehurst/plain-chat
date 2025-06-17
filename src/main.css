@@ -1,19 +1,9 @@
-/* Import chat components styles */
-@import "./components/ChatSidebar.css";
-@import "./components/ChatMain.css";
-@import "./components/ChatMessage.css";
-@import "./components/ChatMessages.css";
-@import "./components/ChatInput.css";
-@import "./components/AISettings.css";
-@import "./components/UsageDashboard.css";
-@import "./components/NotificationComponent.css";
-
 :root {
   /* Base colors */
   --color-primary: #646cff;
   --color-primary-hover: #535bf2;
   --color-primary-light: rgba(100, 108, 255, 0.1);
-  --color-accent: #007aff;
+  --color-accent: #0055ff;
   --color-success: #34c759;
   --color-success-light: rgba(52, 199, 89, 0.1);
   --color-error: #ff3b30;
@@ -31,7 +21,7 @@
   /* Background colors */
   --color-background: #242424;
   --color-surface: #1a1a1a;
-  --color-surface-raised: #2a2a2a;
+  --color-surface-raised: #3e3e3e;
 
   /* Border colors */
   --color-border: rgba(255, 255, 255, 0.1);
@@ -50,53 +40,6 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  min-height: 100vh;
-}
-
-#root {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-}
-
-chat-app {
-  display: flex;
-  height: 100vh;
-  width: 100%;
-}
-
-.auth-required {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  padding: 32px;
-  text-align: center;
-}
-
-.error {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  color: #ff6b6b;
-  font-size: 18px;
-}
-
-@media (max-width: 768px) {
-  chat-app {
-    flex-direction: column;
-  }
-}
-
 @media (prefers-color-scheme: light) {
   :root {
     /* Text colors */
@@ -112,4 +55,23 @@ chat-app {
     /* Border colors */
     --color-border: rgba(0, 0, 0, 0.1);
   }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
 }

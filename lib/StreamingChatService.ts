@@ -25,6 +25,7 @@ export interface StreamMessageOptions {
   userMessage: string;
   conversationHistory: Array<{ role: string; content: string }>;
   isFirstMessage: boolean;
+  model?: string; // Selected model from the UI
 }
 
 export class StreamingChatService {
@@ -133,6 +134,7 @@ export class StreamingChatService {
             message: options.userMessage,
             conversation: options.conversationHistory,
             useConvexStreaming: true,
+            model: options.model, // Pass the selected model
           }),
         }
       );
@@ -264,6 +266,25 @@ export class StreamingChatService {
     }
 
     return [];
+  }
+
+  /**
+   * Deletes a chat and all its messages
+   */
+  public async deleteChat(chatId: string): Promise<boolean> {
+    try {
+      const response = await authService.fetchWithAuth(
+        `${config.apiBaseUrl}/chats/${chatId}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      return response.ok;
+    } catch (error) {
+      console.error("Error deleting chat:", error);
+      return false;
+    }
   }
 
   /**

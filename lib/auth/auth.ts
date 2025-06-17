@@ -8,7 +8,7 @@ export interface AuthStatus {
   message?: string;
 }
 
-export class AuthService {
+export class AuthService extends EventTarget {
   private clerk: any = null;
 
   async init(
@@ -140,7 +140,6 @@ export class AuthService {
       }
 
       // If no Clerk session, return empty headers
-      console.log("No Clerk session available for auth headers");
       return {};
     } catch (error) {
       console.error("Error getting auth headers:", error);
@@ -176,6 +175,8 @@ export class AuthService {
 
   setClerk(clerk: Clerk) {
     this.clerk = clerk;
+    // Emit auth ready event
+    this.dispatchEvent(new CustomEvent("auth-ready"));
   }
 
   getClerkInstance() {
@@ -297,6 +298,72 @@ export class AuthService {
       // Catch-all for any OAuth-related query parameters
       /[?&](code|state|scope|authuser|prompt|session_state)=/.test(search)
     );
+  }
+
+  isReady(): boolean {
+    return (
+      this.clerk !== null && this.clerk.loaded === true && !!this.clerk.session
+    );
+  }
+
+  async waitForReady(timeoutMs: number = 5000): Promise<boolean> {
+    if (this.isReady()) {
+      return true;
+    }
+
+    return new Promise((resolve) => {
+      let timeoutId: ReturnType<typeof setTimeout>;
+      let checkInterval: ReturnType<typeof setInterval>;
+
+      const cleanup = () => {
+        if (timeoutId) clearTimeout(timeoutId);
+        if (checkInterval) clearInterval(checkInterval);
+      };
+
+      // Set timeout
+      timeoutId = setTimeout(() => {
+        cleanup();
+        resolve(false);
+      }, timeoutMs);
+
+      // Check every 100ms
+      checkInterval = setInterval(() => {
+        if (this.isReady()) {
+          cleanup();
+          resolve(true);
+        }
+      }, 100);
+    });
+  }
+
+  async waitForSessionReady(timeoutMs: number = 5000): Promise<boolean> {
+    if (this.clerk && this.clerk.session) {
+      return true;
+    }
+
+    return new Promise((resolve) => {
+      let timeoutId: ReturnType<typeof setTimeout>;
+      let checkInterval: ReturnType<typeof setInterval>;
+
+      const cleanup = () => {
+        if (timeoutId) clearTimeout(timeoutId);
+        if (checkInterval) clearInterval(checkInterval);
+      };
+
+      // Set timeout
+      timeoutId = setTimeout(() => {
+        cleanup();
+        resolve(false);
+      }, timeoutMs);
+
+      // Check every 50ms for session availability
+      checkInterval = setInterval(() => {
+        if (this.clerk && this.clerk.session) {
+          cleanup();
+          resolve(true);
+        }
+      }, 50);
+    });
   }
 }
 

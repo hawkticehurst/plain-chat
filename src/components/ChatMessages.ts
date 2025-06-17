@@ -1,59 +1,99 @@
-import { Component, type Message } from "@lib";
+import { Component, html, signal, effect, reconcile, type Message } from "@lib";
 import { ChatMessage } from "@components";
+import "./ChatMessages.css";
 
 export class ChatMessages extends Component {
-  private _messages: Array<Message> = [];
-  private _renderedCount = 0;
+  // Private reactive state using signals
+  #messages = signal<Array<Message>>([]);
+  #messagesContainer: HTMLElement | null = null;
+  #messageNodes = new Map<string, Element>();
 
-  constructor(messages: Array<Message>) {
+  constructor(initialMessages: Array<Message> = []) {
     super();
-    this._messages = messages;
+    this.#messages(initialMessages);
+  }
+
+  init() {
+    this.innerHTML = "";
+    this.append(html`
+      <div class="messages-container"></div>
+    `);
+
+    // Cache DOM references
+    this.#messagesContainer = this.querySelector(
+      ".messages-container"
+    ) as HTMLElement;
+
+    effect(() => {
+      if (!this.#messagesContainer) return;
+  
+      const messages = this.#messages();
+  
+      // Use reconcile to efficiently update the DOM
+      this.#messageNodes = reconcile(
+        this.#messagesContainer,
+        this.#messageNodes,
+        messages,
+        // Key function: create unique key for each message
+        (message) =>
+          `${message.timestamp || Date.now()}-${message.role}-${message.content.slice(0, 50)}`,
+        // Create function: create new ChatMessage component
+        (message) => {
+          const messageComponent = new ChatMessage();
+          // Initialize the component and render immediately
+          messageComponent.render(
+            message.role,
+            message.content,
+            message.isLoading || false,
+            message.isStreaming || false
+          );
+          return messageComponent;
+        },
+        // Update function: update existing ChatMessage component
+        async (node, message) => {
+          const messageComponent = node as ChatMessage;
+          await messageComponent.render(
+            message.role,
+            message.content,
+            message.isLoading || false,
+            message.isStreaming || false
+          );
+        }
+      );
+  
+      // Auto-scroll to bottom after message updates
+      this.#scrollToBottom();
+    });
+  }
+
+  #scrollToBottom() {
+    if (this.#messagesContainer) {
+      // Use requestAnimationFrame to ensure DOM updates are complete
+      requestAnimationFrame(() => {
+        if (this.#messagesContainer) {
+          this.#messagesContainer.scrollTop =
+            this.#messagesContainer.scrollHeight;
+        }
+      });
+    }
   }
 
   public updateMessages(messages: Array<Message>) {
-    this._messages = messages;
+    this.#messages(messages);
   }
 
-  async render() {
-    // Optimization: Only render new messages, not all messages from scratch
-    const currentCount = this._messages.length;
+  public addMessage(message: Message) {
+    const currentMessages = this.#messages();
+    this.#messages([...currentMessages, message]);
+  }
 
-    // If we have fewer messages than before, re-render everything
-    if (currentCount < this._renderedCount) {
-      this.innerHTML = "";
-      this._renderedCount = 0;
+  public updateLastMessage(message: Message) {
+    const currentMessages = this.#messages();
+    if (currentMessages.length > 0) {
+      const newMessages = [...currentMessages];
+      newMessages[newMessages.length - 1] = message;
+      this.#messages(newMessages);
     }
-
-    // Render only new messages
-    for (let i = this._renderedCount; i < currentCount; i++) {
-      const message = this._messages[i];
-      const messageComponent = new ChatMessage();
-      await messageComponent.render(
-        message.role,
-        message.content,
-        message.isLoading || false,
-        message.isStreaming || false
-      );
-      this.insert(this, messageComponent, null);
-    }
-
-    // Update content of the last message if it's streaming (FIXED LOGIC)
-    if (currentCount > 0) {
-      const lastMessage = this._messages[currentCount - 1];
-      if (lastMessage.isStreaming) {
-        // Update the last rendered message component
-        const lastMessageElement = this.lastElementChild as ChatMessage;
-        if (
-          lastMessageElement &&
-          lastMessageElement.tagName.toLowerCase() === "chat-message"
-        ) {
-          // Use updateStreamingContent for smooth word-by-word animation
-          await lastMessageElement.updateStreamingContent(lastMessage.content);
-        }
-      }
-    }
-
-    this._renderedCount = currentCount;
   }
 }
 
