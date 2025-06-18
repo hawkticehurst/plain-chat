@@ -83,11 +83,7 @@ export class NotificationComponent extends Component {
 
   init() {
     // Build the DOM structure once
-    this.append(html`
-      <div class="notification-container">
-        <!-- Notifications will be added here by reactive effects -->
-      </div>
-    `);
+    this.append(html`<div class="notification-container"></div>`);
 
     // Cache DOM references
     this.#container = this.querySelector(
@@ -135,7 +131,11 @@ export class NotificationComponent extends Component {
     element.innerHTML = `
       <div class="notification__content">
         <span class="notification__message">${this.#escapeHtml(notification.message)}</span>
-        <button class="notification__close" type="button">×</button>
+        <button class="notification__close" type="button">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
     `;
 
