@@ -60,15 +60,14 @@ export class ChatSidebar extends Component {
 
     // Load collapsed state from localStorage, but default to collapsed when signed out
     const savedState = localStorage.getItem("sidebar-collapsed");
-    if (savedState !== null) {
+    if (savedState !== null && authStore.isAuthenticated()) {
+      // If user is signed in, respect their saved preference
       this.#isCollapsed(savedState === "true");
+    } else if (authStore.isAuthenticated()) {
+      // If user is signed in but no saved state, default to open
+      this.#isCollapsed(false);
     } else {
-      // No saved state - default to collapsed when signed out
-      this.#isCollapsed(!authStore.isAuthenticated());
-    }
-
-    // If user is signed out, always collapse regardless of saved state
-    if (!authStore.isAuthenticated()) {
+      // If user is signed out, always collapse
       this.#isCollapsed(true);
     }
 
@@ -206,13 +205,24 @@ export class ChatSidebar extends Component {
 
       if (isSignedIn) {
         this.#loadChats();
+
+        // When user signs in, check if they have a saved preference
+        const savedState = localStorage.getItem("sidebar-collapsed");
+        if (savedState === null) {
+          // No saved preference, default to open for signed-in users
+          this.#isCollapsed(false);
+          localStorage.setItem("sidebar-collapsed", "false");
+        } else {
+          // Respect their saved preference
+          this.#isCollapsed(savedState === "true");
+        }
       } else {
         this.#chats([]);
         this.#loading(false);
         // Collapse sidebar when user signs out
         this.#isCollapsed(true);
-        // Persist the collapsed state
-        localStorage.setItem("sidebar-collapsed", "true");
+        // Note: We don't persist the collapsed state on sign out
+        // This allows the user to have their preference restored on sign in
       }
     });
   }
