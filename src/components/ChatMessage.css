@@ -112,29 +112,11 @@ chat-message {
         font-family: var(--font-family-code);
         line-height: 1.4;
 
-        /* Language badge */
-        &[data-language]:not([data-language=""]):before {
-          content: attr(data-language);
-          position: absolute;
-          top: 8px;
-          right: 8px;
-          background: var(--color-surface-raised);
-          color: var(--color-text-muted);
-          padding: 2px 8px;
-          border-radius: 4px;
-          font-size: 0.7rem;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          z-index: 1;
-          border: 1px solid var(--color-border);
-        }
-
-        /* Copy button - exact same styling as language badge */
+        /* Copy button */
         .copy-button {
           position: absolute !important;
           top: 8px !important;
-          right: calc(8px + var(--lang-width, 60px) + 4px);
+          right: 8px !important;
           background: var(--color-surface-raised) !important;
           color: var(--color-text-muted) !important;
           padding: 3.25px 8px !important;
@@ -187,115 +169,6 @@ chat-message {
           }
         }
 
-        /* When language tag is present, position copy button to its left */
-        &[data-language]:not([data-language=""]) .copy-button {
-          right: calc(8px + var(--lang-width, 60px) + 8px) !important;
-        }
-
-        /* Calculate language badge width based on approximate character count + padding */
-        &[data-language="c"] {
-          --lang-width: 24px;
-        }
-        &[data-language="r"] {
-          --lang-width: 24px;
-        }
-        &[data-language="js"] {
-          --lang-width: 32px;
-        }
-        &[data-language="ts"] {
-          --lang-width: 32px;
-        }
-        &[data-language="go"] {
-          --lang-width: 32px;
-        }
-        &[data-language="css"] {
-          --lang-width: 38px;
-        }
-        &[data-language="sql"] {
-          --lang-width: 38px;
-        }
-        &[data-language="php"] {
-          --lang-width: 38px;
-        }
-        &[data-language="xml"] {
-          --lang-width: 38px;
-        }
-        &[data-language="lua"] {
-          --lang-width: 38px;
-        }
-        &[data-language="vim"] {
-          --lang-width: 38px;
-        }
-        &[data-language="tex"] {
-          --lang-width: 38px;
-        }
-        &[data-language="html"] {
-          --lang-width: 48px;
-        }
-        &[data-language="bash"] {
-          --lang-width: 48px;
-        }
-        &[data-language="json"] {
-          --lang-width: 48px;
-        }
-        &[data-language="yaml"] {
-          --lang-width: 48px;
-        }
-        &[data-language="toml"] {
-          --lang-width: 48px;
-        }
-        &[data-language="rust"] {
-          --lang-width: 48px;
-        }
-        &[data-language="java"] {
-          --lang-width: 48px;
-        }
-        &[data-language="dart"] {
-          --lang-width: 48px;
-        }
-        &[data-language="perl"] {
-          --lang-width: 48px;
-        }
-        &[data-language="scss"] {
-          --lang-width: 48px;
-        }
-        &[data-language="sass"] {
-          --lang-width: 48px;
-        }
-        &[data-language="swift"] {
-          --lang-width: 52px;
-        }
-        &[data-language="shell"] {
-          --lang-width: 52px;
-        }
-        &[data-language="python"] {
-          --lang-width: 58px;
-        }
-        &[data-language="kotlin"] {
-          --lang-width: 58px;
-        }
-        &[data-language="matlab"] {
-          --lang-width: 58px;
-        }
-        &[data-language="clojure"] {
-          --lang-width: 64px;
-        }
-        &[data-language="haskell"] {
-          --lang-width: 64px;
-        }
-        &[data-language="javascript"] {
-          --lang-width: 74px;
-        }
-        &[data-language="powershell"] {
-          --lang-width: 80px;
-        }
-        &[data-language="typescript"] {
-          --lang-width: 80px;
-        }
-        &[data-language="dockerfile"] {
-          --lang-width: 80px;
-        }
-
         /* Shiki overrides for better integration */
         &.hljs {
           background: var(--color-code-bg, #f5f5f5) !important;
@@ -306,9 +179,6 @@ chat-message {
 
           /* Make sure text doesn't wrap */
           white-space: pre;
-
-          /* Padding for language badge */
-          padding-top: 20px;
         }
 
         /* Fallback styling when Shiki fails */
@@ -445,19 +315,12 @@ chat-message {
       border-radius: 6px;
       font-size: 0.8rem;
 
-      &[data-language]:not([data-language=""]):before {
-        font-size: 0.65rem;
-        padding: 1px 6px;
-        top: 6px;
-        right: 8px;
-      }
-
       &.hljs {
         padding: 12px;
         padding-top: 16px;
       }
 
-      /* Mobile copy button adjustments - match language badge styling */
+      /* Mobile copy button adjustments */
       .copy-button {
         font-size: 0.65rem !important;
         padding: 1px 6px !important;
@@ -468,11 +331,6 @@ chat-message {
           width: 10px !important;
           height: 10px !important;
         }
-      }
-
-      /* Adjust positioning for mobile */
-      &[data-language]:not([data-language=""]) .copy-button {
-        right: calc(8px + var(--lang-width, 52px) + 6px) !important;
       }
     }
 
@@ -500,7 +358,7 @@ chat-message {
         padding-top: 14px;
       }
 
-      /* Smaller copy button for very small screens - match language badge styling */
+      /* Smaller copy button for very small screens */
       .copy-button {
         padding: 1px 4px !important;
         font-size: 0.6rem !important;
@@ -513,11 +371,6 @@ chat-message {
         .copy-text {
           display: none !important; /* Hide text on very small screens */
         }
-      }
-
-      /* Adjust positioning for very small screens */
-      &[data-language]:not([data-language=""]) .copy-button {
-        right: calc(8px + var(--lang-width, 40px) + 4px) !important;
       }
     }
   }

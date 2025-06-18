@@ -7,6 +7,8 @@ import {
   config,
   authService,
 } from "@lib";
+import { notificationService } from "./NotificationComponent";
+import { authStore } from "../stores/AuthStore";
 import "./ChatSettings.css";
 
 export class ChatSettings extends Component {
@@ -17,18 +19,13 @@ export class ChatSettings extends Component {
   #hasValidKey = signal<boolean>(false);
   #defaultModel = signal<string>("google/gemini-2.5-flash-preview-05-20");
   #systemPrompt = signal<string>("");
-  #message = signal<{
-    text: string;
-    type: "success" | "error" | "info";
-  } | null>(null);
 
   // DOM references
   #apiKeyInput: HTMLInputElement | null = null;
   #systemPromptTextarea: HTMLTextAreaElement | null = null;
   #testBtn: HTMLButtonElement | null = null;
   #saveBtn: HTMLButtonElement | null = null;
-  #errorElement: HTMLElement | null = null;
-  #successElement: HTMLElement | null = null;
+  #signOutBtn: HTMLButtonElement | null = null;
 
   // Computed values
   #canTestKey = computed(() => this.#apiKey().trim().length > 0);
@@ -38,6 +35,9 @@ export class ChatSettings extends Component {
     // Build the DOM structure once
     this.append(html`
       <div class="ai-settings">
+        <button class="sign-out-btn" @click="handleSignOut" title="Sign Out">
+          Sign Out
+        </button>
         <div class="ai-settings-header">
           <h2>Settings</h2>
           <p class="ai-settings-description">
@@ -60,7 +60,7 @@ export class ChatSettings extends Component {
                   autocomplete="off"
                   @input="handleApiKeyInput"
                 />
-                <button type="button" class="btn-test-key" @click="testApiKey">
+                <button type="button" class="btn" @click="testApiKey">
                   Test Key
                 </button>
               </div>
@@ -97,15 +97,9 @@ export class ChatSettings extends Component {
 
           <!-- Action Buttons -->
           <div class="settings-actions">
-            <button type="button" class="btn btn-primary" @click="saveSettings">
+            <button type="button" class="btn" @click="saveSettings">
               Save Settings
             </button>
-          </div>
-
-          <!-- Status Messages -->
-          <div class="status-messages">
-            <div class="error-message" style="display: none;"></div>
-            <div class="success-message" style="display: none;"></div>
           </div>
         </div>
       </div>
@@ -118,10 +112,7 @@ export class ChatSettings extends Component {
     ) as HTMLTextAreaElement;
     this.#testBtn = this.querySelector(".btn-test-key") as HTMLButtonElement;
     this.#saveBtn = this.querySelector(".btn-primary") as HTMLButtonElement;
-    this.#errorElement = this.querySelector(".error-message") as HTMLElement;
-    this.#successElement = this.querySelector(
-      ".success-message"
-    ) as HTMLElement;
+    this.#signOutBtn = this.querySelector(".sign-out-btn") as HTMLButtonElement;
 
     // Wire up reactive effects
     this.#setupReactiveEffects();
@@ -140,19 +131,15 @@ export class ChatSettings extends Component {
     // Wait for auth service to be ready
     const isReady = await authService.waitForReady(10000);
     if (!isReady) {
-      this.#message({
-        text: "Authentication service failed to initialize. Please refresh the page.",
-        type: "error",
-      });
+      notificationService.error(
+        "Authentication service failed to initialize. Please refresh the page."
+      );
       return;
     }
 
     // Check if user is signed in
     if (!authService.isSignedIn()) {
-      this.#message({
-        text: "Please sign in to access settings.",
-        type: "error",
-      });
+      notificationService.error("Please sign in to access settings.");
       return;
     }
 
@@ -161,6 +148,15 @@ export class ChatSettings extends Component {
   }
 
   #setupReactiveEffects() {
+    // Update sign out button visibility based on auth state
+    effect(() => {
+      if (this.#signOutBtn) {
+        this.#signOutBtn.style.display = authStore.isAuthenticated()
+          ? "block"
+          : "none";
+      }
+    });
+
     // Update test button state
     effect(() => {
       if (this.#testBtn) {
@@ -184,38 +180,6 @@ export class ChatSettings extends Component {
         this.#systemPromptTextarea.value = this.#systemPrompt();
       }
     });
-
-    // Handle status messages
-    effect(() => {
-      const message = this.#message();
-      this.#updateStatusMessages(message);
-    });
-  }
-
-  #updateStatusMessages(
-    message: { text: string; type: "success" | "error" | "info" } | null
-  ) {
-    if (!this.#errorElement || !this.#successElement) return;
-
-    // Clear all messages first
-    this.#errorElement.style.display = "none";
-    this.#successElement.style.display = "none";
-    this.#successElement.style.backgroundColor = "";
-
-    if (!message) return;
-
-    if (message.type === "error") {
-      this.#errorElement.textContent = message.text;
-      this.#errorElement.style.display = "block";
-    } else if (message.type === "success") {
-      this.#successElement.textContent = message.text;
-      this.#successElement.style.display = "block";
-    } else {
-      // Info messages use success styling with different color
-      this.#successElement.textContent = message.text;
-      this.#successElement.style.display = "block";
-      this.#successElement.style.backgroundColor = "var(--color-info)";
-    }
   }
 
   // Event handlers
@@ -232,7 +196,7 @@ export class ChatSettings extends Component {
   async #loadCurrentSettings() {
     try {
       this.#isLoading(true);
-      this.#message({ text: "Loading current settings...", type: "info" });
+      notificationService.info("Loading current settings...");
 
       // Check if user has API key
       const hasKeyResponse = await authService.fetchWithAuth(
@@ -272,13 +236,8 @@ export class ChatSettings extends Component {
           this.#systemPrompt(preferences.systemPrompt || "");
         }
       }
-
-      this.#message(null);
     } catch (error: any) {
-      this.#message({
-        text: `Failed to load settings: ${error.message}`,
-        type: "error",
-      });
+      notificationService.error(`Failed to load settings: ${error.message}`);
     } finally {
       this.#isLoading(false);
     }
@@ -288,7 +247,7 @@ export class ChatSettings extends Component {
     if (!this.#apiKey().trim()) return;
 
     try {
-      this.#message({ text: "Testing API key...", type: "info" });
+      notificationService.info("Testing API key...");
 
       if (this.#testBtn) {
         this.#testBtn.disabled = true;
@@ -312,25 +271,21 @@ export class ChatSettings extends Component {
       if (response.ok) {
         const result = await response.json();
         if (result.valid) {
-          this.#message({ text: "API key is valid!", type: "success" });
+          notificationService.success("API key is valid!");
           this.#hasValidKey(true);
         } else {
-          this.#message({
-            text: `API key invalid: ${result.error}`,
-            type: "error",
-          });
+          notificationService.error(`API key invalid: ${result.error}`);
           this.#hasValidKey(false);
         }
       } else {
         const errorData = await response.json();
-        this.#message({
-          text: `Test failed: ${errorData.message || "Unknown error"}`,
-          type: "error",
-        });
+        notificationService.error(
+          `Test failed: ${errorData.message || "Unknown error"}`
+        );
         this.#hasValidKey(false);
       }
     } catch (error: any) {
-      this.#message({ text: `Test failed: ${error.message}`, type: "error" });
+      notificationService.error(`Test failed: ${error.message}`);
       this.#hasValidKey(false);
     } finally {
       if (this.#testBtn) {
@@ -343,7 +298,7 @@ export class ChatSettings extends Component {
   saveSettings = async () => {
     try {
       this.#isSaving(true);
-      this.#message({ text: "Saving settings...", type: "info" });
+      notificationService.info("Saving settings...");
 
       // Save API key if provided
       if (this.#apiKey().trim()) {
@@ -387,7 +342,7 @@ export class ChatSettings extends Component {
         throw new Error(errorData.message || "Failed to save preferences");
       }
 
-      this.#message({ text: "Settings saved successfully!", type: "success" });
+      notificationService.success("Settings saved successfully!");
 
       // Clear API key input for security
       if (this.#apiKeyInput) {
@@ -401,12 +356,17 @@ export class ChatSettings extends Component {
         this.#loadCurrentSettings();
       }, 1000);
     } catch (error: any) {
-      this.#message({
-        text: `Failed to save settings: ${error.message}`,
-        type: "error",
-      });
+      notificationService.error(`Failed to save settings: ${error.message}`);
     } finally {
       this.#isSaving(false);
+    }
+  };
+
+  handleSignOut = async () => {
+    try {
+      await authStore.signOut();
+    } catch (error) {
+      console.error("Error signing out:", error);
     }
   };
 }

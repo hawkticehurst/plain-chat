@@ -8,6 +8,7 @@ import {
   authService,
 } from "@lib";
 import { notificationService } from "./NotificationComponent";
+import { authStore } from "../stores/AuthStore";
 import "./ChatSidebar.css";
 
 interface ChatItem {
@@ -22,11 +23,9 @@ export class ChatSidebar extends Component {
   #chats = signal<Array<ChatItem>>([]);
   #loading = signal<boolean>(true);
   #currentChatId = signal<string | null>(null);
-  #isSignedIn = signal<boolean>(false);
   #isCollapsed = signal<boolean>(false);
 
   // DOM references
-  #headerSection: HTMLElement | null = null;
   #chatListSection: HTMLElement | null = null;
   #footerSection: HTMLElement | null = null;
 
@@ -58,14 +57,29 @@ export class ChatSidebar extends Component {
 
   constructor() {
     super();
-    // Load collapsed state from localStorage
+
+    // Check if we're on a mobile/small screen device
+    const isMobile = window.innerWidth <= 768;
+
+    // Load collapsed state from localStorage, but default to collapsed when signed out or on mobile
     const savedState = localStorage.getItem("sidebar-collapsed");
-    if (savedState !== null) {
+    if (savedState !== null && authStore.isAuthenticated() && !isMobile) {
+      // If user is signed in and not on mobile, respect their saved preference
       this.#isCollapsed(savedState === "true");
+    } else if (authStore.isAuthenticated() && !isMobile) {
+      // If user is signed in but no saved state and not on mobile, default to open
+      this.#isCollapsed(false);
+    } else {
+      // If user is signed out or on mobile, always collapse
+      this.#isCollapsed(true);
     }
 
-    this.#checkAuthStatus();
     this.#setupAuthListener();
+    this.#setupResizeListener();
+    this.#setupClickOutsideListener();
+    this.#setupTouchGestures();
+    this.#setupClickOutsideListener();
+    this.#setupTouchGestures();
   }
 
   init() {
@@ -73,22 +87,11 @@ export class ChatSidebar extends Component {
     this.append(html`
       <section class="header">
         <button class="new-chat-btn" @click="handleNewChat">New Chat</button>
-        <button class="usage-dashboard-btn" @click="handleUsageDashboard">
-          Usage Dashboard
-        </button>
       </section>
-      <section class="chat-list">
-        <!-- Chat list will be populated by reactive effects -->
-      </section>
-      <section class="footer">
-        <button class="auth-btn" @click="handleAuth">
-          <!-- Button text updated by reactive effects -->
-        </button>
-      </section>
+      <section class="chat-list"></section>
     `);
 
     // Cache DOM references
-    this.#headerSection = this.querySelector(".header") as HTMLElement;
     this.#chatListSection = this.querySelector(".chat-list") as HTMLElement;
     this.#footerSection = this.querySelector(".footer") as HTMLElement;
 
@@ -106,11 +109,8 @@ export class ChatSidebar extends Component {
       return;
     }
 
-    // Check auth status periodically
-    this.#checkAuthStatus();
-
     // If not signed in, stop loading
-    if (!this.#isSignedIn()) {
+    if (!authStore.isAuthenticated()) {
       this.#loading(false);
       return;
     }
@@ -125,13 +125,10 @@ export class ChatSidebar extends Component {
   }
 
   #setupReactiveEffects() {
-    // Update auth button text
+    // Hide footer completely - sign in moved to ChatMain empty state
     effect(() => {
-      const authBtn = this.#footerSection?.querySelector(
-        ".auth-btn"
-      ) as HTMLButtonElement;
-      if (authBtn) {
-        authBtn.textContent = this.#isSignedIn() ? "Sign Out" : "Sign In";
+      if (this.#footerSection) {
+        this.#footerSection.style.display = "none";
       }
     });
 
@@ -146,35 +143,19 @@ export class ChatSidebar extends Component {
       }
     });
 
-    // Enable/disable buttons based on auth status
-    effect(() => {
-      const isSignedIn = this.#isSignedIn();
-      const chatSettingsBtn = this.#headerSection?.querySelector(
-        ".chat-settings-btn"
-      ) as HTMLButtonElement;
-      const usageDashboardBtn = this.#headerSection?.querySelector(
-        ".usage-dashboard-btn"
-      ) as HTMLButtonElement;
-
-      if (chatSettingsBtn) chatSettingsBtn.disabled = !isSignedIn;
-      if (usageDashboardBtn) usageDashboardBtn.disabled = !isSignedIn;
-    });
-
     // Update chat list when chats, loading, or auth state changes
     effect(() => {
       if (!this.#chatListSection) return;
 
-      const loading = this.#loading();
-      const isSignedIn = this.#isSignedIn();
+      const isSignedIn = authStore.isAuthenticated();
       const groupedChats = this.#groupedChats();
       const currentChatId = this.#currentChatId();
 
-      this.#renderChatList(loading, isSignedIn, groupedChats, currentChatId);
+      this.#renderChatList(isSignedIn, groupedChats, currentChatId);
     });
   }
 
   #renderChatList(
-    loading: boolean,
     isSignedIn: boolean,
     groupedChats: Record<string, ChatItem[]>,
     currentChatId: string | null
@@ -184,19 +165,7 @@ export class ChatSidebar extends Component {
     // Clear existing content
     this.#chatListSection.innerHTML = "";
 
-    if (loading) {
-      this.#chatListSection.appendChild(html`
-        <div class="loading">Loading chats...</div>
-      `);
-      return;
-    }
-
     if (!isSignedIn) {
-      this.#chatListSection.appendChild(html`
-        <div class="empty-state">
-          <p>Sign in to see your chat history</p>
-        </div>
-      `);
       return;
     }
 
@@ -238,25 +207,147 @@ export class ChatSidebar extends Component {
   }
 
   #setupAuthListener() {
-    // Check auth status periodically
-    setInterval(() => {
-      const wasSignedIn = this.#isSignedIn();
-      this.#checkAuthStatus();
+    // Listen for auth status changes from the global store
+    window.addEventListener("auth-status-changed", (event: any) => {
+      const { isSignedIn } = event.detail;
+      const isMobile = window.innerWidth <= 768;
 
-      // If auth status changed, refresh
-      if (wasSignedIn !== this.#isSignedIn()) {
-        if (this.#isSignedIn()) {
-          this.#loadChats();
+      if (isSignedIn) {
+        this.#loadChats();
+
+        // When user signs in, check screen size and saved preference
+        const savedState = localStorage.getItem("sidebar-collapsed");
+        if (isMobile) {
+          // On mobile, default to collapsed regardless of saved state
+          this.#isCollapsed(true);
+        } else if (savedState === null) {
+          // No saved preference, default to open for signed-in users on desktop
+          this.#isCollapsed(false);
+          localStorage.setItem("sidebar-collapsed", "false");
         } else {
-          this.#chats([]);
-          this.#loading(false);
+          // Respect their saved preference on desktop
+          this.#isCollapsed(savedState === "true");
         }
+      } else {
+        this.#chats([]);
+        this.#loading(false);
+        // Collapse sidebar when user signs out
+        this.#isCollapsed(true);
+        // Note: We don't persist the collapsed state on sign out
+        // This allows the user to have their preference restored on sign in
       }
-    }, 1000);
+    });
   }
 
-  #checkAuthStatus() {
-    this.#isSignedIn(authService.isSignedIn());
+  #setupResizeListener() {
+    // Listen for window resize events to handle mobile/desktop transitions
+    const handleResize = () => {
+      const isMobile = window.innerWidth <= 768;
+
+      // If switching to mobile and sidebar is open, close it
+      if (isMobile && !this.#isCollapsed() && authStore.isAuthenticated()) {
+        this.#isCollapsed(true);
+        // Don't persist this state change as it's due to screen size
+      }
+      // If switching from mobile to desktop and user is signed in, restore their preference
+      else if (!isMobile && authStore.isAuthenticated()) {
+        const savedState = localStorage.getItem("sidebar-collapsed");
+        if (savedState !== null) {
+          this.#isCollapsed(savedState === "true");
+        } else {
+          // Default to open on desktop if no saved preference
+          this.#isCollapsed(false);
+        }
+      }
+    };
+
+    // Debounce resize events
+    let resizeTimeout: number;
+    const debouncedResize = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = window.setTimeout(handleResize, 150);
+    };
+
+    window.addEventListener("resize", debouncedResize);
+
+    // Store reference to remove listener if needed
+    (this as any)._resizeHandler = debouncedResize;
+  }
+
+  #setupClickOutsideListener() {
+    // Add click outside listener for mobile to close sidebar
+    const handleClickOutside = (event: MouseEvent) => {
+      const isMobile = window.innerWidth <= 768;
+      if (!isMobile || this.#isCollapsed()) return;
+
+      // Check if click is outside the sidebar
+      const target = event.target as Element;
+      const rect = this.getBoundingClientRect();
+      const clickX = event.clientX;
+      const clickY = event.clientY;
+
+      // If click is outside the sidebar bounds
+      const isOutside =
+        clickX < rect.left ||
+        clickX > rect.right ||
+        clickY < rect.top ||
+        clickY > rect.bottom;
+
+      if (isOutside) {
+        // Check if click is on the toggle button (don't close if so)
+        const toggleButton = document.querySelector(".sidebar-toggle-btn");
+        if (!toggleButton || !toggleButton.contains(target)) {
+          this.#isCollapsed(true);
+        }
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+
+    // Store reference to remove listener if needed
+    (this as any)._clickOutsideHandler = handleClickOutside;
+  }
+
+  #setupTouchGestures() {
+    // Add swipe to close gesture for mobile
+    let startX = 0;
+    let startY = 0;
+    let startTime = 0;
+
+    const handleTouchStart = (event: TouchEvent) => {
+      const isMobile = window.innerWidth <= 768;
+      if (!isMobile || this.#isCollapsed()) return;
+
+      const touch = event.touches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+      startTime = Date.now();
+    };
+
+    const handleTouchEnd = (event: TouchEvent) => {
+      const isMobile = window.innerWidth <= 768;
+      if (!isMobile || this.#isCollapsed()) return;
+
+      const touch = event.changedTouches[0];
+      const endX = touch.clientX;
+      const endY = touch.clientY;
+      const endTime = Date.now();
+
+      const deltaX = endX - startX;
+      const deltaY = endY - startY;
+      const deltaTime = endTime - startTime;
+
+      // Check if it's a horizontal swipe left (to close sidebar)
+      const isSwipeLeft =
+        deltaX < -50 && Math.abs(deltaY) < 100 && deltaTime < 300;
+
+      if (isSwipeLeft) {
+        this.#isCollapsed(true);
+      }
+    };
+
+    this.addEventListener("touchstart", handleTouchStart, { passive: true });
+    this.addEventListener("touchend", handleTouchEnd, { passive: true });
   }
 
   async #loadChats() {
@@ -349,31 +440,6 @@ export class ChatSidebar extends Component {
     );
   };
 
-  handleChatSettings = () => {
-    if (this.#isSignedIn()) {
-      window.location.hash = "#/chat-settings";
-    }
-  };
-
-  handleUsageDashboard = () => {
-    if (this.#isSignedIn()) {
-      window.location.hash = "#/usage";
-    }
-  };
-
-  handleAuth = async () => {
-    if (this.#isSignedIn()) {
-      try {
-        await authService.signOut();
-      } catch (error) {
-        console.error("Error signing out:", error);
-      }
-    } else {
-      // Navigate to sign-in page
-      window.location.hash = "#/sign-in";
-    }
-  };
-
   #handleChatSelect = (chatId: string) => {
     // Just dispatch the event - let the App handle everything
     this.dispatchEvent(
@@ -399,8 +465,13 @@ export class ChatSidebar extends Component {
   public toggleCollapse() {
     const newState = !this.#isCollapsed();
     this.#isCollapsed(newState);
-    // Persist state to localStorage
-    localStorage.setItem("sidebar-collapsed", String(newState));
+
+    // Only persist state to localStorage on desktop
+    // On mobile, sidebar state changes are temporary
+    const isMobile = window.innerWidth <= 768;
+    if (!isMobile) {
+      localStorage.setItem("sidebar-collapsed", String(newState));
+    }
   }
 
   public isCollapsed(): boolean {
@@ -408,8 +479,7 @@ export class ChatSidebar extends Component {
   }
 
   public async refreshChats() {
-    this.#checkAuthStatus();
-    if (!this.#isSignedIn()) {
+    if (!authStore.isAuthenticated()) {
       this.#chats([]);
       this.#loading(false);
       return;
@@ -475,6 +545,18 @@ export class ChatSidebar extends Component {
     }
   }
 
+  // Cleanup method to remove event listeners (good practice)
+  disconnectedCallback() {
+    // Remove event listeners to prevent memory leaks
+    if ((this as any)._clickOutsideHandler) {
+      document.removeEventListener("click", (this as any)._clickOutsideHandler);
+    }
+
+    if ((this as any)._resizeHandler) {
+      window.removeEventListener("resize", (this as any)._resizeHandler);
+    }
+  }
+
   public removeChat(chatId: string) {
     // Remove the chat from the local state
     const currentChats = this.#chats();
@@ -515,16 +597,17 @@ class ChatSidebarItem extends Component {
           title="Delete chat"
         >
           <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
             fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
             stroke="currentColor"
-            stroke-width="2"
           >
-            <path d="M3 6h18"></path>
-            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-            <path d="M8 6V4c0-1 1-2 2-2h4c0 1 1 2 2 2v2"></path>
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+            />
           </svg>
         </button>
       </li>

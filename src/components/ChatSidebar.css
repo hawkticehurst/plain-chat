@@ -4,6 +4,7 @@ chat-sidebar {
   width: 280px;
   background: color-mix(in srgb, var(--color-surface) 95%, transparent);
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--color-border);
   flex-shrink: 0;
   height: calc(
@@ -17,6 +18,7 @@ chat-sidebar {
     width 0.3s ease,
     transform 0.3s ease;
   overflow: hidden; /* Collapsed state */
+
   &.collapsed {
     width: 0;
     margin-left: 10px;
@@ -33,7 +35,7 @@ chat-sidebar {
   }
 
   > .header {
-    padding: 20px 16px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -54,7 +56,6 @@ chat-sidebar {
   }
 
   .new-chat-btn,
-  .chat-settings-btn,
   .usage-dashboard-btn,
   .auth-btn {
     border: none;
@@ -66,27 +67,47 @@ chat-sidebar {
     cursor: pointer;
     transition: all 0.2s ease;
 
-    &:hover {
-      opacity: 0.9;
-    }
-
     &[disabled] {
       opacity: 0.6;
       cursor: not-allowed;
-
-      &:hover {
-        background: var(--color-accent) !important;
-        opacity: 0.6;
-      }
     }
   }
 
   .new-chat-btn {
-    background: var(--color-accent);
+    -webkit-app-region: no-drag;
     color: var(--color-text-primary);
+    border: 0;
+    font-family: inherit;
+    outline: none;
+    user-select: none;
+    white-space: nowrap;
+    background: var(--color-primary);
+    box-shadow:
+      0px 4px 8px -4px rgba(0, 0, 0, 0.32),
+      0px 1px 2px rgba(0, 0, 0, 0.32),
+      0px 0px 0px 1px rgba(0, 0, 0, 0.32),
+      0px 0px 1px 1px rgba(0, 0, 0, 0.12),
+      inset 0px 1px 0.75px rgba(255, 255, 255, 0.24),
+      inset 0px -2px 0.75px rgba(0, 0, 0, 0.16);
+
+    &:hover {
+      background: var(--color-primary-hover);
+      cursor: pointer;
+      box-shadow:
+        0px 4px 8px -4px rgba(0, 0, 0, 0.32),
+        0px 1px 2px rgba(0, 0, 0, 0.32),
+        0px 0px 0px 1px rgba(0, 0, 0, 0.32),
+        0px 0px 1px 1px rgba(0, 0, 0, 0.12),
+        inset 0px 1px 0.75px rgba(255, 255, 255, 0.24),
+        inset 0px -2px 0.75px rgba(0, 0, 0, 0.16);
+    }
+
+    &:focus-visible {
+      outline: 2px solid rgb(240, 240, 240);
+      outline-offset: 4px;
+    }
   }
 
-  .chat-settings-btn,
   .usage-dashboard-btn,
   .auth-btn {
     background: var(--color-info);
@@ -141,17 +162,78 @@ chat-sidebar {
     transition: opacity 0.3s ease;
   }
 
-  /* Responsive design */
+  /* Mobile overlay backdrop */
+  &::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: -1;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity 0.3s ease,
+      visibility 0.3s ease;
+    pointer-events: none;
+  }
+
+  /* Mobile responsive design */
   @media (max-width: 768px) {
-    width: 100%;
-    height: auto;
+    /* On mobile, when sidebar is open, it should overlay the chat area */
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 1000;
+    width: calc(100vw - 20px);
+    max-width: 320px;
+    height: calc(100vh - 20px);
+
+    /* Show backdrop when sidebar is open on mobile */
+    &:not(.collapsed)::before {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    &.collapsed {
+      /* When collapsed on mobile, completely hide it */
+      transform: translateX(-100%);
+      width: 280px;
+      margin-left: 0;
+      margin-right: 0;
+      border: 1px solid var(--color-border);
+
+      .header,
+      .footer,
+      .chat-list {
+        opacity: 1;
+        pointer-events: auto;
+      }
+    }
+  }
+
+  @media (max-width: 480px) {
+    /* On very small screens, make sidebar full width when open */
+    width: calc(100vw - 20px);
+    max-width: none;
+
+    /* Adjust positioning for very small screens */
+    top: 5px;
+    left: 5px;
+    height: calc(100vh - 10px);
   }
 }
 
 chat-sidebar-item {
   display: block;
   margin-bottom: 4px;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid transparent;
   transition: all 0.2s ease;
 
@@ -164,8 +246,19 @@ chat-sidebar-item {
     border-color: var(--color-primary) !important;
   }
 
+  &.active .delete-btn {
+    outline: 1px solid rgb(198, 74, 74);
+    background: color-mix(in srgb, var(--color-error) 30%, transparent);
+  }
+
   &:hover .delete-btn {
     opacity: 1;
+    outline: 1px solid rgb(198, 74, 74);
+    background: color-mix(
+      in srgb,
+      var(--color-error) 30%,
+      transparent
+    ) !important;
     transform: translateY(-50%) translateX(30%);
   }
 
@@ -226,16 +319,16 @@ chat-sidebar-item {
   }
 
   .delete-btn:hover {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 0px;
+    outline: 1px solid rgb(168, 60, 60);
+    background: color-mix(in srgb, var(--color-error) 30%, transparent);
     transform: translateY(-50%) translateX(30%);
   }
 
   .delete-btn:focus {
     opacity: 1;
     visibility: visible;
-    outline: 2px solid var(--color-primary);
-    outline-offset: 1px;
+    outline: 1px solid rgb(198, 74, 74);
+    background: color-mix(in srgb, var(--color-error) 30%, transparent);
     transform: translateY(-50%) translateX(30%);
   }
 

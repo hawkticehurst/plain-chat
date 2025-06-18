@@ -1,5 +1,6 @@
 import { Component, html, signal, effect, StreamingChatService } from "@lib";
 import { ChatInput, ChatMessages, notificationService } from "@components";
+import { authStore } from "../stores/AuthStore";
 import type { Message } from "@lib";
 import { titleGenerationService } from "../services";
 import "./ChatMain.css";
@@ -31,6 +32,7 @@ export class ChatMain extends Component {
   constructor() {
     super();
     this.#streamingService = new StreamingChatService();
+    this.#initializeAuth();
   }
 
   // Utility function to estimate token count from text
@@ -158,12 +160,33 @@ export class ChatMain extends Component {
           />
         </svg>
       </button>
-      <div class="empty-state" style="display: none;">
+      <div class="empty-state" style="display: none; opacity: 0;">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="empty-state-icon"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155"
+          />
+        </svg>
         <h2>Start a New Conversation</h2>
         <p>
           Type your first message below to begin a new chat. Your conversation
           will be saved automatically.
         </p>
+        <button
+          class="sign-in-btn"
+          style="display: none;"
+          @click="handleSignIn"
+        >
+          Sign In to Continue
+        </button>
       </div>
       <div class="chat-container" style="display: none;"></div>
     `);
@@ -199,12 +222,51 @@ export class ChatMain extends Component {
       }
     }, 100);
 
-    // Update UI based on whether we have a current chat
+    // Update UI based on whether we have a current chat and auth state
     effect(() => {
       const hasChat = this.#currentChatId() !== null;
+      const isSignedIn = authStore.isAuthenticated();
+      const authReady = authStore.isAuthReady();
+
       if (this.#emptyStateDiv && this.#chatContainer) {
         this.#emptyStateDiv.style.display = hasChat ? "none" : "flex";
         this.#chatContainer.style.display = hasChat ? "block" : "none";
+
+        // Only show empty state content after auth is ready
+        if (!hasChat && authReady) {
+          // Update content first, then animate in
+
+          // Show/hide sign in button in empty state
+          const signInBtn = this.#emptyStateDiv.querySelector(
+            ".sign-in-btn"
+          ) as HTMLElement;
+          if (signInBtn) {
+            signInBtn.style.display = isSignedIn ? "none" : "block";
+          }
+
+          // Update empty state text based on auth status
+          const h2 = this.#emptyStateDiv.querySelector("h2") as HTMLElement;
+          const p = this.#emptyStateDiv.querySelector("p") as HTMLElement;
+          if (h2 && p) {
+            if (isSignedIn) {
+              h2.textContent = "How can I help you today?";
+              p.textContent =
+                "Ask me anything or share your ideas to get started. I'm here to help with questions, brainstorming, or conversation.";
+            } else {
+              h2.textContent = "Welcome to Plain Chat";
+              p.textContent =
+                "Please sign in to start chatting and save your conversations.";
+            }
+          }
+
+          // Trigger fade-in animation after content is updated
+          requestAnimationFrame(() => {
+            this.#emptyStateDiv!.style.opacity = "1";
+          });
+        } else if (!authReady) {
+          // Keep hidden until auth is ready
+          this.#emptyStateDiv.style.opacity = "0";
+        }
       }
     });
 
@@ -215,16 +277,17 @@ export class ChatMain extends Component {
       }
     });
 
-    // Manage button visibility based on settings mode
+    // Manage button visibility based on settings mode and auth status
     effect(() => {
       const isInSettings = this.#isInSettingsMode();
+      const isSignedIn = authStore.isAuthenticated();
       const toggleButton = this.querySelector(
         ".sidebar-toggle-btn"
       ) as HTMLElement;
       const backButton = this.querySelector(
         ".settings-back-btn"
       ) as HTMLElement;
-      const settingsButton = document.querySelector(
+      const settingsButton = this.querySelector(
         ".chat-settings-btn"
       ) as HTMLElement;
 
@@ -233,14 +296,16 @@ export class ChatMain extends Component {
           toggleButton.style.display = "none";
           backButton.style.display = "flex";
         } else {
-          toggleButton.style.display = "flex";
+          // Hide sidebar toggle button when signed out
+          toggleButton.style.display = isSignedIn ? "flex" : "none";
           backButton.style.display = "none";
         }
       }
 
-      // Hide/show settings button
+      // Hide/show settings button based on both settings mode and auth status
       if (settingsButton) {
-        settingsButton.style.display = isInSettings ? "none" : "flex";
+        settingsButton.style.display =
+          isInSettings || !isSignedIn ? "none" : "flex";
       }
     });
 
@@ -712,6 +777,32 @@ export class ChatMain extends Component {
     }
   }
 
+  async #initializeAuth() {
+    // The global auth store now handles initialization
+    // We just wait for it to be ready
+    this.#setupAuthListener();
+  }
+  #setupAuthListener() {
+    // Listen for auth status changes from the global store
+    window.addEventListener("auth-status-changed", (event: any) => {
+      const { isSignedIn } = event.detail;
+
+      // If user signed out, collapse the sidebar
+      if (!isSignedIn) {
+        const sidebar = document.querySelector("chat-sidebar") as any;
+        if (sidebar && sidebar.toggleCollapse && sidebar.isCollapsed) {
+          const isCurrentlyCollapsed = sidebar.isCollapsed();
+
+          if (!isCurrentlyCollapsed) {
+            sidebar.toggleCollapse();
+            this.#sidebarCollapsed(true);
+            this.classList.add("sidebar-collapsed");
+          }
+        }
+      }
+    });
+  }
+
   handleToggleSidebar = () => {
     // Find the sidebar and toggle it
     const sidebar = document.querySelector("chat-sidebar") as any;
@@ -770,6 +861,11 @@ export class ChatMain extends Component {
 
   handleChatSettings = () => {
     this.loadSettings();
+  };
+
+  handleSignIn = () => {
+    // Navigate to sign-in page - hash change will trigger router
+    window.location.hash = "#/sign-in";
   };
 
   loadSettings() {

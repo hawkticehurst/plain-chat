@@ -238,11 +238,10 @@ export class ChatMessage extends Component {
 
   #renderCodeBlock(code: string, language: string): string {
     const codeId = `code-${Math.random().toString(36).substring(2, 9)}`;
-    return `<pre class="code-block" data-language="${language}" data-code-id="${codeId}">
+    return `<pre class="code-block" data-code-id="${codeId}" data-lang="${language}">
       <button class="copy-button" data-code-id="${codeId}" aria-label="Copy code">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-          <path d="m5 15-4-4v-9a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
         </svg>
         <span class="copy-text">Copy</span>
       </button>
@@ -263,7 +262,7 @@ export class ChatMessage extends Component {
 
     for (const codeBlock of codeBlocks) {
       const pre = codeBlock.parentElement as HTMLPreElement;
-      const language = pre.getAttribute("data-language") || "text";
+      const language = pre.getAttribute("data-lang") || "text";
       const code = codeBlock.textContent || "";
 
       try {
@@ -287,7 +286,6 @@ export class ChatMessage extends Component {
         if (shikiPre) {
           // Copy attributes and classes from our custom pre to Shiki's pre
           shikiPre.className = `code-block hljs ${shikiPre.className}`;
-          shikiPre.setAttribute("data-language", language);
           shikiPre.setAttribute(
             "data-code-id",
             pre.getAttribute("data-code-id") || ""

@@ -3,6 +3,7 @@ chat-main {
   height: calc(100vh - 42px);
   background: color-mix(in srgb, var(--color-surface) 95%, transparent);
   backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--color-border);
   border-radius: 20px;
   margin-top: 10px;
@@ -19,6 +20,14 @@ chat-main {
     text-align: center;
     padding: 32px;
     color: var(--color-text-secondary);
+    transition: opacity 0.3s ease-in-out;
+
+    .empty-state-icon {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 16px;
+      color: var(--color-text-muted);
+    }
 
     h2 {
       margin: 0 0 16px 0;
@@ -28,10 +37,45 @@ chat-main {
     }
 
     p {
-      margin: 0;
+      margin: 0 0 24px 0;
       font-size: 1rem;
       line-height: 1.5;
       max-width: 400px;
+    }
+
+    .sign-in-btn {
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: var(--color-primary);
+      color: var(--color-text-primary);
+      box-shadow:
+        0px 4px 8px -4px rgba(0, 0, 0, 0.32),
+        0px 1px 2px rgba(0, 0, 0, 0.32),
+        0px 0px 0px 1px rgba(0, 0, 0, 0.32),
+        0px 0px 1px 1px rgba(0, 0, 0, 0.12),
+        inset 0px 1px 0.75px rgba(255, 255, 255, 0.24),
+        inset 0px -2px 0.75px rgba(0, 0, 0, 0.16);
+
+      &:hover {
+        background: var(--color-primary-hover);
+        box-shadow:
+          0px 4px 8px -4px rgba(0, 0, 0, 0.32),
+          0px 1px 2px rgba(0, 0, 0, 0.32),
+          0px 0px 0px 1px rgba(0, 0, 0, 0.32),
+          0px 0px 1px 1px rgba(0, 0, 0, 0.12),
+          inset 0px 1px 0.75px rgba(255, 255, 255, 0.24),
+          inset 0px -2px 0.75px rgba(0, 0, 0, 0.16);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+      }
     }
   }
 
@@ -52,8 +96,8 @@ chat-main {
   .sidebar-toggle-btn,
   .settings-back-btn {
     position: absolute;
-    top: 20px;
-    left: 20px;
+    top: 16px;
+    left: 16px;
     z-index: 100;
     width: 30px;
     height: 30px;
@@ -61,7 +105,7 @@ chat-main {
     color: var(--color-text-primary);
     border-radius: 8px;
     cursor: pointer;
-    display: flex;
+    display: none; /* Hidden by default, shown via JavaScript when authenticated */
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
@@ -84,7 +128,7 @@ chat-main {
 
   /* Adjust toggle button position when sidebar is collapsed */
   &.sidebar-collapsed .sidebar-toggle-btn {
-    left: 20px; /* Keep it in its normal position */
+    left: 16px; /* Keep it in its normal position */
   }
 
   /* Token Counter */
@@ -95,6 +139,7 @@ chat-main {
     z-index: 100;
     background: color-mix(in srgb, var(--color-surface) 90%, transparent);
     backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--color-border);
     border-radius: 10px;
     padding: 4px 12px;
@@ -161,7 +206,7 @@ chat-main {
   }
 
   .chat-settings-btn {
-    display: flex;
+    display: none; /* Hidden by default, shown via JavaScript when authenticated */
     align-items: center;
     justify-content: center;
     border: none;
@@ -173,8 +218,8 @@ chat-main {
     cursor: pointer;
     transition: all 0.2s ease;
     position: absolute;
-    top: 20px;
-    right: 20px;
+    top: 16px;
+    right: 16px;
     z-index: 10;
 
     &:hover {
@@ -282,6 +327,63 @@ chat-main {
           padding: 8px 16px;
         }
       }
+    }
+  } /* Mobile responsive styles */
+  @media (max-width: 768px) {
+    /* Ensure chat-main takes full width on mobile */
+    width: 100%;
+    margin-left: 0;
+
+    /* Make sidebar toggle button more prominent on mobile */
+    .sidebar-toggle-btn {
+      background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--color-border);
+      width: 40px;
+      height: 40px;
+      z-index: 1001; /* Ensure it's above sidebar overlay */
+
+      svg {
+        --size: 20px;
+        width: var(--size);
+        height: var(--size);
+      }
+    }
+
+    /* Adjust empty state for mobile */
+    .empty-state {
+      padding: 24px 16px;
+
+      h2 {
+        font-size: 1.25rem;
+      }
+
+      p {
+        font-size: 0.9rem;
+      }
+    }
+
+    /* Adjust chat container for mobile */
+    .chat-container {
+      padding-bottom: 90px; /* More space for mobile keyboard */
+    }
+  }
+
+  @media (max-width: 480px) {
+    /* Very small screens */
+    height: calc(100vh - 32px);
+    margin-top: 5px;
+    margin-bottom: 5px;
+    border-radius: 15px;
+
+    .sidebar-toggle-btn {
+      top: 12px;
+      left: 12px;
+    }
+
+    .empty-state {
+      padding: 16px 12px;
     }
   }
 }
