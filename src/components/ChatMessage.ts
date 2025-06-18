@@ -28,13 +28,6 @@ export class ChatMessage extends Component {
     const isLoading = this.#isLoading();
     const isStreaming = this.#isStreaming();
 
-    console.log("🔍 ChatMessage processedContent computed:", {
-      content,
-      isLoading,
-      isStreaming,
-      role: this.#role(),
-    });
-
     return this.#processContent(
       content,
       isLoading || (isStreaming && content === "...")
@@ -506,11 +499,6 @@ export class ChatMessage extends Component {
 
   #processContent(content: string, isLoading: boolean): string {
     // Don't modify content, let CSS handle the animation
-    console.log("🎬 Content processing:", {
-      content,
-      isLoading,
-      isStreaming: this.#isStreaming(),
-    });
     return content;
   }
 
@@ -522,14 +510,6 @@ export class ChatMessage extends Component {
     isStreaming = false,
     aiMetadata?: { model?: string; tokenCount?: number }
   ) {
-    console.log("🎭 ChatMessage render called:", {
-      role,
-      content,
-      isLoading,
-      isStreaming,
-      aiMetadata,
-    });
-
     this.#role(role);
     this.#content(content);
     this.#isLoading(isLoading);

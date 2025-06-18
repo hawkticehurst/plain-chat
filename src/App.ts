@@ -95,7 +95,24 @@ export class App extends Component {
     });
 
     router.createRoute("/chat-settings", async () => {
-      await this.loadSettingsRoute();
+      // If app shell is already rendered and components are available, load settings directly
+      if (this.isAppShellRendered() && this.#chat && this.#sidebar) {
+        // Store current sidebar state and collapse it
+        try {
+          this.#previousSidebarState = this.#sidebar.isCollapsed();
+          if (!this.#sidebar.isCollapsed()) {
+            this.#sidebar.toggleCollapse();
+          }
+          this.#chat.loadSettings();
+        } catch (error) {
+          console.error("Error loading settings directly:", error);
+          // Fallback to full route loading
+          await this.loadSettingsRoute();
+        }
+      } else {
+        // Otherwise, go through the full route loading process
+        await this.loadSettingsRoute();
+      }
     });
 
     router.createRoute("/usage", () => {
@@ -262,6 +279,15 @@ export class App extends Component {
     // Wait for Clerk session to be fully available for token generation
     await authService.waitForSessionReady(3000);
 
+    // Ensure components are properly initialized after shell rendering
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    
+    if (!this.#chat || !this.#sidebar) {
+      // Re-query the elements if they're not available
+      this.#sidebar = this.querySelector("chat-sidebar") as ChatSidebar;
+      this.#chat = this.querySelector("chat-main") as ChatMain;
+    }
+
     // Load the settings page after auth is confirmed ready
     if (this.#chat && this.#sidebar) {
       // Store current sidebar state and collapse it
@@ -270,6 +296,8 @@ export class App extends Component {
         this.#sidebar.toggleCollapse();
       }
       this.#chat.loadSettings();
+    } else {
+      console.error("Chat components not found after rendering app shell");
     }
   }
 

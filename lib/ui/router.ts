@@ -124,11 +124,19 @@ export class Router {
 
     this.#navigating = true;
     window.location.hash = path;
-    // We don't call _executeRoute here because the hashchange event will fire
-    // and trigger _handleRouteChange automatically.
+    
+    // Force execution if hashchange doesn't fire
+    setTimeout(() => {
+      if (this.#navigating) {
+        this.#navigating = false;
+        this.#executeRoute(path);
+      }
+    }, 50);
+    
+    // Reset navigating flag
     setTimeout(() => {
       this.#navigating = false;
-    }, 10);
+    }, 100);
   }
 
   /**
