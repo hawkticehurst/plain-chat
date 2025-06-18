@@ -4,9 +4,8 @@ chat-input {
   height: fit-content;
   width: calc(100% - 20px);
   max-width: max-content;
-  background: rgba(52, 52, 52, 0.8);
-  backdrop-filter: blur(100px);
-  /* background: var(--color-background); */
+  background: rgba(37, 37, 37, 0.7);
+  backdrop-filter: blur(80px);
   border: 1px solid var(--color-border);
   border-radius: 10px;
   font-weight: 500;
@@ -121,8 +120,8 @@ chat-input {
   }
 
   .model-button {
-    background: #3a3a3a;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: #1d1d1d;
+    border: 1px solid rgba(90, 90, 90, 0.2);
     border-radius: 8px;
     padding: 8px 12px;
     font-size: 0.8rem;
@@ -138,7 +137,7 @@ chat-input {
     gap: 8px;
 
     &:hover {
-      background: #4a4a4a;
+      background: #242424;
     }
 
     .model-icon-container {
@@ -182,8 +181,9 @@ chat-input {
     left: 0;
     right: 0;
     padding: 8px;
-    background: #242424;
-    border: 1px solid rgba(119, 119, 119, 0.2);
+    background: rgb(29, 29, 29, 0.75);
+    backdrop-filter: blur(100px);
+    border: 1px solid rgba(90, 90, 90, 0.2);
     border-radius: 8px;
     z-index: 1000;
     margin-bottom: 4px;
@@ -219,7 +219,7 @@ chat-input {
 
     &:focus {
       outline: none;
-      background: var(--color-surface-raised);
+      background: var(--color-surface);
     }
 
     .model-logo {
