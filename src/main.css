@@ -1,7 +1,7 @@
 :root {
   /* Base colors */
-  --color-primary: #535bf2;
-  --color-primary-hover: #3f47f0;
+  --color-primary: #3f47f0;
+  --color-primary-hover: #4d56ff;
   --color-primary-light: rgba(100, 108, 255, 0.1);
   --color-accent: #0055ff;
   --color-success: #34c759;

@@ -20,7 +20,7 @@ chat-app {
     height: calc(100vh - 10px);
     width: 100%;
     background: linear-gradient(90deg, #efd5ff 0%, #515ada 100%);
-    opacity: 0.5;
+    opacity: 0.7;
     background-size: contain;
     animation: gradientAnimation 3s ease-in-out infinite;
     position: absolute;
