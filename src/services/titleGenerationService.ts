@@ -29,10 +29,13 @@ export class TitleGenerationService {
   >();
 
   constructor() {
+    console.log("🏗️ Initializing TitleGenerationService");
     this.initializeWorker();
   }
 
   private initializeWorker() {
+    console.log("🔧 Attempting to initialize title generation worker");
+    
     try {
       // Create the worker from the TypeScript file
       // Vite will handle the compilation and bundling
@@ -40,6 +43,8 @@ export class TitleGenerationService {
         new URL("../workers/titleGenerator.worker.ts", import.meta.url),
         { type: "module" }
       );
+
+      console.log("✅ Title generation worker created successfully");
 
       this.worker.addEventListener(
         "message",
@@ -60,6 +65,8 @@ export class TitleGenerationService {
   }
 
   private handleWorkerMessage(event: MessageEvent<TitleGenerationResponse>) {
+    console.log("📨 Received message from worker:", event.data);
+    
     const { success, chatId, title, error } = event.data;
 
     const pending = this.pendingRequests.get(chatId);
@@ -71,6 +78,7 @@ export class TitleGenerationService {
     this.pendingRequests.delete(chatId);
 
     if (success && title) {
+      console.log(`✅ Title generated successfully for chat ${chatId}: "${title}"`);
       pending.resolve(title);
     } else {
       console.error(`❌ Title generation failed for chat ${chatId}:`, error);
@@ -86,6 +94,11 @@ export class TitleGenerationService {
     chatId: string,
     firstMessage: string
   ): Promise<string | null> {
+    console.log(`🎯 TitleGenerationService.generateTitle called for chat ${chatId}`, { 
+      workerAvailable: !!this.worker,
+      pendingRequests: this.pendingRequests.size 
+    });
+
     if (!this.worker) {
       console.warn(
         "⚠️ Title generation worker not available, falling back to main thread"
@@ -101,10 +114,13 @@ export class TitleGenerationService {
     }
 
     return new Promise(async (resolve, reject) => {
+      console.log(`🔄 Setting up promise for chat ${chatId}`);
+      
       this.pendingRequests.set(chatId, { resolve, reject });
 
       const authToken = await authService.getToken();
       if (!authToken) {
+        console.error(`❌ No auth token available for chat ${chatId}`);
         this.pendingRequests.delete(chatId);
         reject(new Error("No authentication token available"));
         return;
@@ -117,6 +133,7 @@ export class TitleGenerationService {
         authToken,
       };
 
+      console.log(`📤 Posting message to worker for chat ${chatId}`, request);
       this.worker!.postMessage(request);
 
       // Set a timeout to prevent hanging requests
