@@ -1,7 +1,6 @@
 import { Component, html, signal, effect, computed } from "@lib";
 import { marked } from "marked";
-// @ts-ignore - Shiki ESM import
-import { codeToHtml } from "https://esm.sh/shiki@3.6.0";
+import { codeToHtml } from "shiki";
 import "./ChatMessage.css";
 
 export class ChatMessage extends Component {
