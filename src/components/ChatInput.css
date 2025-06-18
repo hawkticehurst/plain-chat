@@ -92,7 +92,7 @@ chat-input {
     transition: all 0.2s ease;
 
     &:hover {
-      background: var(--color-accent-hover);
+      background: #4a4a4a;
     }
 
     &:disabled {
@@ -119,18 +119,16 @@ chat-input {
   .model-selector {
     flex-shrink: 0;
     opacity: 0;
-    transform: translateY(8px);
-    transition: all 0.3s ease;
+    transition: opacity 0.3s ease;
   }
 
   &:hover .model-selector,
   &:focus-within .model-selector {
     opacity: 1;
-    transform: translateY(0);
   }
 
   .model-select {
-    background: rgba(255, 255, 255, 0.1);
+    background: #3a3a3a;
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 12px;
     padding: 8px 12px;
@@ -151,17 +149,13 @@ chat-input {
     padding-right: 32px;
 
     &:hover {
-      border-color: var(--color-accent);
-      background: rgba(255, 255, 255, 0.15);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      background: #4a4a4a;
     }
 
     &:focus {
-      outline: none;
-      border-color: var(--color-primary);
-      background: rgba(255, 255, 255, 0.2);
-      box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb, 59, 130, 246), 0.3);
+      outline: 2px solid white;
+      outline-offset: 2px;
+      border-color: rgba(255, 255, 255, 0.3);
     }
 
     /* Style the options */
