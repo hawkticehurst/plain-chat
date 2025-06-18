@@ -12,6 +12,10 @@ export class ChatMain extends Component {
   #isLoading = signal(false);
   #sidebarCollapsed = signal(false);
   #isInSettingsMode = signal(false);
+  #sidebarStateBeforeSettings = signal<boolean | null>(null);
+  #tokenCount = signal<number>(0);
+  #isTokenCountVisible = signal<boolean>(false);
+  #estimatedTokens = signal<number>(0);
 
   // Cached DOM references
   #chatInput: ChatInput | null = null;
@@ -19,6 +23,7 @@ export class ChatMain extends Component {
   #emptyStateDiv: HTMLElement | null = null;
   #chatContainer: HTMLElement | null = null;
   #toggleButton: HTMLElement | null = null;
+  #tokenCounter: HTMLElement | null = null;
 
   // Services
   #streamingService: StreamingChatService;
@@ -26,6 +31,71 @@ export class ChatMain extends Component {
   constructor() {
     super();
     this.#streamingService = new StreamingChatService();
+  }
+
+  // Utility function to estimate token count from text
+  #estimateTokenCount(text: string): number {
+    // Simple token estimation: roughly 4 characters per token
+    // This is an approximation - real tokenization varies by model
+    const cleanText = text.replace(/\s+/g, " ").trim();
+    return Math.ceil(cleanText.length / 4);
+  }
+
+  // Update estimated token count during streaming
+  #updateEstimatedTokens(content: string) {
+    const estimated = this.#estimateTokenCount(content);
+    this.#estimatedTokens(estimated);
+  }
+
+  // Show/hide token counter
+  #showTokenCounter() {
+    // Remove any existing fade-out animation
+    if (this.#tokenCounter) {
+      this.#tokenCounter.classList.remove("fade-out");
+    }
+    this.#isTokenCountVisible(true);
+  }
+
+  #hideTokenCounter() {
+    if (this.#tokenCounter && this.#isTokenCountVisible()) {
+      // Add fade-out animation
+      this.#tokenCounter.classList.add("fade-out");
+
+      // Hide after animation completes
+      setTimeout(() => {
+        // Set display none and clear state
+        if (this.#tokenCounter) {
+          this.#tokenCounter.style.display = "none";
+        }
+
+        // Clear the reactive state
+        this.#isTokenCountVisible(false);
+        this.#tokenCount(0);
+        this.#estimatedTokens(0);
+      }, 500); // Match the animation duration
+    } else {
+      console.log(
+        "⚠️ Token counter not visible or element not found, skipping animation"
+      );
+    }
+  }
+
+  // Helper method to restore sidebar state when leaving settings
+  #restoreSidebarState() {
+    const sidebar = document.querySelector("chat-sidebar") as any;
+    const savedSidebarState = this.#sidebarStateBeforeSettings();
+
+    if (sidebar && sidebar.isCollapsed && savedSidebarState !== null) {
+      const currentlyCollapsed = sidebar.isCollapsed();
+
+      // If the saved state is different from current state, toggle it
+      if (savedSidebarState !== currentlyCollapsed) {
+        sidebar.toggleCollapse();
+      }
+
+      // Clear the saved state
+      this.#sidebarStateBeforeSettings(null);
+    }
   }
 
   init() {
@@ -62,6 +132,12 @@ export class ChatMain extends Component {
         </svg>
         Back to chat
       </button>
+      <div class="token-counter" style="display: none;">
+        <div class="token-counter-content">
+          <span class="token-count">0</span>
+          <span class="token-label">tokens</span>
+        </div>
+      </div>
       <button class="chat-settings-btn" @click="handleChatSettings">
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -98,6 +174,7 @@ export class ChatMain extends Component {
     this.#toggleButton = this.querySelector(
       ".sidebar-toggle-btn"
     ) as HTMLElement;
+    this.#tokenCounter = this.querySelector(".token-counter") as HTMLElement;
 
     // Create child components
     this.#chatMessages = new ChatMessages(this.#messages());
@@ -198,6 +275,47 @@ export class ChatMain extends Component {
       }
     });
 
+    // Update token counter visibility and content
+    effect(() => {
+      if (this.#tokenCounter) {
+        const isVisible = this.#isTokenCountVisible();
+
+        // Only set display immediately for showing
+        // For hiding, let the fade-out animation handle it
+        if (isVisible) {
+          this.#tokenCounter.style.display = "flex";
+        } else if (!this.#tokenCounter.classList.contains("fade-out")) {
+          // Only hide immediately if we're not in the middle of a fade-out animation
+          this.#tokenCounter.style.display = "none";
+        }
+      }
+    });
+
+    // Update token count display
+    effect(() => {
+      if (this.#tokenCounter) {
+        const tokenCountElement = this.#tokenCounter.querySelector(
+          ".token-count"
+        ) as HTMLElement;
+        if (tokenCountElement) {
+          const isStreaming = this.#isStreaming();
+          const finalCount = this.#tokenCount();
+          const estimatedCount = this.#estimatedTokens();
+
+          if (isStreaming && estimatedCount > 0) {
+            tokenCountElement.textContent = `~${estimatedCount}`;
+            tokenCountElement.className = "token-count streaming";
+          } else if (finalCount > 0) {
+            tokenCountElement.textContent = finalCount.toString();
+            tokenCountElement.className = "token-count final";
+          } else {
+            tokenCountElement.textContent = "0";
+            tokenCountElement.className = "token-count";
+          }
+        }
+      }
+    });
+
     // Start with empty new chat state
     this.startNewChat();
   }
@@ -220,6 +338,9 @@ export class ChatMain extends Component {
 
   // Public API methods
   public async loadChat(chatId: string | null) {
+    // Restore sidebar state if coming from settings
+    this.#restoreSidebarState();
+
     // Clear settings mode
     this.#isInSettingsMode(false);
 
@@ -273,6 +394,9 @@ export class ChatMain extends Component {
   }
 
   public startNewChat() {
+    // Restore sidebar state if coming from settings
+    this.#restoreSidebarState();
+
     // Clear settings mode
     this.#isInSettingsMode(false);
 
@@ -403,6 +527,9 @@ export class ChatMain extends Component {
     const cancellationMessage = this.#streamingService.cancelStreaming();
 
     if (cancellationMessage) {
+      // Hide token counter
+      this.#hideTokenCounter();
+
       // Add cancellation message to the last response
       const messages = this.#messages();
       const lastMessage = messages[messages.length - 1];
@@ -434,6 +561,9 @@ export class ChatMain extends Component {
 
     this.#isStreaming(true);
 
+    // Show token counter
+    this.#showTokenCounter();
+
     // Start title generation in parallel if this is the first message
     if (isFirstMessage && this.#currentChatId()) {
       this.#startParallelTitleGeneration(message);
@@ -442,6 +572,11 @@ export class ChatMain extends Component {
     // Create callbacks for the streaming service
     const callbacks = {
       onMessageUpdate: (streamingMessage: Message) => {
+        // Update estimated token count during streaming
+        if (streamingMessage.isStreaming && streamingMessage.content) {
+          this.#updateEstimatedTokens(streamingMessage.content);
+        }
+
         // Update the message in our local state
         const currentMessages = this.#messages();
         const lastMessage = currentMessages[currentMessages.length - 1];
@@ -462,25 +597,40 @@ export class ChatMain extends Component {
       onStreamingComplete: () => {
         this.#isStreaming(false);
 
-        // Update the last message to mark streaming as complete
-        // This will trigger the reactive effect in ChatMessage for final syntax highlighting
+        // Get final token count from the completed message
         const messages = this.#messages();
         if (messages.length > 0) {
           const lastMessage = messages[messages.length - 1];
           if (lastMessage && lastMessage.role === "response") {
+            const finalTokenCount = this.#estimateTokenCount(
+              lastMessage.content
+            );
+            this.#tokenCount(finalTokenCount);
+            this.#estimatedTokens(0); // Clear estimated count
+
             const updatedMessages = [...messages];
             updatedMessages[updatedMessages.length - 1] = {
               ...lastMessage,
               isStreaming: false,
+              aiMetadata: {
+                model: model || "google/gemini-2.5-flash-preview-05-20", // Use the passed model or default
+                tokenCount: finalTokenCount,
+              },
             };
             this.#messages(updatedMessages);
           }
         }
 
-        // Note: Title generation is now started in parallel, not here
+        // Keep token counter visible for a few seconds after completion
+        setTimeout(() => {
+          this.#hideTokenCounter();
+        }, 3000);
       },
 
       onError: (error: string) => {
+        // Hide token counter on error
+        this.#hideTokenCounter();
+
         // Show error message
         const errorMessage: Message = {
           role: "response",
@@ -581,6 +731,22 @@ export class ChatMain extends Component {
   };
 
   handleBackFromSettings = () => {
+    // Restore the sidebar state first
+    const sidebar = document.querySelector("chat-sidebar") as any;
+    const savedSidebarState = this.#sidebarStateBeforeSettings();
+
+    if (sidebar && sidebar.isCollapsed && savedSidebarState !== null) {
+      const currentlyCollapsed = sidebar.isCollapsed();
+
+      // If the saved state is different from current state, toggle it
+      if (savedSidebarState !== currentlyCollapsed) {
+        sidebar.toggleCollapse();
+      }
+
+      // Clear the saved state
+      this.#sidebarStateBeforeSettings(null);
+    }
+
     // Instead of using window.location.hash which causes a full refresh,
     // directly call the App's newChat method to get smooth transition
     const app = document.querySelector("chat-app") as any;
@@ -589,15 +755,9 @@ export class ChatMain extends Component {
       // and smooth content transition
       app.newChat();
     } else {
-      // Fallback: manually restore sidebar and switch to home
+      // Fallback: manually restore and switch to home
       this.#isInSettingsMode(false);
       this.startNewChat();
-
-      // Try to restore sidebar state manually
-      const sidebar = document.querySelector("chat-sidebar") as any;
-      if (sidebar && sidebar.isCollapsed && sidebar.isCollapsed()) {
-        sidebar.toggleCollapse();
-      }
 
       // Update URL and router state
       window.history.pushState({}, "", "#/");
@@ -608,7 +768,22 @@ export class ChatMain extends Component {
     }
   };
 
+  handleChatSettings = () => {
+    this.loadSettings();
+  };
+
   loadSettings() {
+    // Save current sidebar state before changing it
+    const sidebar = document.querySelector("chat-sidebar") as any;
+    if (sidebar && sidebar.isCollapsed) {
+      this.#sidebarStateBeforeSettings(sidebar.isCollapsed());
+
+      // Collapse the sidebar if it's not already collapsed
+      if (!sidebar.isCollapsed()) {
+        sidebar.toggleCollapse();
+      }
+    }
+
     // Set settings mode
     this.#isInSettingsMode(true);
 

@@ -6,6 +6,10 @@ export interface Message {
   timestamp?: number;
   isLoading?: boolean;
   isStreaming?: boolean;
+  aiMetadata?: {
+    model?: string;
+    tokenCount?: number;
+  };
 }
 
 export interface StreamingChatCallbacks {
@@ -238,6 +242,13 @@ export class StreamingChatService {
             role: msg.role || "response",
             content: msg.content || "No content",
             timestamp: msg.createdAt,
+            aiMetadata: msg.aiMetadata
+              ? {
+                  model: msg.aiMetadata.model,
+                  tokenCount:
+                    msg.aiMetadata.totalTokens || msg.aiMetadata.tokenCount,
+                }
+              : undefined,
           }));
         }
       } else {

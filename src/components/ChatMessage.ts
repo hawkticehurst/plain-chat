@@ -12,11 +12,13 @@ export class ChatMessage extends Component {
   #isStreaming = signal<boolean>(false);
   #hasError = signal<boolean>(false);
   #errorMessage = signal<string>("");
+  #aiMetadata = signal<{ model?: string; tokenCount?: number } | null>(null);
 
   // DOM references
   #messageContainer: HTMLElement | null = null;
   #textElement: HTMLElement | null = null;
   #errorElement: HTMLElement | null = null;
+  #metadataElement: HTMLElement | null = null;
 
   // Shiki configuration
   #shikiLoaded = false;
@@ -53,6 +55,7 @@ export class ChatMessage extends Component {
       <div class="message">
         <div class="content">
           <div class="text"></div>
+          <div class="ai-metadata" style="display: none;"></div>
           <div class="error-box" style="display: none;"></div>
         </div>
       </div>
@@ -62,6 +65,7 @@ export class ChatMessage extends Component {
     this.#messageContainer = this.querySelector(".message") as HTMLElement;
     this.#textElement = this.querySelector(".text") as HTMLElement;
     this.#errorElement = this.querySelector(".error-box") as HTMLElement;
+    this.#metadataElement = this.querySelector(".ai-metadata") as HTMLElement;
 
     // Wire up reactive effects
     this.#setupReactiveEffects();
@@ -121,6 +125,40 @@ export class ChatMessage extends Component {
         this.#errorElement.style.display = "block";
       } else {
         this.#errorElement.style.display = "none";
+      }
+    });
+
+    // Show/hide AI metadata
+    effect(() => {
+      if (!this.#metadataElement) return;
+
+      const metadata = this.#aiMetadata();
+      const role = this.#role();
+      const isStreaming = this.#isStreaming();
+
+      // Only show metadata for response messages that are not currently streaming
+      if (
+        role === "response" &&
+        !isStreaming &&
+        metadata &&
+        (metadata.model || metadata.tokenCount)
+      ) {
+        let metadataHTML = '<div class="ai-metadata-content">';
+
+        if (metadata.model) {
+          metadataHTML += `<span class="model-name">${metadata.model}</span>`;
+        }
+
+        if (metadata.tokenCount) {
+          metadataHTML += `<span class="token-count-final">~ ${metadata.tokenCount} tokens</span>`;
+        }
+
+        metadataHTML += "</div>";
+
+        this.#metadataElement.innerHTML = metadataHTML;
+        this.#metadataElement.style.display = "block";
+      } else {
+        this.#metadataElement.style.display = "none";
       }
     });
 
@@ -447,7 +485,8 @@ export class ChatMessage extends Component {
     role: "prompt" | "response",
     content: string,
     isLoading = false,
-    isStreaming = false
+    isStreaming = false,
+    aiMetadata?: { model?: string; tokenCount?: number }
   ) {
     this.#role(role);
     this.#content(content);
@@ -455,6 +494,7 @@ export class ChatMessage extends Component {
     this.#isStreaming(isStreaming);
     this.#hasError(false);
     this.#errorMessage("");
+    this.#aiMetadata(aiMetadata || null);
   }
 
   public async updateStreamingContent(newContent: string) {
@@ -464,8 +504,14 @@ export class ChatMessage extends Component {
     }
   }
 
-  public async finalizeStream() {
+  public async finalizeStream(aiMetadata?: {
+    model?: string;
+    tokenCount?: number;
+  }) {
     this.#isStreaming(false);
+    if (aiMetadata) {
+      this.#aiMetadata(aiMetadata);
+    }
     // Content will be re-rendered automatically due to reactive effects
   }
 
