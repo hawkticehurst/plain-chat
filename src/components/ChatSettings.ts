@@ -16,8 +16,6 @@ export class ChatSettings extends Component {
   #apiKey = signal<string>("");
   #hasValidKey = signal<boolean>(false);
   #defaultModel = signal<string>("google/gemini-2.5-flash-preview-05-20");
-  #temperature = signal<number>(0.7);
-  #maxTokens = signal<number>(2000);
   #systemPrompt = signal<string>("");
   #message = signal<{
     text: string;
@@ -26,10 +24,6 @@ export class ChatSettings extends Component {
 
   // DOM references
   #apiKeyInput: HTMLInputElement | null = null;
-  #temperatureInput: HTMLInputElement | null = null;
-  #temperatureValue: HTMLSpanElement | null = null;
-  #maxTokensInput: HTMLInputElement | null = null;
-  #maxTokensValue: HTMLSpanElement | null = null;
   #systemPromptTextarea: HTMLTextAreaElement | null = null;
   #testBtn: HTMLButtonElement | null = null;
   #saveBtn: HTMLButtonElement | null = null;
@@ -82,45 +76,6 @@ export class ChatSettings extends Component {
             </div>
           </div>
 
-          <!-- Model Configuration -->
-          <div class="settings-section">
-            <h3>Model Configuration</h3>
-            <div class="form-group">
-              <label for="temperature">
-                Temperature: <span class="temperature-value"></span>
-              </label>
-              <input
-                type="range"
-                id="temperature"
-                class="form-range"
-                min="0"
-                max="2"
-                step="0.1"
-                @input="handleTemperatureInput"
-              />
-              <p class="form-help">
-                Controls randomness. Lower = more focused, Higher = more
-                creative
-              </p>
-            </div>
-
-            <div class="form-group">
-              <label for="max-tokens">
-                Max Tokens: <span class="max-tokens-value"></span>
-              </label>
-              <input
-                type="range"
-                id="max-tokens"
-                class="form-range"
-                min="100"
-                max="4000"
-                step="100"
-                @input="handleMaxTokensInput"
-              />
-              <p class="form-help">Maximum length of AI responses</p>
-            </div>
-          </div>
-
           <!-- Advanced Settings -->
           <div class="settings-section">
             <h3>Advanced Settings</h3>
@@ -158,18 +113,6 @@ export class ChatSettings extends Component {
 
     // Cache DOM references
     this.#apiKeyInput = this.querySelector("#api-key") as HTMLInputElement;
-    this.#temperatureInput = this.querySelector(
-      "#temperature"
-    ) as HTMLInputElement;
-    this.#temperatureValue = this.querySelector(
-      ".temperature-value"
-    ) as HTMLSpanElement;
-    this.#maxTokensInput = this.querySelector(
-      "#max-tokens"
-    ) as HTMLInputElement;
-    this.#maxTokensValue = this.querySelector(
-      ".max-tokens-value"
-    ) as HTMLSpanElement;
     this.#systemPromptTextarea = this.querySelector(
       "#system-prompt"
     ) as HTMLTextAreaElement;
@@ -235,24 +178,6 @@ export class ChatSettings extends Component {
       }
     });
 
-    // Update temperature display
-    effect(() => {
-      if (this.#temperatureValue && this.#temperatureInput) {
-        const temp = this.#temperature();
-        this.#temperatureValue.textContent = temp.toString();
-        this.#temperatureInput.value = temp.toString();
-      }
-    });
-
-    // Update max tokens display
-    effect(() => {
-      if (this.#maxTokensValue && this.#maxTokensInput) {
-        const tokens = this.#maxTokens();
-        this.#maxTokensValue.textContent = tokens.toString();
-        this.#maxTokensInput.value = tokens.toString();
-      }
-    });
-
     // Update system prompt
     effect(() => {
       if (this.#systemPromptTextarea) {
@@ -297,16 +222,6 @@ export class ChatSettings extends Component {
   handleApiKeyInput = (event: Event) => {
     const target = event.target as HTMLInputElement;
     this.#apiKey(target.value);
-  };
-
-  handleTemperatureInput = (event: Event) => {
-    const target = event.target as HTMLInputElement;
-    this.#temperature(parseFloat(target.value));
-  };
-
-  handleMaxTokensInput = (event: Event) => {
-    const target = event.target as HTMLInputElement;
-    this.#maxTokens(parseInt(target.value));
   };
 
   handleSystemPromptInput = (event: Event) => {
@@ -354,8 +269,6 @@ export class ChatSettings extends Component {
           this.#defaultModel(
             preferences.defaultModel || "google/gemini-2.5-flash-preview-05-20"
           );
-          this.#temperature(preferences.temperature || 0.7);
-          this.#maxTokens(preferences.maxTokens || 2000);
           this.#systemPrompt(preferences.systemPrompt || "");
         }
       }
@@ -463,8 +376,6 @@ export class ChatSettings extends Component {
           },
           body: JSON.stringify({
             defaultModel: this.#defaultModel(),
-            temperature: this.#temperature(),
-            maxTokens: this.#maxTokens(),
             systemPrompt: this.#systemPrompt(), // Send empty string to clear, don't convert to undefined
             enableUsageNotifications: true, // Default value
           }),

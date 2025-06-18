@@ -53,14 +53,10 @@ export const streamAIResponse = internalAction({
           preferences: preferences
             ? {
                 defaultModel: preferences.defaultModel,
-                temperature: preferences.temperature,
-                maxTokens: preferences.maxTokens,
                 systemPrompt: preferences.systemPrompt,
               }
             : {
                 defaultModel: "google/gemini-2.5-flash-preview-05-20",
-                temperature: 0.7,
-                maxTokens: 2000,
                 systemPrompt: "",
               },
         }
@@ -133,8 +129,8 @@ export const streamAIResponse = internalAction({
           },
           messages,
           model: modelToUse,
-          temperature: preferences?.temperature || 0.7,
-          maxTokens: preferences?.maxTokens || 2000,
+          temperature: 0.7, // Use default temperature
+          maxTokens: 2000, // Use default max tokens
         }
       );
 

@@ -176,8 +176,6 @@ export const getUserAIPreferences = query({
 export const setUserAIPreferences = mutation({
   args: {
     defaultModel: v.optional(v.string()),
-    temperature: v.optional(v.number()),
-    maxTokens: v.optional(v.number()),
     dailyUsageLimit: v.optional(v.number()),
     monthlyUsageLimit: v.optional(v.number()),
     usageWarningThreshold: v.optional(v.number()),
@@ -203,9 +201,6 @@ export const setUserAIPreferences = mutation({
       args.defaultModel ??
       existingPreferences?.defaultModel ??
       "google/gemini-2.5-flash-preview-05-20";
-    const temperature =
-      args.temperature ?? existingPreferences?.temperature ?? 0.7;
-    const maxTokens = args.maxTokens ?? existingPreferences?.maxTokens ?? 2000;
     const enableUsageNotifications =
       args.enableUsageNotifications ??
       existingPreferences?.enableUsageNotifications ??
@@ -221,8 +216,6 @@ export const setUserAIPreferences = mutation({
 
       if (args.defaultModel !== undefined)
         updateData.defaultModel = defaultModel;
-      if (args.temperature !== undefined) updateData.temperature = temperature;
-      if (args.maxTokens !== undefined) updateData.maxTokens = maxTokens;
       if (args.dailyUsageLimit !== undefined)
         updateData.dailyUsageLimit = args.dailyUsageLimit;
       if (args.monthlyUsageLimit !== undefined)
@@ -243,8 +236,6 @@ export const setUserAIPreferences = mutation({
       const preferencesId = await ctx.db.insert("userAIPreferences", {
         userId: identity.subject,
         defaultModel,
-        temperature,
-        maxTokens,
         dailyUsageLimit: args.dailyUsageLimit,
         monthlyUsageLimit: args.monthlyUsageLimit,
         usageWarningThreshold: args.usageWarningThreshold,

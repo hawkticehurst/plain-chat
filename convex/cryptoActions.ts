@@ -361,8 +361,6 @@ export const performStreamingAICompletion = action({
     ),
     preferences: v.object({
       defaultModel: v.string(),
-      temperature: v.number(),
-      maxTokens: v.number(),
       systemPrompt: v.optional(v.string()),
     }),
   },
@@ -455,8 +453,6 @@ export const performStreamingAICompletionInternal = internalAction({
     ),
     preferences: v.object({
       defaultModel: v.string(),
-      temperature: v.number(),
-      maxTokens: v.number(),
       systemPrompt: v.optional(v.string()),
     }),
   },
@@ -534,8 +530,8 @@ export const performStreamingAICompletionInternal = internalAction({
           body: JSON.stringify({
             model: preferences.defaultModel,
             messages,
-            temperature: preferences.temperature,
-            max_tokens: preferences.maxTokens,
+            temperature: 0.7, // Use default temperature
+            max_tokens: 2000, // Use default max tokens
             stream: true, // Enable streaming
           }),
         }

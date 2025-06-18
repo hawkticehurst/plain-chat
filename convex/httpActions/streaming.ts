@@ -116,14 +116,10 @@ export const streamChat = httpAction(async (ctx, request) => {
         preferences: preferences
           ? {
               defaultModel: preferences.defaultModel,
-              temperature: preferences.temperature,
-              maxTokens: preferences.maxTokens,
               systemPrompt: preferences.systemPrompt,
             }
           : {
               defaultModel: "google/gemini-2.5-flash-preview-05-20",
-              temperature: 0.7,
-              maxTokens: 2000,
               systemPrompt: "",
             },
       }
@@ -166,8 +162,8 @@ export const streamChat = httpAction(async (ctx, request) => {
                   streamData.preferences?.defaultModel ||
                   "google/gemini-2.5-flash-preview-05-20",
                 messages: streamData.messages,
-                temperature: streamData.preferences?.temperature || 0.7,
-                max_tokens: streamData.preferences?.maxTokens || 2000,
+                temperature: 0.7, // Use default temperature
+                max_tokens: 2000, // Use default max tokens
                 stream: true,
               }),
             }
