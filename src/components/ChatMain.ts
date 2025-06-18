@@ -570,10 +570,10 @@ export class ChatMain extends Component {
     const currentMessages = this.#messages();
     this.#messages([...currentMessages, userMessage]);
 
-    // Add loading message for AI response
+    // Add loading message for AI response with animated dots
     const loadingMessage: Message = {
       role: "response",
-      content: "Thinking...",
+      content: "...", // This will be replaced with animated dots by ChatMessage component
       timestamp: Date.now(),
       isLoading: true,
     };

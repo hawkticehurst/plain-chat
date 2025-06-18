@@ -26,11 +26,19 @@ export class ChatMessage extends Component {
   #processedContent = computed(() => {
     const content = this.#content();
     const isLoading = this.#isLoading();
+    const isStreaming = this.#isStreaming();
 
-    if (isLoading) {
-      return content + " <span class='loading-indicator'>⏳</span>";
-    }
-    return content;
+    console.log("🔍 ChatMessage processedContent computed:", {
+      content,
+      isLoading,
+      isStreaming,
+      role: this.#role(),
+    });
+
+    return this.#processContent(
+      content,
+      isLoading || (isStreaming && content === "...")
+    );
   });
 
   #cssClasses = computed(() => {
@@ -184,7 +192,25 @@ export class ChatMessage extends Component {
   ) {
     if (!this.#textElement) return;
 
-    // Process markdown for all content, including streaming
+    // For loading state with just "...", replace with animated dots
+    if (content === "..." && (this.#isLoading() || this.#isStreaming())) {
+      const animatedDots = `
+        <span class="loading-dots-animated">
+          <span class="dot">●</span>
+          <span class="dot">●</span>
+          <span class="dot">●</span>
+        </span>
+      `;
+
+      requestAnimationFrame(() => {
+        if (this.#textElement && this.#content() === content) {
+          this.#textElement.innerHTML = animatedDots;
+        }
+      });
+      return;
+    }
+
+    // Process markdown for all other content
     let markup: string;
     if (isStreaming && role === "response") {
       // For streaming, render markdown carefully to handle partial content
@@ -206,6 +232,7 @@ export class ChatMessage extends Component {
     requestAnimationFrame(() => {
       if (this.#textElement && this.#content() === content) {
         this.#textElement.innerHTML = markup;
+
         // Add copy button event listeners after DOM update
         this.#setupCopyButtons();
       }
@@ -477,6 +504,16 @@ export class ChatMessage extends Component {
     });
   }
 
+  #processContent(content: string, isLoading: boolean): string {
+    // Don't modify content, let CSS handle the animation
+    console.log("🎬 Content processing:", {
+      content,
+      isLoading,
+      isStreaming: this.#isStreaming(),
+    });
+    return content;
+  }
+
   // Public API methods
   public async render(
     role: "prompt" | "response",
@@ -485,6 +522,14 @@ export class ChatMessage extends Component {
     isStreaming = false,
     aiMetadata?: { model?: string; tokenCount?: number }
   ) {
+    console.log("🎭 ChatMessage render called:", {
+      role,
+      content,
+      isLoading,
+      isStreaming,
+      aiMetadata,
+    });
+
     this.#role(role);
     this.#content(content);
     this.#isLoading(isLoading);

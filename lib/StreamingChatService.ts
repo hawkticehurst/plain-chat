@@ -156,10 +156,10 @@ export class StreamingChatService {
         throw new Error("No message ID returned from server");
       }
 
-      // Create initial streaming message
+      // Create initial streaming message with animated dots instead of static ellipsis
       const streamingMessage: Message = {
         role: "response",
-        content: "...",
+        content: "...", // This will be replaced with animated dots by ChatMessage component
         timestamp: Date.now(),
         isStreaming: true,
       };
