@@ -141,6 +141,15 @@ export class ChatSidebar extends Component {
       } else {
         this.classList.remove("collapsed");
       }
+
+      // Emit state change event
+      this.dispatchEvent(
+        new CustomEvent("sidebar-state-changed", {
+          detail: { isCollapsed },
+          bubbles: true,
+          composed: true,
+        })
+      );
     });
 
     // Update chat list when chats, loading, or auth state changes
@@ -472,6 +481,15 @@ export class ChatSidebar extends Component {
     if (!isMobile) {
       localStorage.setItem("sidebar-collapsed", String(newState));
     }
+
+    // Emit state change event
+    this.dispatchEvent(
+      new CustomEvent("sidebar-state-changed", {
+        detail: { isCollapsed: newState },
+        bubbles: true,
+        composed: true,
+      })
+    );
   }
 
   public isCollapsed(): boolean {

@@ -213,14 +213,8 @@ export class ChatMain extends Component {
     // Set up event listeners using the component's event system
     this.#setupEventListeners();
 
-    // Check initial sidebar state for proper styling
-    setTimeout(() => {
-      const sidebar = document.querySelector("chat-sidebar") as any;
-      if (sidebar && sidebar.isCollapsed && sidebar.isCollapsed()) {
-        this.classList.add("sidebar-collapsed");
-        this.#sidebarCollapsed(true);
-      }
-    }, 100);
+    // Set up sidebar state synchronization
+    this.#setupSidebarSync();
 
     // Update UI based on whether we have a current chat and auth state
     effect(() => {
@@ -960,6 +954,35 @@ export class ChatMain extends Component {
     } else {
       this.appendChild(settingsComponent);
     }
+  }
+
+  #setupSidebarSync() {
+    // Listen for sidebar state change events
+    document.addEventListener("sidebar-state-changed", (event) => {
+      const customEvent = event as CustomEvent;
+      const { isCollapsed } = customEvent.detail;
+
+      if (isCollapsed) {
+        this.classList.add("sidebar-collapsed");
+      } else {
+        this.classList.remove("sidebar-collapsed");
+      }
+      this.#sidebarCollapsed(isCollapsed);
+    });
+
+    // Initial sync for cases where the event might have been missed
+    setTimeout(() => {
+      const sidebar = document.querySelector("chat-sidebar") as any;
+      if (sidebar && sidebar.isCollapsed) {
+        const isCollapsed = sidebar.isCollapsed();
+        if (isCollapsed) {
+          this.classList.add("sidebar-collapsed");
+        } else {
+          this.classList.remove("sidebar-collapsed");
+        }
+        this.#sidebarCollapsed(isCollapsed);
+      }
+    }, 10);
   }
 }
 
