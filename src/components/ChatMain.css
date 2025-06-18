@@ -134,7 +134,7 @@ chat-main {
   /* Token Counter */
   .token-counter {
     position: absolute;
-    top: 20px;
+    top: 16px;
     right: 60px; /* Position to the left of the settings button */
     z-index: 100;
     background: color-mix(in srgb, var(--color-surface) 90%, transparent);
