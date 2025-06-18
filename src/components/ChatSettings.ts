@@ -38,6 +38,9 @@ export class ChatSettings extends Component {
     // Build the DOM structure once
     this.append(html`
       <div class="ai-settings">
+        <button class="sign-out-btn" @click="handleSignOut" title="Sign Out">
+          Sign Out
+        </button>
         <div class="ai-settings-header">
           <h2>Settings</h2>
           <p class="ai-settings-description">
@@ -407,6 +410,14 @@ export class ChatSettings extends Component {
       });
     } finally {
       this.#isSaving(false);
+    }
+  };
+
+  handleSignOut = async () => {
+    try {
+      await authService.signOut();
+    } catch (error) {
+      console.error("Error signing out:", error);
     }
   };
 }

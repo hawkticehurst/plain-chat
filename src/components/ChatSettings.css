@@ -6,6 +6,7 @@ chat-settings {
   margin: 0 auto;
   overflow-y: auto;
   max-height: 100vh;
+  position: relative;
 
   /* Header */
   .ai-settings-header {
@@ -254,6 +255,33 @@ chat-settings {
     background: rgba(34, 197, 94, 0.1);
     color: rgb(34, 197, 94);
     border: 1px solid rgba(34, 197, 94, 0.2);
+  }
+
+  /* Sign Out Button */
+  .sign-out-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 100;
+    width: fit-content;
+    border: none;
+    padding: 8px 12px;
+    color: var(--color-text-primary);
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    svg {
+      --size: 16px;
+      width: var(--size);
+      height: var(--size);
+    }
   }
 
   /* Responsive Design */

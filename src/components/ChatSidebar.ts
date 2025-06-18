@@ -58,13 +58,23 @@ export class ChatSidebar extends Component {
 
   constructor() {
     super();
-    // Load collapsed state from localStorage
+    // Check auth status first
+    this.#checkAuthStatus();
+
+    // Load collapsed state from localStorage, but default to collapsed when signed out
     const savedState = localStorage.getItem("sidebar-collapsed");
     if (savedState !== null) {
       this.#isCollapsed(savedState === "true");
+    } else {
+      // No saved state - default to collapsed when signed out
+      this.#isCollapsed(!this.#isSignedIn());
     }
 
-    this.#checkAuthStatus();
+    // If user is signed out, always collapse regardless of saved state
+    if (!this.#isSignedIn()) {
+      this.#isCollapsed(true);
+    }
+
     this.#setupAuthListener();
   }
 
@@ -118,13 +128,10 @@ export class ChatSidebar extends Component {
   }
 
   #setupReactiveEffects() {
-    // Update auth button text
+    // Hide footer completely - sign in moved to ChatMain empty state
     effect(() => {
-      const authBtn = this.#footerSection?.querySelector(
-        ".auth-btn"
-      ) as HTMLButtonElement;
-      if (authBtn) {
-        authBtn.textContent = this.#isSignedIn() ? "Sign Out" : "Sign In";
+      if (this.#footerSection) {
+        this.#footerSection.style.display = "none";
       }
     });
 
@@ -218,13 +225,17 @@ export class ChatSidebar extends Component {
       const wasSignedIn = this.#isSignedIn();
       this.#checkAuthStatus();
 
-      // If auth status changed, refresh
+      // If auth status changed, refresh and handle sidebar state
       if (wasSignedIn !== this.#isSignedIn()) {
         if (this.#isSignedIn()) {
           this.#loadChats();
         } else {
           this.#chats([]);
           this.#loading(false);
+          // Collapse sidebar when user signs out
+          this.#isCollapsed(true);
+          // Persist the collapsed state
+          localStorage.setItem("sidebar-collapsed", "true");
         }
       }
     }, 1000);
@@ -327,19 +338,6 @@ export class ChatSidebar extends Component {
   handleChatSettings = () => {
     if (this.#isSignedIn()) {
       window.location.hash = "#/chat-settings";
-    }
-  };
-
-  handleAuth = async () => {
-    if (this.#isSignedIn()) {
-      try {
-        await authService.signOut();
-      } catch (error) {
-        console.error("Error signing out:", error);
-      }
-    } else {
-      // Navigate to sign-in page
-      window.location.hash = "#/sign-in";
     }
   };
 
