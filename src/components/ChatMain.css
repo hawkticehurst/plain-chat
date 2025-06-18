@@ -96,12 +96,13 @@ chat-main {
   .sidebar-toggle-btn,
   .settings-back-btn {
     position: absolute;
-    top: 16px;
-    left: 16px;
+    top: 20px;
+    left: 20px;
     z-index: 100;
     width: 30px;
     height: 30px;
     border: none;
+    background: var(--color-surface-raised);
     color: var(--color-text-primary);
     border-radius: 8px;
     cursor: pointer;
@@ -218,8 +219,10 @@ chat-main {
     cursor: pointer;
     transition: all 0.2s ease;
     position: absolute;
-    top: 16px;
-    right: 16px;
+    background: var(--color-surface-raised);
+    color: var(--color-text-primary);
+    top: 20px;
+    right: 20px;
     z-index: 10;
 
     &:hover {

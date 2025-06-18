@@ -235,8 +235,8 @@ chat-settings {
   /* Sign Out Button */
   .sign-out-btn {
     position: absolute;
-    top: 16px;
-    right: 16px;
+    top: 20px;
+    right: 20px;
     z-index: 100;
     width: fit-content;
     border: none;
