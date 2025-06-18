@@ -24,6 +24,7 @@ export class ChatMain extends Component {
   #isTokenCountVisible = signal<boolean>(false);
   #estimatedTokens = signal<number>(0);
   #isSignedIn = signal<boolean>(false);
+  #authReady = signal<boolean>(false);
 
   // Cached DOM references
   #chatInput: ChatInput | null = null;
@@ -39,8 +40,7 @@ export class ChatMain extends Component {
   constructor() {
     super();
     this.#streamingService = new StreamingChatService();
-    this.#checkAuthStatus();
-    this.#setupAuthListener();
+    this.#initializeAuth();
   }
 
   // Utility function to estimate token count from text
@@ -168,7 +168,7 @@ export class ChatMain extends Component {
           />
         </svg>
       </button>
-      <div class="empty-state" style="display: none;">
+      <div class="empty-state" style="display: none; opacity: 0;">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
@@ -234,32 +234,46 @@ export class ChatMain extends Component {
     effect(() => {
       const hasChat = this.#currentChatId() !== null;
       const isSignedIn = this.#isSignedIn();
+      const authReady = this.#authReady();
 
       if (this.#emptyStateDiv && this.#chatContainer) {
         this.#emptyStateDiv.style.display = hasChat ? "none" : "flex";
         this.#chatContainer.style.display = hasChat ? "block" : "none";
 
-        // Show/hide sign in button in empty state
-        const signInBtn = this.#emptyStateDiv.querySelector(
-          ".sign-in-btn"
-        ) as HTMLElement;
-        if (signInBtn) {
-          signInBtn.style.display = isSignedIn ? "none" : "block";
-        }
+        // Only show empty state content after auth is ready
+        if (!hasChat && authReady) {
+          // Update content first, then animate in
 
-        // Update empty state text based on auth status
-        const h2 = this.#emptyStateDiv.querySelector("h2") as HTMLElement;
-        const p = this.#emptyStateDiv.querySelector("p") as HTMLElement;
-        if (h2 && p) {
-          if (isSignedIn) {
-            h2.textContent = "How can I help you today?";
-            p.textContent =
-              "Type your first message below to begin a new chat. Your conversation will be saved automatically.";
-          } else {
-            h2.textContent = "Welcome to Plain Chat";
-            p.textContent =
-              "Please sign in to start chatting and save your conversations.";
+          // Show/hide sign in button in empty state
+          const signInBtn = this.#emptyStateDiv.querySelector(
+            ".sign-in-btn"
+          ) as HTMLElement;
+          if (signInBtn) {
+            signInBtn.style.display = isSignedIn ? "none" : "block";
           }
+
+          // Update empty state text based on auth status
+          const h2 = this.#emptyStateDiv.querySelector("h2") as HTMLElement;
+          const p = this.#emptyStateDiv.querySelector("p") as HTMLElement;
+          if (h2 && p) {
+            if (isSignedIn) {
+              h2.textContent = "How can I help you today?";
+              p.textContent =
+                "Ask me anything or share your ideas to get started. I'm here to help with questions, brainstorming, or conversation.";
+            } else {
+              h2.textContent = "Welcome to Plain Chat";
+              p.textContent =
+                "Please sign in to start chatting and save your conversations.";
+            }
+          }
+
+          // Trigger fade-in animation after content is updated
+          requestAnimationFrame(() => {
+            this.#emptyStateDiv!.style.opacity = "1";
+          });
+        } else if (!authReady) {
+          // Keep hidden until auth is ready
+          this.#emptyStateDiv.style.opacity = "0";
         }
       }
 
@@ -773,15 +787,33 @@ export class ChatMain extends Component {
     }
   }
 
-  #checkAuthStatus() {
-    this.#isSignedIn(authService.isSignedIn());
-  }
+  async #initializeAuth() {
+    try {
+      // Wait for auth service to be ready
+      const isReady = await authService.waitForReady(5000); // 5 second timeout
 
+      if (isReady) {
+        this.#isSignedIn(authService.isSignedIn());
+      }
+
+      // Mark as ready regardless of success/failure so UI shows
+      this.#authReady(true);
+
+      // Start the periodic auth listener
+      this.#setupAuthListener();
+    } catch (error) {
+      console.error("Auth initialization failed:", error);
+      // Still mark as ready so UI shows
+      this.#authReady(true);
+      this.#setupAuthListener();
+    }
+  }
   #setupAuthListener() {
     // Check auth status periodically
     setInterval(() => {
       const wasSignedIn = this.#isSignedIn();
-      this.#checkAuthStatus();
+      // Only update auth status, don't change authReady
+      this.#isSignedIn(authService.isSignedIn());
 
       // If auth status changed, update UI and sidebar state
       if (wasSignedIn !== this.#isSignedIn()) {
@@ -863,7 +895,7 @@ export class ChatMain extends Component {
   };
 
   handleSignIn = () => {
-    // Navigate to sign-in page
+    // Navigate to sign-in page - hash change will trigger router
     window.location.hash = "#/sign-in";
   };
 

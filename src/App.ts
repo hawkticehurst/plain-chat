@@ -81,14 +81,14 @@ export class App extends Component {
       }
     });
 
-    router.createRoute("/sign-in", () => {
+    router.createRoute("/sign-in", async () => {
       this.innerHTML = "";
       this.append(html`
         <div class="auth-required">
           <div id="clerk-signin"></div>
         </div>
       `);
-      this.setupSignIn();
+      await this.setupSignIn();
     });
 
     router.createRoute("/chat-settings", async () => {
@@ -118,6 +118,7 @@ export class App extends Component {
       const { Clerk } = await import("@clerk/clerk-js");
       const clerk = new Clerk(publicKey);
 
+      // Load without config - use environment variables instead
       await clerk.load();
 
       authService.setClerk(clerk);
@@ -125,35 +126,63 @@ export class App extends Component {
       // Handle OAuth redirects if present
       if (authService.isOAuthRedirect()) {
         await authService.handleRedirectCallback();
-
-        // Check if there's a redirect URL stored
-        const redirectUrl = sessionStorage.getItem("redirect-after-auth");
-        if (redirectUrl) {
-          sessionStorage.removeItem("redirect-after-auth");
-          window.location.hash = redirectUrl;
-        } else {
-          // After handling the redirect, navigate to home
-          window.location.hash = "/";
-        }
-
-        // Trigger a refresh of the sidebar after OAuth completion
-        setTimeout(() => {
-          const sidebar = document.querySelector("chat-sidebar") as any;
-          if (sidebar && sidebar.refreshChats) {
-            sidebar.refreshChats();
-          }
-        }, 500);
         return;
       }
     } catch (error) {
       console.error("Error initializing Clerk:", error);
     }
   }
-
-  private setupSignIn() {
+  private async setupSignIn() {
     const signInDiv = this.querySelector("#clerk-signin");
-    if (signInDiv && authService.getClerkInstance()) {
-      authService.getClerkInstance().mountSignIn(signInDiv);
+    if (!signInDiv) {
+      console.error("Failed to setup sign-in: missing div");
+      return;
+    }
+
+    // Wait for Clerk to be initialized
+    let attempts = 0;
+    while (!authService.getClerkInstance() && attempts < 50) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      attempts++;
+    }
+
+    const clerk = authService.getClerkInstance();
+    if (!clerk) {
+      console.error(
+        "Failed to setup sign-in: Clerk not initialized after waiting"
+      );
+      return;
+    }
+
+    // Clear any stored redirect to prevent interference
+    sessionStorage.removeItem("redirect-after-auth");
+
+    // Mount without redirect URLs to avoid conflicts - let natural flow handle it
+    clerk.mountSignIn(signInDiv);
+
+    // Add a listener to handle successful sign-in
+    const checkForSignIn = () => {
+      if (clerk.user) {
+        // Use window.location.hash to trigger router
+        window.location.hash = "#/";
+        return true;
+      }
+      return false;
+    };
+
+    // Check immediately in case user is already signed in
+    if (!checkForSignIn()) {
+      // Poll for sign-in completion if not already signed in
+      const pollInterval = setInterval(() => {
+        if (checkForSignIn()) {
+          clearInterval(pollInterval);
+        }
+      }, 500);
+
+      // Clear polling after 2 minutes to avoid infinite polling
+      setTimeout(() => {
+        clearInterval(pollInterval);
+      }, 120000);
     }
   }
 

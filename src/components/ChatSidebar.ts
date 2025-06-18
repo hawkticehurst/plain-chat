@@ -86,7 +86,7 @@ export class ChatSidebar extends Component {
       </section>
       <section class="chat-list"></section>
       <section class="footer">
-        <button class="auth-btn" @click="handleAuth"></button>
+        <button class="auth-btn"></button>
       </section>
     `);
 

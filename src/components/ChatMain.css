@@ -19,6 +19,7 @@ chat-main {
     text-align: center;
     padding: 32px;
     color: var(--color-text-secondary);
+    transition: opacity 0.3s ease-in-out;
 
     .empty-state-icon {
       width: 64px;
