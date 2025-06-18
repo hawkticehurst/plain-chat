@@ -52,8 +52,8 @@ chat-main {
   .sidebar-toggle-btn,
   .settings-back-btn {
     position: absolute;
-    top: 20px;
-    left: 20px;
+    top: 16px;
+    left: 16px;
     z-index: 100;
     width: 30px;
     height: 30px;
@@ -84,7 +84,7 @@ chat-main {
 
   /* Adjust toggle button position when sidebar is collapsed */
   &.sidebar-collapsed .sidebar-toggle-btn {
-    left: 20px; /* Keep it in its normal position */
+    left: 16px; /* Keep it in its normal position */
   }
 
   /* Token Counter */
@@ -173,8 +173,8 @@ chat-main {
     cursor: pointer;
     transition: all 0.2s ease;
     position: absolute;
-    top: 20px;
-    right: 20px;
+    top: 16px;
+    right: 16px;
     z-index: 10;
 
     &:hover {

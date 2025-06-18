@@ -33,7 +33,7 @@ chat-sidebar {
   }
 
   > .header {
-    padding: 20px 16px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -66,24 +66,45 @@ chat-sidebar {
     cursor: pointer;
     transition: all 0.2s ease;
 
-    &:hover {
-      opacity: 0.9;
-    }
-
     &[disabled] {
       opacity: 0.6;
       cursor: not-allowed;
-
-      &:hover {
-        background: var(--color-accent) !important;
-        opacity: 0.6;
-      }
     }
   }
 
   .new-chat-btn {
-    background: var(--color-accent);
+    -webkit-app-region: no-drag;
     color: var(--color-text-primary);
+    border: 0;
+    font-family: inherit;
+    outline: none;
+    user-select: none;
+    white-space: nowrap;
+    background: var(--color-primary);
+    box-shadow:
+      0px 4px 8px -4px rgba(0, 0, 0, 0.32),
+      0px 1px 2px rgba(0, 0, 0, 0.32),
+      0px 0px 0px 1px rgba(0, 0, 0, 0.32),
+      0px 0px 1px 1px rgba(0, 0, 0, 0.12),
+      inset 0px 1px 0.75px rgba(255, 255, 255, 0.24),
+      inset 0px -2px 0.75px rgba(0, 0, 0, 0.16);
+
+    &:hover {
+      background: var(--color-primary-hover);
+      cursor: pointer;
+      box-shadow:
+        0px 4px 8px -4px rgba(0, 0, 0, 0.32),
+        0px 1px 2px rgba(0, 0, 0, 0.32),
+        0px 0px 0px 1px rgba(0, 0, 0, 0.32),
+        0px 0px 1px 1px rgba(0, 0, 0, 0.12),
+        inset 0px 1px 0.75px rgba(255, 255, 255, 0.24),
+        inset 0px -2px 0.75px rgba(0, 0, 0, 0.16);
+    }
+
+    &:focus-visible {
+      outline: 2px solid rgb(240, 240, 240);
+      outline-offset: 4px;
+    }
   }
 
   .chat-settings-btn,
@@ -151,7 +172,7 @@ chat-sidebar {
 chat-sidebar-item {
   display: block;
   margin-bottom: 4px;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid transparent;
   transition: all 0.2s ease;
 
@@ -164,8 +185,19 @@ chat-sidebar-item {
     border-color: var(--color-primary) !important;
   }
 
+  &.active .delete-btn {
+    outline: 1px solid rgb(198, 74, 74);
+    background: color-mix(in srgb, var(--color-error) 30%, transparent);
+  }
+
   &:hover .delete-btn {
     opacity: 1;
+    outline: 1px solid rgb(198, 74, 74);
+    background: color-mix(
+      in srgb,
+      var(--color-error) 30%,
+      transparent
+    ) !important;
     transform: translateY(-50%) translateX(30%);
   }
 
@@ -226,16 +258,16 @@ chat-sidebar-item {
   }
 
   .delete-btn:hover {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 0px;
+    outline: 1px solid rgb(168, 60, 60);
+    background: color-mix(in srgb, var(--color-error) 30%, transparent);
     transform: translateY(-50%) translateX(30%);
   }
 
   .delete-btn:focus {
     opacity: 1;
     visibility: visible;
-    outline: 2px solid var(--color-primary);
-    outline-offset: 1px;
+    outline: 1px solid rgb(198, 74, 74);
+    background: color-mix(in srgb, var(--color-error) 30%, transparent);
     transform: translateY(-50%) translateX(30%);
   }
 
