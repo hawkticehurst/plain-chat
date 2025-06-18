@@ -6,6 +6,7 @@ export interface Message {
   timestamp?: number;
   isLoading?: boolean;
   isStreaming?: boolean;
+  isVSCodeSummary?: boolean; // Flag to identify VS Code summary requests
   aiMetadata?: {
     model?: string;
     tokenCount?: number;

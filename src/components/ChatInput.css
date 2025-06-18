@@ -81,7 +81,8 @@ chat-input {
   }
 
   .send-btn,
-  .cancel-btn {
+  .cancel-btn,
+  .vscode-summary-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -118,6 +119,43 @@ chat-input {
     &:hover {
       background: var(--color-error-hover, #b91c1c);
     }
+  }
+
+  .vscode-summary-btn {
+    width: auto;
+    padding: 0 10px;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    background: var(--color-surface-raised);
+    background: linear-gradient(135deg, #313b42 0%, #162c3d 100%);
+    border: 1px solid rgba(67, 67, 67, 0.9);
+    border-radius: 8px;
+
+    &:hover {
+      background: #4a4a4a;
+      background: linear-gradient(135deg, #377376 0%, #104772 100%);
+      border: 1px solid rgba(182, 238, 246, 0.9);
+      box-shadow: 0 2px 8px rgba(0, 122, 204, 0.3);
+    }
+
+    .vscode-summary-text {
+      white-space: nowrap;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  .bottom-controls {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .model-selector {

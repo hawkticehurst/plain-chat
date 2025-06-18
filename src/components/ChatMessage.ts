@@ -18,6 +18,7 @@ export class ChatMessage extends Component {
   #textElement: HTMLElement | null = null;
   #errorElement: HTMLElement | null = null;
   #metadataElement: HTMLElement | null = null;
+  #copyButton: HTMLElement | null = null;
 
   // Shiki configuration
   #shikiLoaded = false;
@@ -60,6 +61,8 @@ export class ChatMessage extends Component {
     this.#textElement = this.querySelector(".text") as HTMLElement;
     this.#errorElement = this.querySelector(".error-box") as HTMLElement;
     this.#metadataElement = this.querySelector(".ai-metadata") as HTMLElement;
+
+    // Copy button will be created dynamically in the metadata
 
     // Wire up reactive effects
     this.#setupReactiveEffects();
@@ -147,12 +150,34 @@ export class ChatMessage extends Component {
           metadataHTML += `<span class="token-count-final">~ ${metadata.tokenCount} tokens</span>`;
         }
 
+        // Add copy button to metadata
+        metadataHTML += `
+          <button class="copy-btn" title="Copy response">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+            </svg>
+          </button>
+        `;
+
         metadataHTML += "</div>";
 
         this.#metadataElement.innerHTML = metadataHTML;
         this.#metadataElement.style.display = "block";
+
+        // Set up copy button event listener after DOM is updated
+        this.#copyButton = this.#metadataElement.querySelector(
+          ".copy-btn"
+        ) as HTMLElement;
+        if (this.#copyButton) {
+          this.#copyButton.addEventListener(
+            "click",
+            this.#handleCopyClick.bind(this)
+          );
+        }
       } else {
         this.#metadataElement.style.display = "none";
+        this.#copyButton = null;
       }
     });
 
@@ -494,6 +519,49 @@ export class ChatMessage extends Component {
   #processContent(content: string): string {
     // Don't modify content, let CSS handle the animation
     return content;
+  }
+
+  // Copy button handler
+  async #handleCopyClick() {
+    try {
+      const content = this.#content();
+      await navigator.clipboard.writeText(content);
+
+      // Visual feedback - temporarily change button appearance
+      if (this.#copyButton) {
+        const originalTitle = this.#copyButton.title;
+        this.#copyButton.title = "Copied!";
+        this.#copyButton.textContent = "Copied!";
+        this.#copyButton.classList.add("copied");
+
+        setTimeout(() => {
+          if (this.#copyButton) {
+            this.#copyButton.title = originalTitle;
+            this.#copyButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+            </svg>`;
+            this.#copyButton.classList.remove("copied");
+          }
+        }, 2000);
+      }
+    } catch (error) {
+      console.error("Failed to copy content:", error);
+
+      // Show error feedback
+      if (this.#copyButton) {
+        const originalTitle = this.#copyButton.title;
+        this.#copyButton.title = "Copy failed";
+        this.#copyButton.classList.add("error");
+
+        setTimeout(() => {
+          if (this.#copyButton) {
+            this.#copyButton.title = originalTitle;
+            this.#copyButton.classList.remove("error");
+          }
+        }, 2000);
+      }
+    }
   }
 
   // Public API methods

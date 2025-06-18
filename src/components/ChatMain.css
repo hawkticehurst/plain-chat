@@ -135,7 +135,7 @@ chat-main {
   /* Token Counter */
   .token-counter {
     position: absolute;
-    top: 16px;
+    top: 20px;
     right: 60px; /* Position to the left of the settings button */
     z-index: 100;
     background: color-mix(in srgb, var(--color-surface) 90%, transparent);
@@ -331,8 +331,98 @@ chat-main {
         }
       }
     }
-  } /* Mobile responsive styles */
-  @media (max-width: 768px) {
+  }
+
+  /* Summary prompt styles */
+  .summary-prompt {
+    position: absolute;
+    bottom: 130px; /* Position above chat input */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: none;
+    border-radius: 10px;
+    background: rgba(37, 37, 37);
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+    transition: all 0.3s ease-out;
+  }
+
+  .summary-prompt.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .summary-prompt-content {
+    background: var(--color-surface-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 6px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    white-space: nowrap;
+  }
+
+  .summary-prompt-text {
+    color: var(--color-text-primary);
+    font-size: 0.9rem;
+    margin-right: 8px;
+  }
+
+  .summary-copy-btn {
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .summary-copy-btn:hover {
+    background: var(--color-primary-hover);
+  }
+
+  .summary-copy-btn.copied {
+    background: var(--color-success);
+  }
+
+  .summary-copy-btn.error {
+    background: var(--color-error);
+  }
+
+  .summary-dismiss-btn {
+    background: transparent;
+    border: none;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+  }
+
+  .summary-dismiss-btn:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-text-primary);
+  }
+
+  .summary-dismiss-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  chat-main {
     /* Ensure chat-main takes full width on mobile */
     width: 100%;
     margin-left: 0;
@@ -371,9 +461,32 @@ chat-main {
     .chat-container {
       padding-bottom: 90px; /* More space for mobile keyboard */
     }
-  }
 
-  @media (max-width: 480px) {
+    /* Summary prompt styles */
+    .summary-prompt {
+      bottom: 70px;
+      left: 16px;
+      right: 16px;
+      transform: none;
+    }
+
+    .summary-prompt.visible {
+      transform: translateY(0);
+    }
+
+    .summary-prompt-content {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .summary-prompt-text {
+      font-size: 0.85rem;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  chat-main {
     /* Very small screens */
     height: calc(100vh - 32px);
     margin-top: 5px;

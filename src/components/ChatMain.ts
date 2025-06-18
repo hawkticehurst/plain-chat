@@ -32,6 +32,9 @@ export class ChatMain extends Component {
   #chatContainer: HTMLElement | null = null;
   #toggleButton: HTMLElement | null = null;
   #tokenCounter: HTMLElement | null = null;
+  #summaryPrompt: HTMLElement | null = null;
+  #summaryCopyBtn: HTMLElement | null = null;
+  #summaryDismissBtn: HTMLElement | null = null;
 
   // Services
   #streamingService: StreamingChatService;
@@ -196,6 +199,34 @@ export class ChatMain extends Component {
         </button>
       </div>
       <div class="chat-container" style="display: none;"></div>
+
+      <!-- Summary prompt that appears above chat input -->
+      <div class="summary-prompt" style="display: none;">
+        <div class="summary-prompt-content">
+          <span class="summary-prompt-text"
+            >Want to copy the last AI response?</span
+          >
+          <button class="summary-copy-btn" title="Copy last AI response">
+            Copy Response
+          </button>
+          <button class="summary-dismiss-btn" title="Dismiss">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
     `);
 
     // Cache DOM references
@@ -205,6 +236,27 @@ export class ChatMain extends Component {
       ".sidebar-toggle-btn"
     ) as HTMLElement;
     this.#tokenCounter = this.querySelector(".token-counter") as HTMLElement;
+    this.#summaryPrompt = this.querySelector(".summary-prompt") as HTMLElement;
+    this.#summaryCopyBtn = this.querySelector(
+      ".summary-copy-btn"
+    ) as HTMLElement;
+    this.#summaryDismissBtn = this.querySelector(
+      ".summary-dismiss-btn"
+    ) as HTMLElement;
+
+    // Set up summary prompt event listeners
+    if (this.#summaryCopyBtn) {
+      this.#summaryCopyBtn.addEventListener(
+        "click",
+        this.#handleSummaryCopy.bind(this)
+      );
+    }
+    if (this.#summaryDismissBtn) {
+      this.#summaryDismissBtn.addEventListener(
+        "click",
+        this.#handleSummaryDismiss.bind(this)
+      );
+    }
 
     // Create child components
     this.#chatMessages = new ChatMessages(this.#messages());
@@ -717,6 +769,24 @@ export class ChatMain extends Component {
         setTimeout(() => {
           this.#hideTokenCounter();
         }, 3000);
+
+        // Show summary prompt if there are multiple exchanges (at least 2 pairs of messages)
+        const nonLoadingMessages = messages.filter(
+          (m) => !m.isLoading && m.content !== "..."
+        );
+        console.log("🔍 Checking summary prompt trigger:", {
+          totalMessages: messages.length,
+          nonLoadingMessages: nonLoadingMessages.length,
+          shouldTrigger: nonLoadingMessages.length >= 4,
+        });
+
+        if (nonLoadingMessages.length >= 4) {
+          // At least 2 user messages + 2 AI responses
+          console.log("✅ Triggering summary prompt in 2 seconds");
+          setTimeout(() => {
+            this.#showSummaryPrompt();
+          }, 2000); // Show after a brief delay
+        }
       },
 
       onError: (error: string) => {
@@ -865,6 +935,107 @@ export class ChatMain extends Component {
       } else {
         this.classList.remove("sidebar-collapsed");
       }
+    }
+  };
+
+  // Summary prompt handlers
+  #handleSummaryCopy = async () => {
+    try {
+      // Get the last AI response content
+      const lastResponse = this.#getLastAIResponse();
+
+      if (!lastResponse) {
+        throw new Error("No AI response found to copy");
+      }
+
+      await navigator.clipboard.writeText(lastResponse);
+
+      // Visual feedback
+      if (this.#summaryCopyBtn) {
+        const originalText = this.#summaryCopyBtn.textContent;
+        this.#summaryCopyBtn.textContent = "Copied!";
+        this.#summaryCopyBtn.classList.add("copied");
+
+        setTimeout(() => {
+          if (this.#summaryCopyBtn) {
+            this.#summaryCopyBtn.textContent = originalText;
+            this.#summaryCopyBtn.classList.remove("copied");
+          }
+        }, 2000);
+      }
+
+      // Hide the prompt after copying
+      this.#hideSummaryPrompt();
+    } catch (error) {
+      console.error("Failed to copy last response:", error);
+
+      // Show error feedback
+      if (this.#summaryCopyBtn) {
+        const originalText = this.#summaryCopyBtn.textContent;
+        this.#summaryCopyBtn.textContent = "Copy failed";
+        this.#summaryCopyBtn.classList.add("error");
+
+        setTimeout(() => {
+          if (this.#summaryCopyBtn) {
+            this.#summaryCopyBtn.textContent = originalText;
+            this.#summaryCopyBtn.classList.remove("error");
+          }
+        }, 2000);
+      }
+    }
+  };
+
+  #handleSummaryDismiss = () => {
+    this.#hideSummaryPrompt();
+  };
+
+  #getLastAIResponse = (): string | null => {
+    const messages = this.#messages();
+    const nonLoadingMessages = messages.filter(
+      (m) => !m.isLoading && m.content !== "..."
+    );
+
+    // Find the last AI response (role === "response")
+    for (let i = nonLoadingMessages.length - 1; i >= 0; i--) {
+      const message = nonLoadingMessages[i];
+      if (message.role === "response") {
+        return message.content.trim();
+      }
+    }
+
+    return null;
+  };
+
+  #showSummaryPrompt = () => {
+    console.log("📢 showSummaryPrompt called", {
+      summaryPromptElement: this.#summaryPrompt,
+      elementExists: !!this.#summaryPrompt,
+      currentDisplay: this.#summaryPrompt?.style.display,
+    });
+
+    if (this.#summaryPrompt) {
+      this.#summaryPrompt.style.display = "block";
+      console.log("📢 Summary prompt display set to block");
+      // Trigger animation
+      requestAnimationFrame(() => {
+        if (this.#summaryPrompt) {
+          this.#summaryPrompt.classList.add("visible");
+          console.log("📢 Summary prompt visible class added");
+        }
+      });
+    } else {
+      console.error("❌ Summary prompt element not found!");
+    }
+  };
+
+  #hideSummaryPrompt = () => {
+    if (this.#summaryPrompt) {
+      this.#summaryPrompt.classList.remove("visible");
+      setTimeout(() => {
+        if (this.#summaryPrompt) {
+          this.#summaryPrompt.style.display = "none";
+        }
+      }, 300); // Match CSS transition duration
     }
   };
 
