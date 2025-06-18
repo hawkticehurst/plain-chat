@@ -3,16 +3,18 @@
 ## Issues Fixed
 
 ### 1. External CDN Dependencies
+
 - **Problem**: `shiki` was imported from `https://esm.sh/shiki@3.6.0` which was blocked by CSP
 - **Solution**: Installed `shiki` as a local dependency via `npm install shiki`
-- **Files Changed**: 
+- **Files Changed**:
   - `src/components/ChatMessage.ts` - Updated import statement
   - `package.json` - Added shiki dependency
 
 ### 2. Content Security Policy (CSP) Updated
+
 - **Problem**: CSP was too restrictive and blocking external resources
 - **Solution**: Cleaned up CSP to only allow necessary external domains
-- **Files Changed**: 
+- **Files Changed**:
   - `public/_headers` - Simplified CSP directives
 
 ## Updated CSP Headers
@@ -22,6 +24,7 @@ Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' '
 ```
 
 ### Explanation of CSP Directives:
+
 - `script-src`: Allows scripts from your site, Clerk auth, and Cloudflare (for analytics/protection)
 - `connect-src`: Allows API calls to your backend (Convex) and auth services
 - `img-src`: Allows images from your site and Clerk profile images
@@ -32,24 +35,29 @@ Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' '
 ## Deployment Steps
 
 ### 1. Deploy Backend Changes
+
 ```bash
 cd /var/home/hawkticehurst/Documents/programming/projects/plain-chat
 npx convex deploy --prod
 ```
 
 ### 2. Build and Verify Local Changes
+
 ```bash
 npm run build
 # Check that build completes without errors
 ```
 
 ### 3. Deploy to Cloudflare Pages
+
 - Push changes to your repository
 - Cloudflare Pages will automatically deploy the new build
 - The updated `_headers` file will be deployed with the new CSP
 
 ### 4. Verify in Production
+
 After deployment, check:
+
 - [ ] No CSP errors in browser console
 - [ ] No CORS errors for esm.sh (should be eliminated)
 - [ ] Shiki syntax highlighting still works
@@ -58,17 +66,22 @@ After deployment, check:
 ## Troubleshooting
 
 ### If you still see Cloudflare Insights errors:
+
 These are usually not critical and don't affect app functionality. They're related to Cloudflare's analytics and can be ignored or:
+
 1. Disable Cloudflare Analytics in your Cloudflare dashboard
 2. Or add integrity attribute exceptions in your CSP
 
 ### If syntax highlighting doesn't work:
+
 Check that the shiki import is working:
+
 ```typescript
 import { codeToHtml } from "shiki";
 ```
 
 ### If you see new CSP violations:
+
 Add the blocked domains to the appropriate CSP directive in `public/_headers`
 
 ## Benefits of This Fix
@@ -82,11 +95,13 @@ Add the blocked domains to the appropriate CSP directive in `public/_headers`
 ## File Changes Summary
 
 ### Modified Files:
+
 - `src/components/ChatMessage.ts` - Updated shiki import
 - `public/_headers` - Cleaned up CSP policy
 - `package.json` - Added shiki dependency
 
 ### No Changes Required:
+
 - Convex backend code (CORS already properly configured)
 - Environment variables
 - Clerk configuration
