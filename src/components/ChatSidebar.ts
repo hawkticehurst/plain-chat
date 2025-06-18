@@ -58,20 +58,28 @@ export class ChatSidebar extends Component {
   constructor() {
     super();
 
-    // Load collapsed state from localStorage, but default to collapsed when signed out
+    // Check if we're on a mobile/small screen device
+    const isMobile = window.innerWidth <= 768;
+
+    // Load collapsed state from localStorage, but default to collapsed when signed out or on mobile
     const savedState = localStorage.getItem("sidebar-collapsed");
-    if (savedState !== null && authStore.isAuthenticated()) {
-      // If user is signed in, respect their saved preference
+    if (savedState !== null && authStore.isAuthenticated() && !isMobile) {
+      // If user is signed in and not on mobile, respect their saved preference
       this.#isCollapsed(savedState === "true");
-    } else if (authStore.isAuthenticated()) {
-      // If user is signed in but no saved state, default to open
+    } else if (authStore.isAuthenticated() && !isMobile) {
+      // If user is signed in but no saved state and not on mobile, default to open
       this.#isCollapsed(false);
     } else {
-      // If user is signed out, always collapse
+      // If user is signed out or on mobile, always collapse
       this.#isCollapsed(true);
     }
 
     this.#setupAuthListener();
+    this.#setupResizeListener();
+    this.#setupClickOutsideListener();
+    this.#setupTouchGestures();
+    this.#setupClickOutsideListener();
+    this.#setupTouchGestures();
   }
 
   init() {
@@ -202,18 +210,22 @@ export class ChatSidebar extends Component {
     // Listen for auth status changes from the global store
     window.addEventListener("auth-status-changed", (event: any) => {
       const { isSignedIn } = event.detail;
+      const isMobile = window.innerWidth <= 768;
 
       if (isSignedIn) {
         this.#loadChats();
 
-        // When user signs in, check if they have a saved preference
+        // When user signs in, check screen size and saved preference
         const savedState = localStorage.getItem("sidebar-collapsed");
-        if (savedState === null) {
-          // No saved preference, default to open for signed-in users
+        if (isMobile) {
+          // On mobile, default to collapsed regardless of saved state
+          this.#isCollapsed(true);
+        } else if (savedState === null) {
+          // No saved preference, default to open for signed-in users on desktop
           this.#isCollapsed(false);
           localStorage.setItem("sidebar-collapsed", "false");
         } else {
-          // Respect their saved preference
+          // Respect their saved preference on desktop
           this.#isCollapsed(savedState === "true");
         }
       } else {
@@ -225,6 +237,117 @@ export class ChatSidebar extends Component {
         // This allows the user to have their preference restored on sign in
       }
     });
+  }
+
+  #setupResizeListener() {
+    // Listen for window resize events to handle mobile/desktop transitions
+    const handleResize = () => {
+      const isMobile = window.innerWidth <= 768;
+
+      // If switching to mobile and sidebar is open, close it
+      if (isMobile && !this.#isCollapsed() && authStore.isAuthenticated()) {
+        this.#isCollapsed(true);
+        // Don't persist this state change as it's due to screen size
+      }
+      // If switching from mobile to desktop and user is signed in, restore their preference
+      else if (!isMobile && authStore.isAuthenticated()) {
+        const savedState = localStorage.getItem("sidebar-collapsed");
+        if (savedState !== null) {
+          this.#isCollapsed(savedState === "true");
+        } else {
+          // Default to open on desktop if no saved preference
+          this.#isCollapsed(false);
+        }
+      }
+    };
+
+    // Debounce resize events
+    let resizeTimeout: number;
+    const debouncedResize = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = window.setTimeout(handleResize, 150);
+    };
+
+    window.addEventListener("resize", debouncedResize);
+
+    // Store reference to remove listener if needed
+    (this as any)._resizeHandler = debouncedResize;
+  }
+
+  #setupClickOutsideListener() {
+    // Add click outside listener for mobile to close sidebar
+    const handleClickOutside = (event: MouseEvent) => {
+      const isMobile = window.innerWidth <= 768;
+      if (!isMobile || this.#isCollapsed()) return;
+
+      // Check if click is outside the sidebar
+      const target = event.target as Element;
+      const rect = this.getBoundingClientRect();
+      const clickX = event.clientX;
+      const clickY = event.clientY;
+
+      // If click is outside the sidebar bounds
+      const isOutside =
+        clickX < rect.left ||
+        clickX > rect.right ||
+        clickY < rect.top ||
+        clickY > rect.bottom;
+
+      if (isOutside) {
+        // Check if click is on the toggle button (don't close if so)
+        const toggleButton = document.querySelector(".sidebar-toggle-btn");
+        if (!toggleButton || !toggleButton.contains(target)) {
+          this.#isCollapsed(true);
+        }
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+
+    // Store reference to remove listener if needed
+    (this as any)._clickOutsideHandler = handleClickOutside;
+  }
+
+  #setupTouchGestures() {
+    // Add swipe to close gesture for mobile
+    let startX = 0;
+    let startY = 0;
+    let startTime = 0;
+
+    const handleTouchStart = (event: TouchEvent) => {
+      const isMobile = window.innerWidth <= 768;
+      if (!isMobile || this.#isCollapsed()) return;
+
+      const touch = event.touches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+      startTime = Date.now();
+    };
+
+    const handleTouchEnd = (event: TouchEvent) => {
+      const isMobile = window.innerWidth <= 768;
+      if (!isMobile || this.#isCollapsed()) return;
+
+      const touch = event.changedTouches[0];
+      const endX = touch.clientX;
+      const endY = touch.clientY;
+      const endTime = Date.now();
+
+      const deltaX = endX - startX;
+      const deltaY = endY - startY;
+      const deltaTime = endTime - startTime;
+
+      // Check if it's a horizontal swipe left (to close sidebar)
+      const isSwipeLeft =
+        deltaX < -50 && Math.abs(deltaY) < 100 && deltaTime < 300;
+
+      if (isSwipeLeft) {
+        this.#isCollapsed(true);
+      }
+    };
+
+    this.addEventListener("touchstart", handleTouchStart, { passive: true });
+    this.addEventListener("touchend", handleTouchEnd, { passive: true });
   }
 
   async #loadChats() {
@@ -342,8 +465,13 @@ export class ChatSidebar extends Component {
   public toggleCollapse() {
     const newState = !this.#isCollapsed();
     this.#isCollapsed(newState);
-    // Persist state to localStorage
-    localStorage.setItem("sidebar-collapsed", String(newState));
+
+    // Only persist state to localStorage on desktop
+    // On mobile, sidebar state changes are temporary
+    const isMobile = window.innerWidth <= 768;
+    if (!isMobile) {
+      localStorage.setItem("sidebar-collapsed", String(newState));
+    }
   }
 
   public isCollapsed(): boolean {
@@ -414,6 +542,18 @@ export class ChatSidebar extends Component {
       if (currentItem) {
         currentItem.classList.add("active");
       }
+    }
+  }
+
+  // Cleanup method to remove event listeners (good practice)
+  disconnectedCallback() {
+    // Remove event listeners to prevent memory leaks
+    if ((this as any)._clickOutsideHandler) {
+      document.removeEventListener("click", (this as any)._clickOutsideHandler);
+    }
+
+    if ((this as any)._resizeHandler) {
+      window.removeEventListener("resize", (this as any)._resizeHandler);
     }
   }
 

@@ -10,6 +10,7 @@ chat-app {
   overflow: hidden;
   background: rgba(52, 52, 52, 0);
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 
   chat-main {
     transition: all 0.3s ease;
@@ -27,7 +28,7 @@ chat-app {
     left: 0;
     z-index: -10;
   }
-  
+
   .auth-required {
     display: flex;
     align-items: center;
@@ -53,7 +54,27 @@ chat-app {
     padding: 24px;
   }
 
+  /* Mobile responsive styles */
   @media (max-width: 768px) {
-    flex-direction: column;
+    /* On mobile, chat-main should take full width */
+    gap: 0;
+
+    chat-main {
+      /* Ensure chat-main takes full width on mobile */
+      width: 100%;
+      margin-right: 10px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    /* On very small screens, adjust margins */
+    width: calc(100% - 10px);
+    height: calc(100vh - 10px);
+    margin: 5px;
+    border-radius: 20px;
+
+    chat-main {
+      margin-right: 5px;
+    }
   }
 }

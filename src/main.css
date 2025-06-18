@@ -48,25 +48,14 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    /* Text colors */
-    --color-text-primary: #213547;
-    --color-text-secondary: #666666;
-    --color-text-inverse: #ffffff;
+::-webkit-scrollbar-track {
+  background: transparent; /* Make the track transparent */
+}
 
-    /* Background colors */
-    --color-background: #ffffff;
-    --color-surface: #f9f9f9;
-    --color-surface-raised: #ffffff;
-
-    /* Border colors */
-    --color-border: rgba(0, 0, 0, 0.1);
-
-    /* Code styling for light mode */
-    --color-code-bg: #f8f8f8;
-    --color-code-border: rgba(0, 0, 0, 0.1);
-  }
+::-webkit-scrollbar {
+  display: none;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }
 
 *,

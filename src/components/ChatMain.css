@@ -3,6 +3,7 @@ chat-main {
   height: calc(100vh - 42px);
   background: color-mix(in srgb, var(--color-surface) 95%, transparent);
   backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--color-border);
   border-radius: 20px;
   margin-top: 10px;
@@ -138,6 +139,7 @@ chat-main {
     z-index: 100;
     background: color-mix(in srgb, var(--color-surface) 90%, transparent);
     backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--color-border);
     border-radius: 10px;
     padding: 4px 12px;
@@ -325,6 +327,63 @@ chat-main {
           padding: 8px 16px;
         }
       }
+    }
+  } /* Mobile responsive styles */
+  @media (max-width: 768px) {
+    /* Ensure chat-main takes full width on mobile */
+    width: 100%;
+    margin-left: 0;
+
+    /* Make sidebar toggle button more prominent on mobile */
+    .sidebar-toggle-btn {
+      background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--color-border);
+      width: 40px;
+      height: 40px;
+      z-index: 1001; /* Ensure it's above sidebar overlay */
+
+      svg {
+        --size: 20px;
+        width: var(--size);
+        height: var(--size);
+      }
+    }
+
+    /* Adjust empty state for mobile */
+    .empty-state {
+      padding: 24px 16px;
+
+      h2 {
+        font-size: 1.25rem;
+      }
+
+      p {
+        font-size: 0.9rem;
+      }
+    }
+
+    /* Adjust chat container for mobile */
+    .chat-container {
+      padding-bottom: 90px; /* More space for mobile keyboard */
+    }
+  }
+
+  @media (max-width: 480px) {
+    /* Very small screens */
+    height: calc(100vh - 32px);
+    margin-top: 5px;
+    margin-bottom: 5px;
+    border-radius: 15px;
+
+    .sidebar-toggle-btn {
+      top: 12px;
+      left: 12px;
+    }
+
+    .empty-state {
+      padding: 16px 12px;
     }
   }
 }
