@@ -25,13 +25,7 @@ export class ChatMessage extends Component {
   // Computed values
   #processedContent = computed(() => {
     const content = this.#content();
-    const isLoading = this.#isLoading();
-    const isStreaming = this.#isStreaming();
-
-    return this.#processContent(
-      content,
-      isLoading || (isStreaming && content === "...")
-    );
+    return this.#processContent(content);
   });
 
   #cssClasses = computed(() => {
@@ -497,7 +491,7 @@ export class ChatMessage extends Component {
     });
   }
 
-  #processContent(content: string, isLoading: boolean): string {
+  #processContent(content: string): string {
     // Don't modify content, let CSS handle the animation
     return content;
   }
