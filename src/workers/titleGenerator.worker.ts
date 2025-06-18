@@ -22,13 +22,13 @@ self.addEventListener(
   "message",
   async (event: MessageEvent<TitleGenerationRequest>) => {
     console.log("🔧 Worker: Received message from main thread:", event.data);
-    
+
     const { chatId, firstMessage, apiBaseUrl, authToken } = event.data;
 
     try {
       const url = `${apiBaseUrl}/chats/${chatId}/generate-title`;
       console.log(`🌐 Worker: Making request to ${url}`);
-      
+
       const response = await fetch(url, {
         method: "POST",
         headers: {
@@ -40,12 +40,15 @@ self.addEventListener(
         }),
       });
 
-      console.log(`📡 Worker: Response status for chat ${chatId}:`, response.status);
+      console.log(
+        `📡 Worker: Response status for chat ${chatId}:`,
+        response.status
+      );
 
       if (response.ok) {
         const data = await response.json();
         console.log(`📄 Worker: Response data for chat ${chatId}:`, data);
-        
+
         const result: TitleGenerationResponse = {
           success: data.success,
           chatId,

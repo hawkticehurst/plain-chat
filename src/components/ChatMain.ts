@@ -584,12 +584,16 @@ export class ChatMain extends Component {
     const allMessages = this.#messages();
     const nonLoadingMessages = allMessages.filter((m) => !m.isLoading);
     const isFirstMessage = nonLoadingMessages.length === 1;
-    
+
     console.log("📊 Message analysis:", {
       totalMessages: allMessages.length,
       nonLoadingMessages: nonLoadingMessages.length,
       isFirstMessage,
-      allMessages: allMessages.map(m => ({ role: m.role, isLoading: m.isLoading, content: m.content.substring(0, 50) }))
+      allMessages: allMessages.map((m) => ({
+        role: m.role,
+        isLoading: m.isLoading,
+        content: m.content.substring(0, 50),
+      })),
     });
 
     // Handle the AI response using the streaming service
@@ -641,14 +645,19 @@ export class ChatMain extends Component {
     console.log("🔍 Checking title generation conditions:", {
       isFirstMessage,
       currentChatId: this.#currentChatId(),
-      shouldStartTitleGeneration: isFirstMessage && this.#currentChatId()
+      shouldStartTitleGeneration: isFirstMessage && this.#currentChatId(),
     });
-    
+
     if (isFirstMessage && this.#currentChatId()) {
-      console.log("🎯 Starting parallel title generation with message:", message.substring(0, 100));
+      console.log(
+        "🎯 Starting parallel title generation with message:",
+        message.substring(0, 100)
+      );
       this.#startParallelTitleGeneration(message);
     } else {
-      console.log("⏭️ Skipping title generation - not first message or no chat ID");
+      console.log(
+        "⏭️ Skipping title generation - not first message or no chat ID"
+      );
     }
 
     // Create callbacks for the streaming service
@@ -765,8 +774,11 @@ export class ChatMain extends Component {
    * This allows the title to be generated and displayed as soon as it's ready
    */
   async #startParallelTitleGeneration(firstMessage: string) {
-    console.log("🚀 Starting parallel title generation", { firstMessage, currentChatId: this.#currentChatId() });
-    
+    console.log("🚀 Starting parallel title generation", {
+      firstMessage,
+      currentChatId: this.#currentChatId(),
+    });
+
     if (!this.#currentChatId()) {
       console.warn("⚠️ No current chat ID available for title generation");
       return;
@@ -775,8 +787,10 @@ export class ChatMain extends Component {
     const chatId = this.#currentChatId()!;
 
     try {
-      console.log(`🔄 Calling titleGenerationService.generateTitle for chat ${chatId}`);
-      
+      console.log(
+        `🔄 Calling titleGenerationService.generateTitle for chat ${chatId}`
+      );
+
       // Generate title in web worker (non-blocking)
       const title = await titleGenerationService.generateTitle(
         chatId,
@@ -786,8 +800,10 @@ export class ChatMain extends Component {
       console.log(`📝 Title generation result for chat ${chatId}:`, title);
 
       if (title) {
-        console.log(`✅ Dispatching chat-title-updated event for chat ${chatId}`);
-        
+        console.log(
+          `✅ Dispatching chat-title-updated event for chat ${chatId}`
+        );
+
         // Immediately notify parent to update sidebar with new title
         this.dispatchEvent(
           new CustomEvent("chat-title-updated", {
