@@ -12,7 +12,7 @@ This project follows a unique approach that combines:
 - **Reactive State Management**: Signal-based reactivity similar to modern frameworks
 - **Declarative Templates**: HTML-like template syntax with type safety
 
-See the [`GUIDELINES.md`](./GUIDELINES.md) for a very detailed description of the architectural principles and patterns.
+See the [`GUIDELINES.md`](./GUIDELINES.md) file for a very detailed description of the architectural principles and patterns.
 
 ## Setup
 
