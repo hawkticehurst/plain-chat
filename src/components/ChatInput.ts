@@ -9,13 +9,19 @@ export class ChatInput extends Component {
   #textValue = signal("");
   #isModelMenuOpen = signal(false);
 
+  // Constants for local storage
+  static readonly #LOCAL_STORAGE_MODEL_KEY = "plain-chat-selected-model";
+
   // Available AI models
   #availableModels = [
     {
       id: "google/gemini-2.5-flash-preview-05-20",
       name: "Gemini 2.5 Flash",
     },
-    { id: "google/gemini-2.5-flash-lite-preview-06-17", name: "Gemini 2.5 Flash Lite" },
+    {
+      id: "google/gemini-2.5-flash-lite-preview-06-17",
+      name: "Gemini 2.5 Flash Lite",
+    },
     { id: "openai/o4-mini", name: "o4 mini" },
     { id: "google/gemini-2.5-pro-preview", name: "Gemini 2.5 Pro" },
     { id: "anthropic/claude-sonnet-4", name: "Claude Sonnet 4" },
@@ -26,7 +32,10 @@ export class ChatInput extends Component {
     { id: "openai/gpt-4o-mini", name: "GPT-4o Mini" },
     { id: "deepseek/deepseek-chat-v3-0324:free", name: "DeepSeek V3" },
     { id: "deepseek/deepseek-r1-0528:free", name: "DeepSeek R1" },
-    { id: "deepseek/deepseek-r1-distill-llama-70b", name: "DeepSeek R1 (Llama Distilled)" },
+    {
+      id: "deepseek/deepseek-r1-distill-llama-70b",
+      name: "DeepSeek R1 (Llama Distilled)",
+    },
     { id: "meta-llama/llama-4-maverick", name: "Llama 4 Maverick" },
     { id: "meta-llama/llama-4-scout", name: "Llama 4 Scout" },
     { id: "meta-llama/llama-3.3-70b-instruct", name: "Llama 3.3 70B" },
@@ -153,7 +162,10 @@ export class ChatInput extends Component {
       this.#handleModelMenuKeydown.bind(this)
     );
 
-    // Load user's preferred model
+    // Load saved model from local storage first
+    this.#loadModelFromStorage();
+
+    // Load user's preferred model from server
     this.#loadUserPreferences();
 
     // Wire up reactive effects for granular updates
@@ -279,12 +291,20 @@ export class ChatInput extends Component {
       if (response.ok) {
         const preferences = await response.json();
         if (preferences && preferences.defaultModel) {
-          // Update the selected model
-          this.#selectedModel(preferences.defaultModel);
+          // Only update the model if there's no saved model in localStorage
+          // This ensures user's local preference takes precedence
+          const savedModel = this.#loadSelectedModelFromStorage();
 
-          // Update the UI components
-          this.#updateModelButton();
-          this.#updateModelMenuOptions();
+          if (!savedModel) {
+            // Update the selected model only if no local preference exists
+            this.#selectedModel(preferences.defaultModel);
+            this.#saveSelectedModelToStorage(preferences.defaultModel);
+
+            // Update the UI components
+            this.#updateModelButton();
+            this.#updateModelMenuOptions();
+          }
+          // If there is a saved model, we keep the current selection and don't override it
         }
       }
     } catch (error) {
@@ -324,19 +344,17 @@ export class ChatInput extends Component {
   }
 
   #handleMenuClick(event: Event) {
-    console.log("Menu click event:", event);
     const target = event.target as Element;
 
     // Find the button element (might be clicking on SVG or span inside)
     const button = target.closest(".model-option") as HTMLButtonElement;
-    console.log("Found button:", button);
 
     if (button && button.hasAttribute("data-model-id")) {
       const modelId = button.getAttribute("data-model-id");
-      console.log("Selected model ID:", modelId);
 
       if (modelId) {
         this.#selectedModel(modelId);
+        this.#saveSelectedModelToStorage(modelId);
         this.#updateModelButton();
         this.#updateModelMenuOptions();
         this.#closeModelMenu();
@@ -349,8 +367,6 @@ export class ChatInput extends Component {
             composed: true,
           })
         );
-
-        console.log("Model changed to:", modelId);
       }
     }
   }
@@ -393,6 +409,39 @@ export class ChatInput extends Component {
           options[currentIndex].click();
         }
         break;
+    }
+  }
+
+  // Private methods for local storage persistence
+  #saveSelectedModelToStorage(modelId: string) {
+    try {
+      localStorage.setItem(ChatInput.#LOCAL_STORAGE_MODEL_KEY, modelId);
+    } catch (error) {
+      console.warn("Failed to save selected model to localStorage:", error);
+    }
+  }
+
+  #loadSelectedModelFromStorage(): string | null {
+    try {
+      return localStorage.getItem(ChatInput.#LOCAL_STORAGE_MODEL_KEY);
+    } catch (error) {
+      console.warn("Failed to load selected model from localStorage:", error);
+      return null;
+    }
+  }
+
+  #loadModelFromStorage() {
+    const savedModel = this.#loadSelectedModelFromStorage();
+    if (savedModel) {
+      // Validate that the saved model is still in our available models list
+      const isValidModel = this.#availableModels.some(
+        (model) => model.id === savedModel
+      );
+      if (isValidModel) {
+        this.#selectedModel(savedModel);
+        this.#updateModelButton();
+        this.#updateModelMenuOptions();
+      }
     }
   }
 
@@ -455,6 +504,7 @@ export class ChatInput extends Component {
 
     if (modelId) {
       this.#selectedModel(modelId);
+      this.#saveSelectedModelToStorage(modelId);
       this.#updateModelButton();
       this.#updateModelMenuOptions();
       this.#closeModelMenu();
@@ -540,6 +590,7 @@ export class ChatInput extends Component {
 
   setSelectedModel(model: string) {
     this.#selectedModel(model);
+    this.#saveSelectedModelToStorage(model);
     this.#updateModelButton();
     this.#updateModelMenuOptions();
   }
