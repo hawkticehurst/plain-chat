@@ -12,6 +12,25 @@ chat-sidebar {
   border-radius: 20px;
   margin: 10px;
   margin-right: 0;
+  position: relative;
+  transition:
+    width 0.3s ease,
+    transform 0.3s ease;
+  overflow: hidden; /* Collapsed state */
+  &.collapsed {
+    width: 0;
+    margin-left: 10px;
+    margin-right: -10px; /* Negative margin to maintain overall spacing */
+    min-width: 0; /* Allow it to shrink below natural width */
+    border: none;
+
+    .header,
+    .footer,
+    .chat-list {
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
 
   > .header {
     padding: 20px 16px;
@@ -115,6 +134,13 @@ chat-sidebar {
     }
   }
 
+  /* Content sections with transition */
+  .header,
+  .footer,
+  .chat-list {
+    transition: opacity 0.3s ease;
+  }
+
   /* Responsive design */
   @media (max-width: 768px) {
     width: 100%;
@@ -168,6 +194,12 @@ chat-sidebar-item {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition: opacity 0.2s ease-out;
+  }
+
+  /* Animation class for smooth title updates */
+  .title.updating {
+    opacity: 0.3;
   }
 
   .delete-btn {

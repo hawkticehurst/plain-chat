@@ -15,6 +15,7 @@ export class App extends Component {
   #sidebar: ChatSidebar | null = null;
   #chat: ChatMain | null = null;
   #confirmDialog: ConfirmDialog | null = null;
+  #previousSidebarState: boolean | null = null;
 
   constructor() {
     super();
@@ -24,6 +25,14 @@ export class App extends Component {
   async init() {
     router.createRoute("/", () => {
       this.renderAppShell();
+      // Restore previous sidebar state if we're coming from settings
+      if (this.#previousSidebarState !== null && this.#sidebar) {
+        const currentState = this.#sidebar.isCollapsed();
+        if (currentState !== this.#previousSidebarState) {
+          this.#sidebar.toggleCollapse();
+        }
+        this.#previousSidebarState = null;
+      }
     });
 
     router.createRoute("/chat/:id", async (params) => {
@@ -58,6 +67,15 @@ export class App extends Component {
 
       // Load the specific chat after auth is confirmed ready
       if (this.#chat && this.#sidebar) {
+        // Restore previous sidebar state if we're coming from settings
+        if (this.#previousSidebarState !== null) {
+          const currentState = this.#sidebar.isCollapsed();
+          if (currentState !== this.#previousSidebarState) {
+            this.#sidebar.toggleCollapse();
+          }
+          this.#previousSidebarState = null;
+        }
+
         this.#chat.loadChat(chatId);
         this.#sidebar.setCurrentChat(chatId);
       }
@@ -73,9 +91,8 @@ export class App extends Component {
       this.setupSignIn();
     });
 
-    router.createRoute("/chat-settings", () => {
-      this.innerHTML = "";
-      this.append(html`<chat-settings></chat-settings>`);
+    router.createRoute("/chat-settings", async () => {
+      await this.loadSettingsRoute();
     });
 
     router.createRoute("/usage", () => {
@@ -164,27 +181,8 @@ export class App extends Component {
         @chat-deleted="handleChatDeleted"
         @chat-error="handleChatError"
         @chat-created="handleChatCreated"
+        @chat-title-updated="chatTitleUpdated"
       ></chat-main>
-      <button class="chat-settings-btn" @click="handleChatSettings">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 0 1 1.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.559.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.894.149c-.424.07-.764.383-.929.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 0 1-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.398.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 0 1-.12-1.45l.527-.737c.25-.35.272-.806.108-1.204-.165-.397-.506-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 0 1 .12-1.45l.773-.773a1.125 1.125 0 0 1 1.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894Z"
-          />
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-          />
-        </svg>
-      </button>
       <div class="gradient" role="presentation"></div>
       <notification-component></notification-component>
       <confirm-dialog></confirm-dialog>
@@ -197,8 +195,51 @@ export class App extends Component {
   }
 
   handleChatSettings = () => {
-    this.#sidebar?.handleChatSettings();
+    // Force route execution if we're not already on settings
+    if (router.currentRoute !== "/chat-settings") {
+      router.navigate("/chat-settings");
+      // Fallback: manually execute settings route if navigation doesn't trigger properly
+      setTimeout(() => {
+        if (router.currentRoute !== "/chat-settings") {
+          // Manually execute the settings route
+          this.loadSettingsRoute();
+        }
+      }, 100);
+    }
   };
+
+  private async loadSettingsRoute() {
+    // Check if app shell is already rendered
+    const isAppShellRendered = this.isAppShellRendered();
+
+    if (!isAppShellRendered) {
+      // Full app render needed (page refresh or direct navigation)
+      this.renderAppShell();
+    }
+
+    // Wait for auth to be ready before loading the settings
+    const authReady = await authService.waitForReady(10000);
+
+    if (!authReady || !authService.isSignedIn()) {
+      // Store the intended settings URL for after auth
+      sessionStorage.setItem("redirect-after-auth", "/chat-settings");
+      router.navigate("/sign-in");
+      return;
+    }
+
+    // Wait for Clerk session to be fully available for token generation
+    await authService.waitForSessionReady(3000);
+
+    // Load the settings page after auth is confirmed ready
+    if (this.#chat && this.#sidebar) {
+      // Store current sidebar state and collapse it
+      this.#previousSidebarState = this.#sidebar.isCollapsed();
+      if (!this.#sidebar.isCollapsed()) {
+        this.#sidebar.toggleCollapse();
+      }
+      this.#chat.loadSettings();
+    }
+  }
 
   public selectChat(event: Event) {
     const customEvent = event as CustomEvent;
@@ -243,9 +284,21 @@ export class App extends Component {
       return;
     }
 
+    // Restore previous sidebar state if we're coming from settings
+    if (this.#previousSidebarState !== null) {
+      const currentState = this.#sidebar.isCollapsed();
+      if (currentState !== this.#previousSidebarState) {
+        this.#sidebar.toggleCollapse();
+      }
+      this.#previousSidebarState = null;
+    }
+
     // Load new chat immediately
     this.#chat.startNewChat();
     this.#sidebar.setCurrentChat(null);
+
+    // Focus the chat input for better UX
+    this.#chat.focusInput();
 
     // Update URL
     window.history.pushState({}, "", "#/");
@@ -263,12 +316,17 @@ export class App extends Component {
     this.#sidebar.removeChat(id);
   }
 
-  public chatTitleUpdated() {
+  public chatTitleUpdated(event: Event) {
     if (!this.#sidebar) {
       console.error("ChatSidebar component not initialized");
       return;
     }
-    this.#sidebar.refreshChats();
+
+    const customEvent = event as CustomEvent;
+    const { chatId, title } = customEvent.detail;
+
+    // Use the new optimized method that updates just the specific chat
+    this.#sidebar.updateChatTitle(chatId, title);
   }
 
   public async handleDeleteRequest(event: Event) {

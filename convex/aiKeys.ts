@@ -175,13 +175,11 @@ export const getUserAIPreferences = query({
 // Mutation to create or update user's AI preferences
 export const setUserAIPreferences = mutation({
   args: {
-    defaultModel: v.string(),
-    temperature: v.number(),
-    maxTokens: v.number(),
+    defaultModel: v.optional(v.string()),
     dailyUsageLimit: v.optional(v.number()),
     monthlyUsageLimit: v.optional(v.number()),
     usageWarningThreshold: v.optional(v.number()),
-    enableUsageNotifications: v.boolean(),
+    enableUsageNotifications: v.optional(v.boolean()),
     enableStreaming: v.optional(v.boolean()), // Make optional for backward compatibility
     systemPrompt: v.optional(v.string()),
   },
@@ -198,23 +196,52 @@ export const setUserAIPreferences = mutation({
 
     const now = Date.now();
 
-    // Provide default value for enableStreaming if not provided
-    const enableStreaming = args.enableStreaming ?? true; // Default to true for Convex streaming
+    // Provide default values when not provided
+    const defaultModel =
+      args.defaultModel ??
+      existingPreferences?.defaultModel ??
+      "google/gemini-2.5-flash-preview-05-20";
+    const enableUsageNotifications =
+      args.enableUsageNotifications ??
+      existingPreferences?.enableUsageNotifications ??
+      true;
+    const enableStreaming =
+      args.enableStreaming ?? existingPreferences?.enableStreaming ?? true;
 
     if (existingPreferences) {
-      // Update existing preferences
-      await ctx.db.patch(existingPreferences._id, {
-        ...args,
-        enableStreaming,
+      // Update existing preferences - only update fields that are provided
+      const updateData: any = {
         updatedAt: now,
-      });
+      };
+
+      if (args.defaultModel !== undefined)
+        updateData.defaultModel = defaultModel;
+      if (args.dailyUsageLimit !== undefined)
+        updateData.dailyUsageLimit = args.dailyUsageLimit;
+      if (args.monthlyUsageLimit !== undefined)
+        updateData.monthlyUsageLimit = args.monthlyUsageLimit;
+      if (args.usageWarningThreshold !== undefined)
+        updateData.usageWarningThreshold = args.usageWarningThreshold;
+      if (args.enableUsageNotifications !== undefined)
+        updateData.enableUsageNotifications = enableUsageNotifications;
+      if (args.enableStreaming !== undefined)
+        updateData.enableStreaming = enableStreaming;
+      if (args.systemPrompt !== undefined)
+        updateData.systemPrompt = args.systemPrompt || ""; // Allow empty string to clear system prompt
+
+      await ctx.db.patch(existingPreferences._id, updateData);
       return existingPreferences._id;
     } else {
       // Create new preferences
       const preferencesId = await ctx.db.insert("userAIPreferences", {
         userId: identity.subject,
-        ...args,
+        defaultModel,
+        dailyUsageLimit: args.dailyUsageLimit,
+        monthlyUsageLimit: args.monthlyUsageLimit,
+        usageWarningThreshold: args.usageWarningThreshold,
+        enableUsageNotifications,
         enableStreaming,
+        systemPrompt: args.systemPrompt || "", // Allow empty string to clear system prompt
         createdAt: now,
         updatedAt: now,
       });

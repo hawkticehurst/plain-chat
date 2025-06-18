@@ -4,7 +4,5 @@ export const config = {
   openrouter: {
     baseUrl: "https://openrouter.ai/api/v1",
     defaultModel: "google/gemini-2.5-flash-preview-05-20",
-    maxTokens: 4096,
-    temperature: 0.7,
   },
 };

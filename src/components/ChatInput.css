@@ -1,17 +1,14 @@
 chat-input {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   padding: 0;
   margin: 0;
-  height: 67px;
-  width: 100%;
+  height: fit-content;
+  width: calc(100% - 20px);
   max-width: max-content;
   background: rgba(52, 52, 52, 0.8);
   backdrop-filter: blur(100px);
   /* background: var(--color-background); */
   border: 1px solid var(--color-border);
-  border-radius: 20px;
+  border-radius: 10px;
   font-weight: 500;
   font-size: 1rem;
   position: absolute;
@@ -24,11 +21,6 @@ chat-input {
   transition:
     transform 0.3s ease,
     height 0.3s ease;
-
-  &:hover,
-  &:focus-within {
-    height: 110px;
-  }
 
   .wrapper {
     display: flex;

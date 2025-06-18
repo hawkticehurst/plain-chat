@@ -11,6 +11,10 @@ chat-app {
   background: rgba(52, 52, 52, 0);
   backdrop-filter: blur(16px);
 
+  chat-main {
+    transition: all 0.3s ease;
+  }
+
   .gradient {
     height: calc(100vh - 10px);
     width: 100%;
@@ -35,42 +39,7 @@ chat-app {
       background-position: 0% 50%;
     }
   }
-
-  .chat-settings-btn {
-    display: flex;
-    align-items: center;
-    border: none;
-    padding: 10px 14px;
-    border-radius: 0 20px 0 8px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    position: absolute;
-    top: 10px;
-    right: 10px;
-
-    &:hover {
-      opacity: 0.9;
-    }
-
-    &[disabled] {
-      opacity: 0.6;
-      cursor: not-allowed;
-
-      &:hover {
-        background: var(--color-accent) !important;
-        opacity: 0.6;
-      }
-    }
-
-    svg {
-      --size: 16px;
-      width: var(--size);
-      height: var(--size);
-    }
-  }
-
+  
   .auth-required {
     display: flex;
     align-items: center;

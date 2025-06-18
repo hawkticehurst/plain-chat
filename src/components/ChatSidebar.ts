@@ -23,6 +23,7 @@ export class ChatSidebar extends Component {
   #loading = signal<boolean>(true);
   #currentChatId = signal<string | null>(null);
   #isSignedIn = signal<boolean>(false);
+  #isCollapsed = signal<boolean>(false);
 
   // DOM references
   #headerSection: HTMLElement | null = null;
@@ -57,6 +58,12 @@ export class ChatSidebar extends Component {
 
   constructor() {
     super();
+    // Load collapsed state from localStorage
+    const savedState = localStorage.getItem("sidebar-collapsed");
+    if (savedState !== null) {
+      this.#isCollapsed(savedState === "true");
+    }
+
     this.#checkAuthStatus();
     this.#setupAuthListener();
   }
@@ -125,6 +132,17 @@ export class ChatSidebar extends Component {
       ) as HTMLButtonElement;
       if (authBtn) {
         authBtn.textContent = this.#isSignedIn() ? "Sign Out" : "Sign In";
+      }
+    });
+
+    // Apply collapsed state to the component
+    effect(() => {
+      const isCollapsed = this.#isCollapsed();
+
+      if (isCollapsed) {
+        this.classList.add("collapsed");
+      } else {
+        this.classList.remove("collapsed");
       }
     });
 
@@ -367,11 +385,10 @@ export class ChatSidebar extends Component {
     );
   };
 
-  #handleChatDelete = (chatId: string, chatTitle: string) => {
-    // Dispatch event to parent to show confirmation dialog
+  #handleChatDelete = (id: string, title: string) => {
     this.dispatchEvent(
       new CustomEvent("chat-delete-requested", {
-        detail: { id: chatId, title: chatTitle },
+        detail: { id, title },
         bubbles: true,
         composed: true,
       })
@@ -379,6 +396,17 @@ export class ChatSidebar extends Component {
   };
 
   // Public API methods
+  public toggleCollapse() {
+    const newState = !this.#isCollapsed();
+    this.#isCollapsed(newState);
+    // Persist state to localStorage
+    localStorage.setItem("sidebar-collapsed", String(newState));
+  }
+
+  public isCollapsed(): boolean {
+    return this.#isCollapsed();
+  }
+
   public async refreshChats() {
     this.#checkAuthStatus();
     if (!this.#isSignedIn()) {
@@ -389,6 +417,39 @@ export class ChatSidebar extends Component {
 
     this.#loading(true);
     await this.#loadChats();
+  }
+
+  /**
+   * Updates a specific chat's title without doing a full refresh
+   * This provides immediate UI feedback when titles are generated
+   */
+  public updateChatTitle(chatId: string, newTitle: string) {
+    const currentChats = this.#chats();
+    const updatedChats = currentChats.map((chat) =>
+      chat.id === chatId
+        ? { ...chat, title: newTitle, timestamp: new Date() }
+        : chat
+    );
+
+    // Check if we found and updated the chat
+    const chatFound = updatedChats.some(
+      (chat) => chat.id === chatId && chat.title === newTitle
+    );
+    if (chatFound) {
+      this.#chats(updatedChats);
+
+      // Also update the specific chat item in the DOM with animation
+      const chatItem = this.#chatListSection?.querySelector(
+        `chat-sidebar-item[data-chat-id="${chatId}"]`
+      ) as any;
+      if (chatItem && typeof chatItem.updateTitleWithAnimation === "function") {
+        chatItem.updateTitleWithAnimation(newTitle);
+      }
+    } else {
+      // The chat might be new and not yet in our local state
+      // Do a full refresh to ensure we have the latest data
+      this.refreshChats();
+    }
   }
 
   public setCurrentChat(chatId: string | null) {
@@ -506,6 +567,33 @@ class ChatSidebarItem extends Component {
 
   get id() {
     return this.#id();
+  } /**
+   * Updates the title with a smooth fade animation
+   */
+  public updateTitleWithAnimation(newTitle: string) {
+    const titleElement = this.querySelector(".title") as HTMLElement;
+    if (!titleElement) {
+      // Fallback to signal update if element not found
+      this.#title(newTitle);
+      return;
+    }
+
+    // Start fade out using CSS class
+    titleElement.classList.add("updating");
+
+    // After fade out completes, update text and fade in
+    setTimeout(() => {
+      this.#title(newTitle); // Update the signal
+      titleElement.textContent = newTitle; // Update DOM directly for immediate effect
+      titleElement.classList.remove("updating");
+    }, 200);
+  }
+
+  /**
+   * Updates the title without animation (for regular updates)
+   */
+  public updateTitle(newTitle: string) {
+    this.#title(newTitle);
   }
 }
 

@@ -75,8 +75,9 @@ export default defineSchema({
   userAIPreferences: defineTable({
     userId: v.string(),
     defaultModel: v.string(),
-    temperature: v.number(),
-    maxTokens: v.number(),
+    // Keep these for compatibility (unused by client, hardcoded in API)
+    temperature: v.optional(v.number()),
+    maxTokens: v.optional(v.number()),
     // Usage limits
     dailyUsageLimit: v.optional(v.number()),
     monthlyUsageLimit: v.optional(v.number()),

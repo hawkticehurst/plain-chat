@@ -28,6 +28,14 @@ import type * as httpActions_usage from "../httpActions/usage.js";
 import type * as lib_corsConfig from "../lib/corsConfig.js";
 import type * as lib_serverCrypto from "../lib/serverCrypto.js";
 import type * as messages from "../messages.js";
+import type * as migrations_checkCleanRecords from "../migrations/checkCleanRecords.js";
+import type * as migrations_checkSpecificRecord from "../migrations/checkSpecificRecord.js";
+import type * as migrations_cleanProductionRecords from "../migrations/cleanProductionRecords.js";
+import type * as migrations_fixSpecificRecord from "../migrations/fixSpecificRecord.js";
+import type * as migrations_forceCleanAllRecords from "../migrations/forceCleanAllRecords.js";
+import type * as migrations_nuclearCleanup from "../migrations/nuclearCleanup.js";
+import type * as migrations_removeTemperatureMaxTokens from "../migrations/removeTemperatureMaxTokens.js";
+import type * as migrations_targetSpecificRecord from "../migrations/targetSpecificRecord.js";
 import type * as usage from "../usage.js";
 
 /**
@@ -54,6 +62,14 @@ declare const fullApi: ApiFromModules<{
   "lib/corsConfig": typeof lib_corsConfig;
   "lib/serverCrypto": typeof lib_serverCrypto;
   messages: typeof messages;
+  "migrations/checkCleanRecords": typeof migrations_checkCleanRecords;
+  "migrations/checkSpecificRecord": typeof migrations_checkSpecificRecord;
+  "migrations/cleanProductionRecords": typeof migrations_cleanProductionRecords;
+  "migrations/fixSpecificRecord": typeof migrations_fixSpecificRecord;
+  "migrations/forceCleanAllRecords": typeof migrations_forceCleanAllRecords;
+  "migrations/nuclearCleanup": typeof migrations_nuclearCleanup;
+  "migrations/removeTemperatureMaxTokens": typeof migrations_removeTemperatureMaxTokens;
+  "migrations/targetSpecificRecord": typeof migrations_targetSpecificRecord;
   usage: typeof usage;
 }>;
 export declare const api: FilterApi<

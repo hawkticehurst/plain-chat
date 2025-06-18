@@ -107,18 +107,8 @@ export const getPreferences = httpAction(async (ctx, request) => {
   try {
     const preferences = await ctx.runQuery(api.aiKeys.getUserAIPreferences);
 
-    // Handle model name migration from old to new
-    if (
-      preferences &&
-      preferences.defaultModel === "google/gemini-2.0-flash-exp"
-    ) {
-      preferences.defaultModel = "google/gemini-2.5-flash-preview-05-20";
-    }
-
     const response = preferences || {
       defaultModel: "google/gemini-2.5-flash-preview-05-20",
-      temperature: 0.7,
-      maxTokens: 2000,
       enableStreaming: true,
       systemPrompt: "",
     };

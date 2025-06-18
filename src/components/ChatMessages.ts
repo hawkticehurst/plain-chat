@@ -15,9 +15,7 @@ export class ChatMessages extends Component {
 
   init() {
     this.innerHTML = "";
-    this.append(html`
-      <div class="messages-container"></div>
-    `);
+    this.append(html` <div class="messages-container"></div> `);
 
     // Cache DOM references
     this.#messagesContainer = this.querySelector(
@@ -26,9 +24,9 @@ export class ChatMessages extends Component {
 
     effect(() => {
       if (!this.#messagesContainer) return;
-  
+
       const messages = this.#messages();
-  
+
       // Use reconcile to efficiently update the DOM
       this.#messageNodes = reconcile(
         this.#messagesContainer,
@@ -45,7 +43,8 @@ export class ChatMessages extends Component {
             message.role,
             message.content,
             message.isLoading || false,
-            message.isStreaming || false
+            message.isStreaming || false,
+            message.aiMetadata
           );
           return messageComponent;
         },
@@ -56,11 +55,12 @@ export class ChatMessages extends Component {
             message.role,
             message.content,
             message.isLoading || false,
-            message.isStreaming || false
+            message.isStreaming || false,
+            message.aiMetadata
           );
         }
       );
-  
+
       // Auto-scroll to bottom after message updates
       this.#scrollToBottom();
     });
