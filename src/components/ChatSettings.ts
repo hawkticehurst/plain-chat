@@ -61,7 +61,7 @@ export class ChatSettings extends Component {
                   autocomplete="off"
                   @input="handleApiKeyInput"
                 />
-                <button type="button" class="btn-test-key" @click="testApiKey">
+                <button type="button" class="btn" @click="testApiKey">
                   Test Key
                 </button>
               </div>
@@ -98,7 +98,7 @@ export class ChatSettings extends Component {
 
           <!-- Action Buttons -->
           <div class="settings-actions">
-            <button type="button" class="btn btn-primary" @click="saveSettings">
+            <button type="button" class="btn" @click="saveSettings">
               Save Settings
             </button>
           </div>
