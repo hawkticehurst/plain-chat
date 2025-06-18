@@ -130,7 +130,7 @@ export const streamAIResponse = internalAction({
           messages,
           model: modelToUse,
           temperature: 0.7, // Use default temperature
-          maxTokens: 2000, // Use default max tokens
+          maxTokens: 8000, // Use default max tokens
         }
       );
 

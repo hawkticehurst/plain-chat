@@ -29,12 +29,12 @@ export class TitleGenerationService {
   >();
 
   constructor() {
-    console.log("🏗️ Initializing TitleGenerationService");
+    // console.log("🏗️ Initializing TitleGenerationService");
     this.initializeWorker();
   }
 
   private initializeWorker() {
-    console.log("🔧 Attempting to initialize title generation worker");
+    // console.log("🔧 Attempting to initialize title generation worker");
 
     try {
       // Create the worker from the TypeScript file
@@ -44,7 +44,7 @@ export class TitleGenerationService {
         { type: "module" }
       );
 
-      console.log("✅ Title generation worker created successfully");
+      // console.log("✅ Title generation worker created successfully");
 
       this.worker.addEventListener(
         "message",
@@ -65,7 +65,7 @@ export class TitleGenerationService {
   }
 
   private handleWorkerMessage(event: MessageEvent<TitleGenerationResponse>) {
-    console.log("📨 Received message from worker:", event.data);
+    // console.log("📨 Received message from worker:", event.data);
 
     const { success, chatId, title, error } = event.data;
 
@@ -78,9 +78,9 @@ export class TitleGenerationService {
     this.pendingRequests.delete(chatId);
 
     if (success && title) {
-      console.log(
-        `✅ Title generated successfully for chat ${chatId}: "${title}"`
-      );
+      // console.log(
+      //   `✅ Title generated successfully for chat ${chatId}: "${title}"`
+      // );
       pending.resolve(title);
     } else {
       console.error(`❌ Title generation failed for chat ${chatId}:`, error);
@@ -96,25 +96,25 @@ export class TitleGenerationService {
     chatId: string,
     firstMessage: string
   ): Promise<string | null> {
-    console.log(
-      `🎯 TitleGenerationService.generateTitle called for chat ${chatId}`,
-      {
-        workerAvailable: !!this.worker,
-        pendingRequests: this.pendingRequests.size,
-      }
-    );
+    // console.log(
+    //   `🎯 TitleGenerationService.generateTitle called for chat ${chatId}`,
+    //   {
+    //     workerAvailable: !!this.worker,
+    //     pendingRequests: this.pendingRequests.size,
+    //   }
+    // );
 
     if (!this.worker) {
-      console.warn(
-        "⚠️ Title generation worker not available, falling back to main thread"
-      );
+      // console.warn(
+      //   "⚠️ Title generation worker not available, falling back to main thread"
+      // );
       return this.fallbackTitleGeneration(chatId, firstMessage);
     }
 
     if (this.pendingRequests.has(chatId)) {
-      console.warn(
-        `⚠️ Title generation already in progress for chat ${chatId}`
-      );
+      // console.warn(
+      //   `⚠️ Title generation already in progress for chat ${chatId}`
+      // );
       return null;
     }
 
@@ -138,7 +138,7 @@ export class TitleGenerationService {
         authToken,
       };
 
-      console.log(`📤 Posting message to worker for chat ${chatId}`, request);
+      // console.log(`📤 Posting message to worker for chat ${chatId}`, request);
       this.worker!.postMessage(request);
 
       // Set a timeout to prevent hanging requests
