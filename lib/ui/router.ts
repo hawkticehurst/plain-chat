@@ -124,7 +124,7 @@ export class Router {
 
     this.#navigating = true;
     window.location.hash = path;
-    
+
     // Force execution if hashchange doesn't fire
     setTimeout(() => {
       if (this.#navigating) {
@@ -132,7 +132,7 @@ export class Router {
         this.#executeRoute(path);
       }
     }, 50);
-    
+
     // Reset navigating flag
     setTimeout(() => {
       this.#navigating = false;

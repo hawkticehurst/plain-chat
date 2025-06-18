@@ -280,8 +280,8 @@ export class App extends Component {
     await authService.waitForSessionReady(3000);
 
     // Ensure components are properly initialized after shell rendering
-    await new Promise(resolve => requestAnimationFrame(resolve));
-    
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+
     if (!this.#chat || !this.#sidebar) {
       // Re-query the elements if they're not available
       this.#sidebar = this.querySelector("chat-sidebar") as ChatSidebar;

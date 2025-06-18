@@ -1,4 +1,11 @@
-import { Component, html, signal, effect, StreamingChatService, router } from "@lib";
+import {
+  Component,
+  html,
+  signal,
+  effect,
+  StreamingChatService,
+  router,
+} from "@lib";
 import { ChatInput, ChatMessages, notificationService } from "@components";
 import { authStore } from "../stores/AuthStore";
 import type { Message } from "@lib";
