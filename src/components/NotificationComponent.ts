@@ -54,11 +54,11 @@ export class NotificationService {
   }
 
   // Convenience methods
-  info(message: string, duration: number = 5000): string {
+  info(message: string, duration: number = 2000): string {
     return this.show({ type: "info", message, duration });
   }
 
-  warning(message: string, duration: number = 7000): string {
+  warning(message: string, duration: number = 3000): string {
     return this.show({ type: "warning", message, duration });
   }
 
@@ -67,7 +67,7 @@ export class NotificationService {
     return this.show({ type: "error", message, duration });
   }
 
-  success(message: string, duration: number = 4000): string {
+  success(message: string, duration: number = 2000): string {
     return this.show({ type: "success", message, duration });
   }
 }
