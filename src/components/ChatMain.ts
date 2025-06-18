@@ -276,11 +276,6 @@ export class ChatMain extends Component {
           this.#emptyStateDiv.style.opacity = "0";
         }
       }
-
-      // Hide chat input when not signed in
-      if (this.#chatInput) {
-        this.#chatInput.style.display = isSignedIn ? "block" : "none";
-      }
     });
 
     // Update messages when they change
@@ -789,14 +784,21 @@ export class ChatMain extends Component {
 
   async #initializeAuth() {
     try {
-      // Wait for auth service to be ready
-      const isReady = await authService.waitForReady(5000); // 5 second timeout
-
-      if (isReady) {
-        this.#isSignedIn(authService.isSignedIn());
+      // Wait for Clerk to be loaded (not necessarily with a session)
+      let attempts = 0;
+      while (attempts < 50) {
+        // 5 second timeout (50 * 100ms)
+        const clerk = authService.getClerkInstance();
+        if (clerk && clerk.loaded) {
+          // Clerk is loaded, we can determine auth status
+          this.#isSignedIn(authService.isSignedIn());
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        attempts++;
       }
 
-      // Mark as ready regardless of success/failure so UI shows
+      // Mark as ready regardless of auth status
       this.#authReady(true);
 
       // Start the periodic auth listener
