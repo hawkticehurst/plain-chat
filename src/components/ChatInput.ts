@@ -8,6 +8,7 @@ export class ChatInput extends Component {
   #selectedModel = signal("google/gemini-2.5-flash-preview-05-20");
   #textValue = signal("");
   #isModelMenuOpen = signal(false);
+  #isSignedIn = signal(false);
 
   // Constants for local storage
   static readonly #LOCAL_STORAGE_MODEL_KEY = "plain-chat-selected-model";
@@ -48,6 +49,7 @@ export class ChatInput extends Component {
   #cancelBtn: HTMLButtonElement | null = null;
   #modelButton: HTMLButtonElement | null = null;
   #modelMenu: HTMLDivElement | null = null;
+  #authCheckInterval: number | null = null;
 
   init() {
     this.innerHTML = "";
@@ -233,17 +235,35 @@ export class ChatInput extends Component {
   }
 
   #setupReactiveEffects() {
-    // Update textarea disabled state based on loading/streaming
+    // Update auth state periodically
+    const updateAuthState = () => {
+      this.#isSignedIn(authService.isSignedIn());
+    };
+
+    // Initial auth state check
+    updateAuthState();
+
+    // Set up periodic auth state checks
+    const authCheckInterval = window.setInterval(updateAuthState, 1000);
+
+    // Store interval reference for cleanup
+    this.#authCheckInterval = authCheckInterval;
+
+    // Update textarea disabled state based on loading/streaming/auth
     effect(() => {
       if (this.#textarea) {
-        this.#textarea.disabled = this.#isLoading() || this.#isStreaming();
+        this.#textarea.disabled =
+          this.#isLoading() || this.#isStreaming() || !this.#isSignedIn();
+        this.#textarea.placeholder = !this.#isSignedIn()
+          ? "Please sign in to send messages..."
+          : "Type your message here...";
       }
     });
 
-    // Update send button based on loading state
+    // Update send button based on loading and auth state
     effect(() => {
       if (this.#sendBtn) {
-        this.#sendBtn.disabled = this.#isLoading();
+        this.#sendBtn.disabled = this.#isLoading() || !this.#isSignedIn();
         this.#sendBtn.innerHTML = "";
         const markup = this.#isLoading()
           ? html`<span></span>`
@@ -456,6 +476,12 @@ export class ChatInput extends Component {
       "click",
       this.#handleMenuClick.bind(this)
     );
+
+    // Clean up auth check interval
+    if (this.#authCheckInterval) {
+      clearInterval(this.#authCheckInterval);
+      this.#authCheckInterval = null;
+    }
   }
 
   // Event handlers (called via @ attributes)
@@ -469,7 +495,7 @@ export class ChatInput extends Component {
   }
 
   handleKeyDown(event: KeyboardEvent) {
-    if (event.key === "Enter" && !event.shiftKey) {
+    if (event.key === "Enter" && !event.shiftKey && this.#isSignedIn()) {
       event.preventDefault();
       this.handleSend();
     }
@@ -521,7 +547,12 @@ export class ChatInput extends Component {
   }
 
   handleSend() {
-    if (!this.#textarea || !this.#textValue().trim() || this.#isLoading()) {
+    if (
+      !this.#textarea ||
+      !this.#textValue().trim() ||
+      this.#isLoading() ||
+      !this.#isSignedIn()
+    ) {
       return;
     }
 
