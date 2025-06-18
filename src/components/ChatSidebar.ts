@@ -8,6 +8,7 @@ import {
   authService,
 } from "@lib";
 import { notificationService } from "./NotificationComponent";
+import { authStore } from "../stores/AuthStore";
 import "./ChatSidebar.css";
 
 interface ChatItem {
@@ -22,11 +23,9 @@ export class ChatSidebar extends Component {
   #chats = signal<Array<ChatItem>>([]);
   #loading = signal<boolean>(true);
   #currentChatId = signal<string | null>(null);
-  #isSignedIn = signal<boolean>(false);
   #isCollapsed = signal<boolean>(false);
 
   // DOM references
-  #headerSection: HTMLElement | null = null;
   #chatListSection: HTMLElement | null = null;
   #footerSection: HTMLElement | null = null;
 
@@ -58,8 +57,6 @@ export class ChatSidebar extends Component {
 
   constructor() {
     super();
-    // Check auth status first
-    this.#checkAuthStatus();
 
     // Load collapsed state from localStorage, but default to collapsed when signed out
     const savedState = localStorage.getItem("sidebar-collapsed");
@@ -67,11 +64,11 @@ export class ChatSidebar extends Component {
       this.#isCollapsed(savedState === "true");
     } else {
       // No saved state - default to collapsed when signed out
-      this.#isCollapsed(!this.#isSignedIn());
+      this.#isCollapsed(!authStore.isAuthenticated());
     }
 
     // If user is signed out, always collapse regardless of saved state
-    if (!this.#isSignedIn()) {
+    if (!authStore.isAuthenticated()) {
       this.#isCollapsed(true);
     }
 
@@ -85,13 +82,9 @@ export class ChatSidebar extends Component {
         <button class="new-chat-btn" @click="handleNewChat">New Chat</button>
       </section>
       <section class="chat-list"></section>
-      <section class="footer">
-        <button class="auth-btn"></button>
-      </section>
     `);
 
     // Cache DOM references
-    this.#headerSection = this.querySelector(".header") as HTMLElement;
     this.#chatListSection = this.querySelector(".chat-list") as HTMLElement;
     this.#footerSection = this.querySelector(".footer") as HTMLElement;
 
@@ -109,11 +102,8 @@ export class ChatSidebar extends Component {
       return;
     }
 
-    // Check auth status periodically
-    this.#checkAuthStatus();
-
     // If not signed in, stop loading
-    if (!this.#isSignedIn()) {
+    if (!authStore.isAuthenticated()) {
       this.#loading(false);
       return;
     }
@@ -146,21 +136,11 @@ export class ChatSidebar extends Component {
       }
     });
 
-    // Enable/disable buttons based on auth status
-    effect(() => {
-      const isSignedIn = this.#isSignedIn();
-      const chatSettingsBtn = this.#headerSection?.querySelector(
-        ".chat-settings-btn"
-      ) as HTMLButtonElement;
-
-      if (chatSettingsBtn) chatSettingsBtn.disabled = !isSignedIn;
-    });
-
     // Update chat list when chats, loading, or auth state changes
     effect(() => {
       if (!this.#chatListSection) return;
 
-      const isSignedIn = this.#isSignedIn();
+      const isSignedIn = authStore.isAuthenticated();
       const groupedChats = this.#groupedChats();
       const currentChatId = this.#currentChatId();
 
@@ -220,29 +200,21 @@ export class ChatSidebar extends Component {
   }
 
   #setupAuthListener() {
-    // Check auth status periodically
-    setInterval(() => {
-      const wasSignedIn = this.#isSignedIn();
-      this.#checkAuthStatus();
+    // Listen for auth status changes from the global store
+    window.addEventListener("auth-status-changed", (event: any) => {
+      const { isSignedIn } = event.detail;
 
-      // If auth status changed, refresh and handle sidebar state
-      if (wasSignedIn !== this.#isSignedIn()) {
-        if (this.#isSignedIn()) {
-          this.#loadChats();
-        } else {
-          this.#chats([]);
-          this.#loading(false);
-          // Collapse sidebar when user signs out
-          this.#isCollapsed(true);
-          // Persist the collapsed state
-          localStorage.setItem("sidebar-collapsed", "true");
-        }
+      if (isSignedIn) {
+        this.#loadChats();
+      } else {
+        this.#chats([]);
+        this.#loading(false);
+        // Collapse sidebar when user signs out
+        this.#isCollapsed(true);
+        // Persist the collapsed state
+        localStorage.setItem("sidebar-collapsed", "true");
       }
-    }, 1000);
-  }
-
-  #checkAuthStatus() {
-    this.#isSignedIn(authService.isSignedIn());
+    });
   }
 
   async #loadChats() {
@@ -335,12 +307,6 @@ export class ChatSidebar extends Component {
     );
   };
 
-  handleChatSettings = () => {
-    if (this.#isSignedIn()) {
-      window.location.hash = "#/chat-settings";
-    }
-  };
-
   #handleChatSelect = (chatId: string) => {
     // Just dispatch the event - let the App handle everything
     this.dispatchEvent(
@@ -375,8 +341,7 @@ export class ChatSidebar extends Component {
   }
 
   public async refreshChats() {
-    this.#checkAuthStatus();
-    if (!this.#isSignedIn()) {
+    if (!authStore.isAuthenticated()) {
       this.#chats([]);
       this.#loading(false);
       return;

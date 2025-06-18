@@ -54,7 +54,6 @@ chat-sidebar {
   }
 
   .new-chat-btn,
-  .chat-settings-btn,
   .usage-dashboard-btn,
   .auth-btn {
     border: none;
@@ -107,7 +106,6 @@ chat-sidebar {
     }
   }
 
-  .chat-settings-btn,
   .usage-dashboard-btn,
   .auth-btn {
     background: var(--color-info);

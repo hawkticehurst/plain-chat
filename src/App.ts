@@ -1,5 +1,6 @@
 import { Component, html, authService, router } from "@lib";
 import { notificationService } from "./components/NotificationComponent";
+import { authStore } from "./stores/AuthStore";
 import type { ChatSidebar } from "./components/ChatSidebar";
 import type { ChatMain } from "./components/ChatMain";
 import type { ConfirmDialog } from "./components/ConfirmDialog";
@@ -20,6 +21,8 @@ export class App extends Component {
   constructor() {
     super();
     this.initClerk();
+    // Initialize the global auth store
+    authStore.initialize();
   }
 
   async init() {

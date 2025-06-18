@@ -104,7 +104,7 @@ chat-main {
     color: var(--color-text-primary);
     border-radius: 8px;
     cursor: pointer;
-    display: flex;
+    display: none; /* Hidden by default, shown via JavaScript when authenticated */
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
@@ -204,7 +204,7 @@ chat-main {
   }
 
   .chat-settings-btn {
-    display: flex;
+    display: none; /* Hidden by default, shown via JavaScript when authenticated */
     align-items: center;
     justify-content: center;
     border: none;

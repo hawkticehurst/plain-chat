@@ -8,6 +8,7 @@ import {
   authService,
 } from "@lib";
 import { notificationService } from "./NotificationComponent";
+import { authStore } from "../stores/AuthStore";
 import "./ChatSettings.css";
 
 export class ChatSettings extends Component {
@@ -18,7 +19,6 @@ export class ChatSettings extends Component {
   #hasValidKey = signal<boolean>(false);
   #defaultModel = signal<string>("google/gemini-2.5-flash-preview-05-20");
   #systemPrompt = signal<string>("");
-  #isSignedIn = signal<boolean>(false);
 
   // DOM references
   #apiKeyInput: HTMLInputElement | null = null;
@@ -26,7 +26,6 @@ export class ChatSettings extends Component {
   #testBtn: HTMLButtonElement | null = null;
   #saveBtn: HTMLButtonElement | null = null;
   #signOutBtn: HTMLButtonElement | null = null;
-  #authCheckInterval: number | null = null;
 
   // Computed values
   #canTestKey = computed(() => this.#apiKey().trim().length > 0);
@@ -149,24 +148,12 @@ export class ChatSettings extends Component {
   }
 
   #setupReactiveEffects() {
-    // Update auth state periodically
-    const updateAuthState = () => {
-      this.#isSignedIn(authService.isSignedIn());
-    };
-
-    // Initial auth state check
-    updateAuthState();
-
-    // Set up periodic auth state checks
-    const authCheckInterval = window.setInterval(updateAuthState, 1000);
-
-    // Store interval reference for cleanup
-    this.#authCheckInterval = authCheckInterval;
-
     // Update sign out button visibility based on auth state
     effect(() => {
       if (this.#signOutBtn) {
-        this.#signOutBtn.style.display = this.#isSignedIn() ? "block" : "none";
+        this.#signOutBtn.style.display = authStore.isAuthenticated()
+          ? "block"
+          : "none";
       }
     });
 
@@ -375,18 +362,9 @@ export class ChatSettings extends Component {
     }
   };
 
-  // Cleanup method
-  destroy() {
-    // Clean up auth check interval
-    if (this.#authCheckInterval) {
-      clearInterval(this.#authCheckInterval);
-      this.#authCheckInterval = null;
-    }
-  }
-
   handleSignOut = async () => {
     try {
-      await authService.signOut();
+      await authStore.signOut();
     } catch (error) {
       console.error("Error signing out:", error);
     }

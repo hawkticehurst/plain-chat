@@ -18,26 +18,14 @@ chat-app {
   .gradient {
     height: calc(100vh - 10px);
     width: 100%;
-    background: linear-gradient(90deg, #3f2b96 0%, #a8c0ff 100%);
-    opacity: 0.2;
-    background-size: 800% 800%;
+    background: linear-gradient(90deg, #efd5ff 0%, #515ada 100%);
+    opacity: 0.5;
+    background-size: contain;
     animation: gradientAnimation 3s ease-in-out infinite;
     position: absolute;
     top: 0;
     left: 0;
     z-index: -10;
-  }
-
-  @keyframes gradientAnimation {
-    0% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-    100% {
-      background-position: 0% 50%;
-    }
   }
   
   .auth-required {

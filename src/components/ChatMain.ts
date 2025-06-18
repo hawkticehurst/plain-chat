@@ -1,12 +1,6 @@
-import {
-  Component,
-  html,
-  signal,
-  effect,
-  StreamingChatService,
-  authService,
-} from "@lib";
+import { Component, html, signal, effect, StreamingChatService } from "@lib";
 import { ChatInput, ChatMessages, notificationService } from "@components";
+import { authStore } from "../stores/AuthStore";
 import type { Message } from "@lib";
 import { titleGenerationService } from "../services";
 import "./ChatMain.css";
@@ -23,8 +17,6 @@ export class ChatMain extends Component {
   #tokenCount = signal<number>(0);
   #isTokenCountVisible = signal<boolean>(false);
   #estimatedTokens = signal<number>(0);
-  #isSignedIn = signal<boolean>(false);
-  #authReady = signal<boolean>(false);
 
   // Cached DOM references
   #chatInput: ChatInput | null = null;
@@ -233,8 +225,8 @@ export class ChatMain extends Component {
     // Update UI based on whether we have a current chat and auth state
     effect(() => {
       const hasChat = this.#currentChatId() !== null;
-      const isSignedIn = this.#isSignedIn();
-      const authReady = this.#authReady();
+      const isSignedIn = authStore.isAuthenticated();
+      const authReady = authStore.isAuthReady();
 
       if (this.#emptyStateDiv && this.#chatContainer) {
         this.#emptyStateDiv.style.display = hasChat ? "none" : "flex";
@@ -285,16 +277,17 @@ export class ChatMain extends Component {
       }
     });
 
-    // Manage button visibility based on settings mode
+    // Manage button visibility based on settings mode and auth status
     effect(() => {
       const isInSettings = this.#isInSettingsMode();
+      const isSignedIn = authStore.isAuthenticated();
       const toggleButton = this.querySelector(
         ".sidebar-toggle-btn"
       ) as HTMLElement;
       const backButton = this.querySelector(
         ".settings-back-btn"
       ) as HTMLElement;
-      const settingsButton = document.querySelector(
+      const settingsButton = this.querySelector(
         ".chat-settings-btn"
       ) as HTMLElement;
 
@@ -303,14 +296,16 @@ export class ChatMain extends Component {
           toggleButton.style.display = "none";
           backButton.style.display = "flex";
         } else {
-          toggleButton.style.display = "flex";
+          // Hide sidebar toggle button when signed out
+          toggleButton.style.display = isSignedIn ? "flex" : "none";
           backButton.style.display = "none";
         }
       }
 
-      // Hide/show settings button
+      // Hide/show settings button based on both settings mode and auth status
       if (settingsButton) {
-        settingsButton.style.display = isInSettings ? "none" : "flex";
+        settingsButton.style.display =
+          isInSettings || !isSignedIn ? "none" : "flex";
       }
     });
 
@@ -783,57 +778,29 @@ export class ChatMain extends Component {
   }
 
   async #initializeAuth() {
-    try {
-      // Wait for Clerk to be loaded (not necessarily with a session)
-      let attempts = 0;
-      while (attempts < 50) {
-        // 5 second timeout (50 * 100ms)
-        const clerk = authService.getClerkInstance();
-        if (clerk && clerk.loaded) {
-          // Clerk is loaded, we can determine auth status
-          this.#isSignedIn(authService.isSignedIn());
-          break;
-        }
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        attempts++;
-      }
-
-      // Mark as ready regardless of auth status
-      this.#authReady(true);
-
-      // Start the periodic auth listener
-      this.#setupAuthListener();
-    } catch (error) {
-      console.error("Auth initialization failed:", error);
-      // Still mark as ready so UI shows
-      this.#authReady(true);
-      this.#setupAuthListener();
-    }
+    // The global auth store now handles initialization
+    // We just wait for it to be ready
+    this.#setupAuthListener();
   }
   #setupAuthListener() {
-    // Check auth status periodically
-    setInterval(() => {
-      const wasSignedIn = this.#isSignedIn();
-      // Only update auth status, don't change authReady
-      this.#isSignedIn(authService.isSignedIn());
+    // Listen for auth status changes from the global store
+    window.addEventListener("auth-status-changed", (event: any) => {
+      const { isSignedIn } = event.detail;
 
-      // If auth status changed, update UI and sidebar state
-      if (wasSignedIn !== this.#isSignedIn()) {
+      // If user signed out, collapse the sidebar
+      if (!isSignedIn) {
         const sidebar = document.querySelector("chat-sidebar") as any;
         if (sidebar && sidebar.toggleCollapse && sidebar.isCollapsed) {
           const isCurrentlyCollapsed = sidebar.isCollapsed();
 
-          // If user signed out, collapse the sidebar
-          if (!this.#isSignedIn() && !isCurrentlyCollapsed) {
+          if (!isCurrentlyCollapsed) {
             sidebar.toggleCollapse();
             this.#sidebarCollapsed(true);
             this.classList.add("sidebar-collapsed");
           }
-          // If user signed in, we can keep the sidebar in its current state
-          // (don't auto-expand as user might prefer it collapsed)
         }
       }
-    }, 1000);
+    });
   }
 
   handleToggleSidebar = () => {
