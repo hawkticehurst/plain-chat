@@ -5,6 +5,7 @@ export const CORS_CONFIG = {
   developmentOrigins: ["http://localhost:5173", "http://127.0.0.1:5173"],
   productionOrigins: [
     "https://chat.hawkticehurst.com",
+    "https://beta.chat.hawkticehurst.com",
     "https://plain-chat.pages.dev",
   ],
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -19,9 +20,14 @@ export function getAllowedOrigins(isDev = false): string[] {
     ? CORS_CONFIG.developmentOrigins
     : [...CORS_CONFIG.productionOrigins];
 
-  // Add custom domain if configured in production
-  if (!isDev && process.env.VITE_PRODUCTION_DOMAIN) {
-    origins.push(process.env.VITE_PRODUCTION_DOMAIN);
+  // Add custom domains if configured in production
+  if (!isDev) {
+    if (process.env.VITE_PRODUCTION_DOMAIN) {
+      origins.push(process.env.VITE_PRODUCTION_DOMAIN);
+    }
+    if (process.env.VITE_BETA_DOMAIN) {
+      origins.push(process.env.VITE_BETA_DOMAIN);
+    }
   }
 
   return origins;

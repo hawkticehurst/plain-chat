@@ -126,6 +126,18 @@ export class App extends Component {
 
   private async initClerk() {
     try {
+      // Debug: Log environment variables (remove this after debugging)
+      if (import.meta.env.DEV || window.location.hostname.includes('beta')) {
+        console.group("🔍 Environment Variables Debug");
+        console.log("VITE_CLERK_PUBLISHABLE_KEY:", import.meta.env.VITE_CLERK_PUBLISHABLE_KEY ? `${import.meta.env.VITE_CLERK_PUBLISHABLE_KEY.substring(0, 15)}...` : "❌ NOT SET");
+        console.log("VITE_CONVEX_URL:", import.meta.env.VITE_CONVEX_URL || "❌ NOT SET");
+        console.log("VITE_CONVEX_HTTP_URL:", import.meta.env.VITE_CONVEX_HTTP_URL || "❌ NOT SET");
+        console.log("VITE_BETA_DOMAIN:", import.meta.env.VITE_BETA_DOMAIN || "❌ NOT SET");
+        console.log("MODE:", import.meta.env.MODE);
+        console.log("Current hostname:", window.location.hostname);
+        console.groupEnd();
+      }
+
       // Initialize Clerk early to handle OAuth redirects
       const publicKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
