@@ -50,6 +50,7 @@ Below is some context and guidelines for the code base. Please read and follow t
 ## General Guidelines
 
 - Remember to always check for missing or unused imports when adding, removing, or refactoring code.
+- Remember to always check for code that can be simplified, refactored, or removed when making changes.
 - Padding, margin, and border should always be defined in pixels (px) for consistency.
 - Font sizes should always be defined in rem units for consistency.
 
