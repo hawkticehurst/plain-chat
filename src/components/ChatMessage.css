@@ -2,6 +2,17 @@ chat-message {
   display: block;
   width: 100%;
 
+  /* Hide content until Shiki is initialized to prevent flashing */
+  &.shiki-loading {
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+  }
+
+  &.shiki-ready {
+    opacity: 1;
+    transition: opacity 0.2s ease-in-out;
+  }
+
   .message {
     display: flex;
     gap: 12px;
@@ -11,7 +22,7 @@ chat-message {
 
     &.prompt {
       margin-left: auto;
-      margin-right: 0;
+      margin-right: 16px;
       margin-top: 60px;
       flex-direction: row-reverse;
 
@@ -133,6 +144,15 @@ chat-message {
         font-family: var(--font-family-code);
         border: 1px solid var(--color-code-border, transparent);
         position: relative;
+        white-space: pre;
+
+        /* Ensure code content starts from the beginning */
+        code {
+          margin: 0;
+          padding: 0;
+          text-indent: 0;
+          white-space: pre;
+        }
       }
 
       /* Enhanced styling for syntax highlighted code blocks */
@@ -146,6 +166,20 @@ chat-message {
         position: relative;
         font-family: var(--font-family-code);
         line-height: 1.4;
+        padding: 16px;
+
+        /* Fix text rendering and indentation */
+        code {
+          display: block;
+          white-space: pre;
+          font-family: inherit;
+          line-height: inherit;
+          /* Remove any default margins/padding that could cause indentation */
+          margin: 0;
+          padding: 0;
+          /* Ensure text starts from the beginning */
+          text-indent: 0;
+        }
 
         /* Copy button */
         .copy-button {
@@ -207,13 +241,22 @@ chat-message {
         /* Shiki overrides for better integration */
         &.hljs {
           background: var(--color-code-bg, #f5f5f5) !important;
+          padding: 16px !important; /* Ensure consistent padding for highlighted code */
 
           /* Ensure proper scrolling */
           overflow-x: auto;
           overflow-y: hidden;
 
-          /* Make sure text doesn't wrap */
+          /* Make sure text doesn't wrap and starts from the beginning */
           white-space: pre;
+
+          /* Fix any potential indentation issues from Shiki */
+          code {
+            margin: 0 !important;
+            padding: 0 !important;
+            text-indent: 0 !important;
+            white-space: pre !important;
+          }
         }
 
         /* Fallback styling when Shiki fails */
@@ -342,6 +385,10 @@ chat-message {
   @media (max-width: 768px) {
     .message {
       max-width: 85%;
+
+      &.prompt {
+        margin-right: 0;
+      }
     }
 
     /* Responsive code block improvements */

@@ -22,13 +22,9 @@ export class ChatMessage extends Component {
 
   // Shiki configuration
   #shikiLoaded = false;
+  #shikiInitialized = signal(false);
 
   // Computed values
-  #processedContent = computed(() => {
-    const content = this.#content();
-    return this.#processContent(content);
-  });
-
   #cssClasses = computed(() => {
     const role = this.#role();
     const isLoading = this.#isLoading();
@@ -42,8 +38,23 @@ export class ChatMessage extends Component {
   });
 
   init() {
-    // Initialize Shiki asynchronously - don't block component initialization
+    // Start hidden until Shiki is ready - apply to all messages
+    this.classList.add("shiki-loading");
+
+    // Initialize Shiki asynchronously
     this.#initializeShiki();
+
+    // Fallback timeout to show content even if Shiki takes too long
+    setTimeout(() => {
+      if (this.classList.contains("shiki-loading")) {
+        console.warn(
+          "Shiki took too long to initialize, showing content anyway"
+        );
+        this.#shikiInitialized(true); // This will trigger content rendering
+        this.classList.remove("shiki-loading");
+        this.classList.add("shiki-ready");
+      }
+    }, 2000); // 2 second timeout
 
     // Build the DOM structure once
     this.append(html`
@@ -78,6 +89,14 @@ export class ChatMessage extends Component {
 
       if (testResult && testResult.includes("<pre")) {
         this.#shikiLoaded = true;
+        this.#shikiInitialized(true);
+
+        // Show the component now that Shiki is ready
+        this.classList.remove("shiki-loading");
+        this.classList.add("shiki-ready");
+
+        // The reactive effect will automatically render content now that Shiki is initialized
+        // No need for manual re-rendering since the signal change will trigger the effect
       } else {
         throw new Error("Shiki returned invalid result");
       }
@@ -89,6 +108,11 @@ export class ChatMessage extends Component {
         errorMessage
       );
       this.#shikiLoaded = false;
+      this.#shikiInitialized(true); // Still mark as initialized to prevent hanging and allow content rendering
+
+      // Show the component even if Shiki failed
+      this.classList.remove("shiki-loading");
+      this.classList.add("shiki-ready");
     }
   }
 
@@ -103,7 +127,12 @@ export class ChatMessage extends Component {
     effect(() => {
       if (!this.#textElement) return;
 
-      const content = this.#processedContent();
+      // Don't render any content until Shiki is ready to prevent flashes
+      if (!this.#shikiInitialized()) {
+        return;
+      }
+
+      const content = this.#content();
       const isStreaming = this.#isStreaming();
       const role = this.#role();
 
@@ -178,21 +207,6 @@ export class ChatMessage extends Component {
       } else {
         this.#metadataElement.style.display = "none";
         this.#copyButton = null;
-      }
-    });
-
-    // Re-render with full syntax highlighting when streaming completes
-    effect(() => {
-      const isStreaming = this.#isStreaming();
-      const content = this.#content();
-      const role = this.#role();
-
-      // When streaming stops, re-process content for better syntax highlighting
-      if (!isStreaming && content && role === "response") {
-        // Small delay to ensure the content has been fully set
-        setTimeout(() => {
-          this.#updateTextContent(content, false, role);
-        }, 100);
       }
     });
   }
@@ -277,15 +291,58 @@ export class ChatMessage extends Component {
 
   #renderCodeBlock(code: string, language: string): string {
     const codeId = `code-${Math.random().toString(36).substring(2, 9)}`;
-    return `<pre class="code-block" data-code-id="${codeId}" data-lang="${language}">
+    // Don't normalize here - let Shiki handle it to avoid double normalization
+    // Store the raw code for consistent processing later
+
+    return `<pre class="code-block" data-code-id="${codeId}" data-lang="${language}" data-raw-code="${this.#escapeHtml(code)}">
       <button class="copy-button" data-code-id="${codeId}" aria-label="Copy code">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
         </svg>
         <span class="copy-text">Copy</span>
       </button>
-      <code class="hljs">${this.#escapeHtml(code)}</code>
+      <code class="hljs">${this.#escapeHtml(this.#normalizeCodeBlockContent(code))}</code>
     </pre>`;
+  }
+
+  #normalizeCodeBlockContent(code: string): string {
+    // Split into lines
+    const lines = code.split("\n");
+
+    // Remove empty lines from the beginning and end
+    while (lines.length > 0 && lines[0].trim() === "") {
+      lines.shift();
+    }
+    while (lines.length > 0 && lines[lines.length - 1].trim() === "") {
+      lines.pop();
+    }
+
+    if (lines.length === 0) {
+      return code; // Return original if all lines were empty
+    }
+
+    // Find the minimum indentation (excluding empty lines)
+    const nonEmptyLines = lines.filter((line) => line.trim() !== "");
+    if (nonEmptyLines.length === 0) {
+      return lines.join("\n");
+    }
+
+    const minIndent = Math.min(
+      ...nonEmptyLines.map((line) => {
+        const match = line.match(/^(\s*)/);
+        return match ? match[1].length : 0;
+      })
+    );
+
+    // Remove the common indentation from all lines
+    const normalizedLines = lines.map((line) => {
+      if (line.trim() === "") {
+        return ""; // Keep empty lines empty
+      }
+      return line.slice(minIndent);
+    });
+
+    return normalizedLines.join("\n");
   }
 
   async #applySyntaxHighlighting(html: string): Promise<string> {
@@ -302,7 +359,11 @@ export class ChatMessage extends Component {
     for (const codeBlock of codeBlocks) {
       const pre = codeBlock.parentElement as HTMLPreElement;
       const language = pre.getAttribute("data-lang") || "text";
-      const code = codeBlock.textContent || "";
+      // Get the raw code from the data attribute to ensure consistency
+      const rawCode =
+        pre.getAttribute("data-raw-code") || codeBlock.textContent || "";
+      // Decode HTML entities in the raw code
+      const code = this.#unescapeHtml(rawCode);
 
       try {
         // Determine theme based on color scheme
@@ -312,7 +373,10 @@ export class ChatMessage extends Component {
         const theme = isDark ? "github-dark" : "github-light";
         const mappedLang = this.#mapLanguage(language);
 
-        const highlightedHtml = await codeToHtml(code, {
+        // Normalize the code before highlighting - only once here
+        const normalizedCode = this.#normalizeCodeBlockContent(code);
+
+        const highlightedHtml = await codeToHtml(normalizedCode, {
           lang: mappedLang,
           theme: theme,
         });
@@ -355,7 +419,12 @@ export class ChatMessage extends Component {
 
         // Apply basic fallback styling for failed highlighting
         pre.classList.add("hljs", "hljs-fallback");
-        codeBlock.innerHTML = this.#escapeHtml(code);
+        // Use normalized code for consistency and get from raw data
+        const rawCode =
+          pre.getAttribute("data-raw-code") || codeBlock.textContent || "";
+        const code = this.#unescapeHtml(rawCode);
+        const normalizedCode = this.#normalizeCodeBlockContent(code);
+        codeBlock.innerHTML = this.#escapeHtml(normalizedCode);
       }
     }
 
@@ -455,6 +524,15 @@ export class ChatMessage extends Component {
       .replace(/'/g, "&#39;");
   }
 
+  #unescapeHtml(text: string): string {
+    return text
+      .replace(/&#39;/g, "'")
+      .replace(/&quot;/g, '"')
+      .replace(/&gt;/g, ">")
+      .replace(/&lt;/g, "<")
+      .replace(/&amp;/g, "&");
+  }
+
   #setupCopyButtons() {
     if (!this.#textElement) return;
 
@@ -475,11 +553,24 @@ export class ChatMessage extends Component {
         try {
           // Find the corresponding code block
           const codeBlock = this.#textElement?.querySelector(
-            `pre[data-code-id="${codeId}"] code`
+            `pre[data-code-id="${codeId}"]`
           );
           if (!codeBlock) return;
 
-          const codeText = codeBlock.textContent || "";
+          // Get the original raw code from the data attribute for accurate copying
+          const rawCode = codeBlock.getAttribute("data-raw-code");
+          let codeText: string;
+
+          if (rawCode) {
+            // Use the raw code and normalize it for copying
+            const unescapedCode = this.#unescapeHtml(rawCode);
+            codeText = this.#normalizeCodeBlockContent(unescapedCode);
+          } else {
+            // Fallback to text content if raw code is not available
+            const codeElement = codeBlock.querySelector("code");
+            codeText = codeElement?.textContent || "";
+          }
+
           await navigator.clipboard.writeText(codeText);
 
           // Provide visual feedback
@@ -514,11 +605,6 @@ export class ChatMessage extends Component {
         }
       });
     });
-  }
-
-  #processContent(content: string): string {
-    // Don't modify content, let CSS handle the animation
-    return content;
   }
 
   // Copy button handler
