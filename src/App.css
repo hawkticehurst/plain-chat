@@ -58,23 +58,26 @@ chat-app {
   @media (max-width: 768px) {
     /* On mobile, chat-main should take full width */
     gap: 0;
+    margin: 8px;
+    width: calc(100% - 16px);
+    height: calc(100vh - 16px);
 
     chat-main {
       /* Ensure chat-main takes full width on mobile */
       width: 100%;
-      margin-right: 10px;
+      margin: 8px;
     }
   }
 
   @media (max-width: 480px) {
     /* On very small screens, adjust margins */
-    width: calc(100% - 10px);
-    height: calc(100vh - 10px);
-    margin: 5px;
+    width: calc(100% - 12px);
+    height: calc(100vh - 12px);
+    margin: 6px;
     border-radius: 20px;
 
     chat-main {
-      margin-right: 5px;
+      margin: 5px;
     }
   }
 }

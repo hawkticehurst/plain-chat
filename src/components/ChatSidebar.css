@@ -16,15 +16,33 @@ chat-sidebar {
   position: relative;
   transition:
     width 0.3s ease,
-    transform 0.3s ease;
+    transform 0.3s ease,
+    visibility 0.3s ease;
   overflow: hidden; /* Collapsed state */
+
+  /* Backdrop overlay for mobile */
+  &::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: -1;
+    transition: all 0.3s ease;
+  }
 
   &.collapsed {
     width: 0;
     margin-left: 10px;
-    margin-right: -10px; /* Negative margin to maintain overall spacing */
+    margin-right: -10px;
     min-width: 0; /* Allow it to shrink below natural width */
     border: none;
+    visibility: hidden; /* Fully hide when collapsed */
 
     .header,
     .footer,
@@ -186,12 +204,13 @@ chat-sidebar {
   @media (max-width: 768px) {
     /* On mobile, when sidebar is open, it should overlay the chat area */
     position: fixed;
-    top: 10px;
-    left: 10px;
+    top: 8px;
+    left: 8px;
     z-index: 1000;
-    width: calc(100vw - 20px);
+    width: calc(100vw - 16px);
     max-width: 320px;
-    height: calc(100vh - 20px);
+    height: calc(100vh - 16px);
+    margin: 0;
 
     /* Show backdrop when sidebar is open on mobile */
     &:not(.collapsed)::before {
@@ -205,28 +224,26 @@ chat-sidebar {
       /* When collapsed on mobile, completely hide it */
       transform: translateX(-100%);
       width: 280px;
-      margin-left: 0;
-      margin-right: 0;
+      margin: 0;
       border: 1px solid var(--color-border);
+      visibility: hidden;
 
       .header,
       .footer,
       .chat-list {
-        opacity: 1;
-        pointer-events: auto;
+        opacity: 0;
+        pointer-events: none;
       }
     }
   }
 
   @media (max-width: 480px) {
-    /* On very small screens, make sidebar full width when open */
-    width: calc(100vw - 20px);
+    width: calc(100vw - 24px);
     max-width: none;
-
-    /* Adjust positioning for very small screens */
     top: 5px;
     left: 5px;
-    height: calc(100vh - 10px);
+    height: calc(100vh - 24px);
+    border-radius: 15px;
   }
 }
 

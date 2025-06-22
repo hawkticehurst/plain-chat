@@ -98,7 +98,7 @@ chat-main {
     position: absolute;
     top: 20px;
     left: 20px;
-    z-index: 100;
+    z-index: 1001; /* Higher than sidebar's z-index (1000) to ensure it's always clickable */
     width: 30px;
     height: 30px;
     border: none;
@@ -423,24 +423,22 @@ chat-main {
 /* Mobile responsive styles */
 @media (max-width: 768px) {
   chat-main {
-    /* Ensure chat-main takes full width on mobile */
+    /* Ensure chat-main takes full width on mobile with consistent margins */
     width: 100%;
-    margin-left: 0;
+    margin: 8px;
+    height: calc(100vh - 32px);
 
-    /* Make sidebar toggle button more prominent on mobile */
     .sidebar-toggle-btn {
-      background: color-mix(in srgb, var(--color-surface) 90%, transparent);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid var(--color-border);
-      width: 40px;
-      height: 40px;
-      z-index: 1001; /* Ensure it's above sidebar overlay */
+      z-index: 1001; /* Ensure it's above the sidebar */
 
-      svg {
-        --size: 20px;
-        width: var(--size);
-        height: var(--size);
+      /* Create a larger touch target without affecting visual size */
+      &::before {
+        content: "";
+        position: absolute;
+        top: -8px;
+        left: -8px;
+        right: -8px;
+        bottom: -8px;
       }
     }
 
@@ -487,16 +485,10 @@ chat-main {
 
 @media (max-width: 480px) {
   chat-main {
-    /* Very small screens */
-    height: calc(100vh - 32px);
-    margin-top: 5px;
-    margin-bottom: 5px;
+    /* Very small screens with consistent spacing */
+    height: calc(100vh - 24px);
+    margin: 5px;
     border-radius: 15px;
-
-    .sidebar-toggle-btn {
-      top: 12px;
-      left: 12px;
-    }
 
     .empty-state {
       padding: 16px 12px;
