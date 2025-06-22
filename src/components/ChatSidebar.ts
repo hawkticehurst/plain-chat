@@ -450,6 +450,12 @@ export class ChatSidebar extends Component {
   };
 
   #handleChatSelect = (chatId: string) => {
+    // On mobile, collapse the sidebar when a chat is selected
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      this.#isCollapsed(true);
+    }
+
     // Just dispatch the event - let the App handle everything
     this.dispatchEvent(
       new CustomEvent("chat-selected", {
