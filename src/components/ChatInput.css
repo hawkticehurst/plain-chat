@@ -410,24 +410,23 @@ chat-input {
     }
 
     .input {
-      font-size: 0.9rem;
+      font-size: 1rem;
     }
 
     .send-btn,
     .cancel-btn {
-      width: 28px;
-      height: 28px;
+      width: 30px;
+      height: 30px;
     }
 
     .vscode-summary-btn {
-      width: auto;
       display: none;
     }
 
     .model-button {
       min-width: 120px;
       padding: 6px 8px;
-      font-size: 0.75rem;
+      font-size: 0.85rem;
     }
 
     .model-option {
@@ -446,7 +445,7 @@ chat-input {
       }
 
       .model-option-name {
-        font-size: 0.8rem;
+        font-size: 0.85rem;
       }
     }
   }
