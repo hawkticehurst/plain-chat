@@ -2,6 +2,12 @@
 
 A minimal and playful AI chat application built with vanilla TypeScript, Convex, and Clerk.
 
+## Beta
+
+The production build of this app was submitted to the [T3 Chat Cloneathon](https://cloneathon.t3.chat/) and is locked at the June 18th, 2025 PR until the hackathon results are announced.
+
+Development continues on the project. You can try the latest version at https://beta.chat.hawkticehurst.com, and view the source code on the [`beta` branch](https://github.com/hawkticehurst/plain-chat/tree/beta).
+
 ## Development Philosophy
 
 This project follows a unique approach that combines:
