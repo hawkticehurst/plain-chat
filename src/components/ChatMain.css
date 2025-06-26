@@ -459,24 +459,6 @@ chat-main {
     .chat-container {
       padding-bottom: 90px; /* More space for mobile keyboard */
     }
-
-    /* Summary prompt styles */
-    .summary-prompt {
-      display: none; /* Hide summary prompt on mobile screens */
-    }
-
-    .summary-prompt.visible {
-      transform: translateY(0);
-    }
-
-    .summary-prompt-content {
-      width: 100%;
-      justify-content: space-between;
-    }
-
-    .summary-prompt-text {
-      font-size: 0.85rem;
-    }
   }
 }
 

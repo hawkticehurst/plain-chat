@@ -1007,11 +1007,20 @@ export class ChatMain extends Component {
   };
 
   #showSummaryPrompt = () => {
+    // Check if we're on a mobile device (screen width <= 768px)
+    const isMobile = window.matchMedia("(max-width: 768px)").matches;
+
     console.log("📢 showSummaryPrompt called", {
       summaryPromptElement: this.#summaryPrompt,
       elementExists: !!this.#summaryPrompt,
       currentDisplay: this.#summaryPrompt?.style.display,
+      isMobile,
     });
+
+    // Only show summary prompt on desktop devices
+    if (isMobile) {
+      return;
+    }
 
     if (this.#summaryPrompt) {
       this.#summaryPrompt.style.display = "block";
