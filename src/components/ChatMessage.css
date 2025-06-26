@@ -240,7 +240,7 @@ chat-message {
 
         /* Shiki overrides for better integration */
         &.hljs {
-          background: var(--color-code-bg, #f5f5f5) !important;
+          background: var(--color-code-bg) !important;
           padding: 16px !important; /* Ensure consistent padding for highlighted code */
 
           /* Ensure proper scrolling */
@@ -261,7 +261,7 @@ chat-message {
 
         /* Fallback styling when Shiki fails */
         &.hljs-fallback {
-          background: var(--color-code-bg, #f5f5f5) !important;
+          background: var(--color-code-bg) !important;
           color: var(--color-text-primary);
 
           code {
@@ -272,10 +272,10 @@ chat-message {
       }
 
       blockquote {
-        border-left: 3px solid var(--color-border, #ddd);
+        border-left: 3px solid var(--color-border);
         padding-left: 16px;
         margin: 0.5em 0;
-        color: var(--color-text-secondary, #666);
+        color: var(--color-text-secondary);
       }
 
       table {
@@ -286,13 +286,13 @@ chat-message {
 
       th,
       td {
-        border: 1px solid var(--color-border, #ddd);
+        border: 1px solid var(--color-border);
         padding: 8px;
         text-align: left;
       }
 
       th {
-        background: var(--color-bg-secondary, #f8f8f8);
+        background: var(--color-background-secondary);
         font-weight: bold;
       }
     }
