@@ -462,10 +462,7 @@ chat-main {
 
     /* Summary prompt styles */
     .summary-prompt {
-      bottom: 70px;
-      left: 16px;
-      right: 16px;
-      transform: none;
+      display: none; /* Hide summary prompt on mobile screens */
     }
 
     .summary-prompt.visible {
