@@ -622,10 +622,14 @@ export class ChatInput extends Component {
   }
 
   handleKeyDown(event: KeyboardEvent) {
+    // Check if user is on mobile/tablet (screen width <= 1024px)
+    const isMobileOrTablet = window.innerWidth <= 1024;
+
     if (
       event.key === "Enter" &&
       !event.shiftKey &&
-      authStore.isAuthenticated()
+      authStore.isAuthenticated() &&
+      !isMobileOrTablet // Only send on Enter for desktop devices
     ) {
       event.preventDefault();
       this.handleSend();
