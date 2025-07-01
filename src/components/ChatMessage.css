@@ -59,6 +59,8 @@ chat-message {
 
     /* General text content styles - apply to all messages */
     .text {
+      word-wrap: break-word;
+        
       /* Ensure markdown elements work well */
       h1,
       h2,

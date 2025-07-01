@@ -19,8 +19,8 @@ chat-messages {
 .scroll-to-bottom-button {
   position: absolute;
   bottom: 60px;
-  right: 50%;
-  transform: translateX(50%);
+  left: 50%;
+  transform: translateX(-50%);
   width: 40px;
   height: 40px;
   border: 1px solid var(--border-color);
@@ -42,7 +42,6 @@ chat-messages {
 
 .scroll-to-bottom-button.visible {
   opacity: 1;
-  transform: translateY(0);
   pointer-events: auto;
 }
 
@@ -51,18 +50,15 @@ chat-messages {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.scroll-to-bottom-button:active {
-  transform: scale(0.95);
-}
-
 @media (max-width: 768px) {
   .messages-container {
     padding: 16px 16px 60px 16px;
   }
 
   .scroll-to-bottom-button {
-    right: 20px;
-    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 30px;
   }
 }
 
@@ -72,8 +68,9 @@ chat-messages {
   }
 
   .scroll-to-bottom-button {
-    right: 16px;
-    bottom: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 30px;
     width: 36px;
     height: 36px;
     font-size: 1.1rem;
