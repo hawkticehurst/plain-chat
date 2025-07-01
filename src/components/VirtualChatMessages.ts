@@ -59,7 +59,7 @@ export class VirtualChatMessages extends Component {
 
     // Effect to update virtual scrolling when messages change
     effect(() => {
-      const messages = this.#messages();
+      // const messages = this.#messages();
       this.#updateVisibleRange();
       this.#renderVisibleMessages();
     });
