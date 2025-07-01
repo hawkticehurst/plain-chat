@@ -441,6 +441,12 @@ export class ChatSidebar extends Component {
 
   // Event handlers
   handleNewChat = () => {
+    // On mobile, collapse the sidebar when new chat is created
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      this.#isCollapsed(true);
+    }
+
     this.dispatchEvent(
       new CustomEvent("new-chat-requested", {
         bubbles: true,
