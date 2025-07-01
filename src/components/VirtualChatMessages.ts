@@ -43,9 +43,15 @@ export class VirtualChatMessages extends Component {
     `);
 
     // Cache DOM references
-    this.#messagesContainer = this.querySelector(".messages-container") as HTMLElement;
-    this.#scrollButton = this.querySelector(".scroll-to-bottom-button") as HTMLElement;
-    this.#virtualContainer = this.querySelector(".virtual-content") as HTMLElement;
+    this.#messagesContainer = this.querySelector(
+      ".messages-container"
+    ) as HTMLElement;
+    this.#scrollButton = this.querySelector(
+      ".scroll-to-bottom-button"
+    ) as HTMLElement;
+    this.#virtualContainer = this.querySelector(
+      ".virtual-content"
+    ) as HTMLElement;
 
     // Set up scroll handling
     this.#setupScrollButton();
@@ -58,7 +64,7 @@ export class VirtualChatMessages extends Component {
       this.#renderVisibleMessages();
     });
 
-    // Effect to render visible messages when visible range changes  
+    // Effect to render visible messages when visible range changes
     effect(() => {
       // Trigger re-render when visible range changes
       this.#visibleStart();
@@ -76,7 +82,9 @@ export class VirtualChatMessages extends Component {
     };
 
     // Use passive listener for better performance
-    this.#messagesContainer.addEventListener("scroll", handleScroll, { passive: true });
+    this.#messagesContainer.addEventListener("scroll", handleScroll, {
+      passive: true,
+    });
 
     // Handle resize
     const resizeObserver = new ResizeObserver(() => {
@@ -102,8 +110,13 @@ export class VirtualChatMessages extends Component {
     const totalItems = messages.length;
 
     // Calculate visible range with buffer
-    const visibleStart = Math.max(0, Math.floor(scrollTop / this.#itemHeight) - this.#bufferSize);
-    const visibleCount = Math.ceil(this.#containerHeight / this.#itemHeight) + (this.#bufferSize * 2);
+    const visibleStart = Math.max(
+      0,
+      Math.floor(scrollTop / this.#itemHeight) - this.#bufferSize
+    );
+    const visibleCount =
+      Math.ceil(this.#containerHeight / this.#itemHeight) +
+      this.#bufferSize * 2;
     const visibleEnd = Math.min(totalItems, visibleStart + visibleCount);
 
     this.#visibleStart(visibleStart);
@@ -123,8 +136,10 @@ export class VirtualChatMessages extends Component {
 
     // Update spacers
     const topSpacer = this.querySelector(".virtual-spacer-top") as HTMLElement;
-    const bottomSpacer = this.querySelector(".virtual-spacer-bottom") as HTMLElement;
-    
+    const bottomSpacer = this.querySelector(
+      ".virtual-spacer-bottom"
+    ) as HTMLElement;
+
     if (topSpacer) topSpacer.style.height = `${topSpacerHeight}px`;
     if (bottomSpacer) bottomSpacer.style.height = `${bottomSpacerHeight}px`;
 
@@ -141,10 +156,10 @@ export class VirtualChatMessages extends Component {
       if (!this.#renderedMessages.has(i) && messages[i]) {
         const message = messages[i];
         const messageComponent = new ChatMessage();
-        
+
         // Set a fixed height to ensure consistent virtual scrolling
         messageComponent.style.minHeight = `${this.#itemHeight}px`;
-        
+
         messageComponent.render(
           message.role,
           message.content,
@@ -202,7 +217,7 @@ export class VirtualChatMessages extends Component {
 
   public updateMessages(messages: Array<Message>) {
     this.#messages(messages);
-    
+
     // Auto-scroll to bottom if user isn't manually scrolling
     if (!this.#isUserScrolling) {
       setTimeout(() => this.scrollToBottom(), 100);
