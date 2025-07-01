@@ -35,7 +35,6 @@ chat-messages {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease;
   opacity: 0;
-  transform: translateY(10px);
   pointer-events: none;
   z-index: 10;
 }
