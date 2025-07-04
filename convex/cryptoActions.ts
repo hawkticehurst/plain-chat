@@ -219,7 +219,7 @@ export const testApiKey = action({
             "X-Title": "Chat App",
           },
           body: JSON.stringify({
-            model: "openai/gpt-3.5-turbo",
+            model: "google/gemini-2.5-flash",
             messages: [{ role: "user", content: "Hello" }],
             max_tokens: 5,
           }),
